@@ -1138,6 +1138,80 @@
         .question-animate {
             animation: questionIn 0.35s ease;
         }
+
+        /* ========== CUSTOM EXIT MODAL ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(4, 4, 15, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 32px 24px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(248, 113, 113, 0.05);
+            animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(12px);
+        }
+
+        .modal-warning-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.4));
+        }
+
+        .modal-content h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-red);
+            margin-bottom: 12px;
+        }
+
+        .modal-content p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .modal-buttons .btn {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 14px;
+        }
+
+        .btn-danger-modal {
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger-modal:hover {
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 
@@ -1202,9 +1276,19 @@
         </div>
         <div class="quiz-info-bar">
             <span class="progress-text" id="progress-text">Întrebarea 1 din 30</span>
-            <div id="quiz-timer" class="quiz-timer-badge">
-                <span class="timer-icon">⏱️</span>
-                <span id="timer-countdown">20:00</span>
+            <div class="quiz-info-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                <div id="quiz-timer" class="quiz-timer-badge">
+                    <span class="timer-icon">⏱️</span>
+                    <span id="timer-countdown">20:00</span>
+                </div>
+                <button id="btn-exit" class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px; border-radius: var(--radius-sm); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(248, 113, 113, 0.3); color: var(--accent-red); background: rgba(248, 113, 113, 0.05); transition: all 0.2s;" onmouseover="this.style.background='rgba(248, 113, 113, 0.15)'; this.style.borderColor='var(--accent-red)'" onmouseout="this.style.background='rgba(248, 113, 113, 0.05)'; this.style.borderColor='rgba(248, 113, 113, 0.3)'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Ieșire</span>
+                </button>
             </div>
         </div>
         <div class="quiz-container">
@@ -1926,6 +2010,34 @@
             }
         });
 
+        // Exit test button click
+        const btnExit = $('#btn-exit');
+        const modalExit = $('#modal-exit');
+        const btnCancelExit = $('#btn-cancel-exit');
+        const btnConfirmExit = $('#btn-confirm-exit');
+
+        if (btnExit && modalExit && btnCancelExit && btnConfirmExit) {
+            btnExit.addEventListener('click', () => {
+                modalExit.style.display = 'flex';
+            });
+
+            btnCancelExit.addEventListener('click', () => {
+                modalExit.style.display = 'none';
+            });
+
+            btnConfirmExit.addEventListener('click', () => {
+                modalExit.style.display = 'none';
+                restartQuiz();
+            });
+
+            // Also hide modal if clicking outside content
+            modalExit.addEventListener('click', (e) => {
+                if (e.target === modalExit) {
+                    modalExit.style.display = 'none';
+                }
+            });
+        }
+
         /* ========================================================================
            INIT
            ======================================================================== */
@@ -1982,6 +2094,19 @@
         initApp();
         setTimeout(() => els.studentName.focus(), 500);
     </script>
+
+    <!-- Custom Exit Confirmation Modal -->
+    <div id="modal-exit" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-warning-icon">⚠️</div>
+            <h2>Avertisment!</h2>
+            <p>Vei ieși din test, iar progresul tău nu va fi salvat.</p>
+            <div class="modal-buttons">
+                <button id="btn-cancel-exit" class="btn btn-ghost">Continuă testul</button>
+                <button id="btn-confirm-exit" class="btn btn-danger-modal">Da, ieși</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
