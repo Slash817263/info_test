@@ -403,8 +403,13 @@
         }
 
         @keyframes pulse-timer {
-            from { transform: scale(1); }
-            to { transform: scale(1.04); }
+            from {
+                transform: scale(1);
+            }
+
+            to {
+                transform: scale(1.04);
+            }
         }
 
         /* Quiz Container */
@@ -740,6 +745,7 @@
             gap: 16px;
             margin-bottom: 32px;
         }
+
         @media (max-width: 640px) {
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -1246,7 +1252,7 @@
                 </div>
                 <div class="stat-card">
                     <span class="stat-icon">⏱️</span>
-                    <span class="stat-value">~20</span>
+                    <span class="stat-value">20</span>
                     <span class="stat-label">Minute</span>
                 </div>
             </div>
@@ -1264,7 +1270,9 @@
                 </svg>
             </button>
             <div style="margin-top: 24px; font-size: 13px; text-align: center;">
-                <a href="admin.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)'">Panou Administrare</a>
+                <a href="admin.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;"
+                    onmouseover="this.style.color='var(--text-secondary)'"
+                    onmouseout="this.style.color='var(--text-muted)'">Panou Administrare</a>
             </div>
         </div>
     </main>
@@ -1276,16 +1284,21 @@
         </div>
         <div class="quiz-info-bar">
             <span class="progress-text" id="progress-text">Întrebarea 1 din 30</span>
-            <div class="quiz-info-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+            <div class="quiz-info-right"
+                style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                 <div id="quiz-timer" class="quiz-timer-badge">
                     <span class="timer-icon">⏱️</span>
                     <span id="timer-countdown">20:00</span>
                 </div>
-                <button id="btn-exit" class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px; border-radius: var(--radius-sm); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(248, 113, 113, 0.3); color: var(--accent-red); background: rgba(248, 113, 113, 0.05); transition: all 0.2s;" onmouseover="this.style.background='rgba(248, 113, 113, 0.15)'; this.style.borderColor='var(--accent-red)'" onmouseout="this.style.background='rgba(248, 113, 113, 0.05)'; this.style.borderColor='rgba(248, 113, 113, 0.3)'">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
+                <button id="btn-exit" class="btn btn-ghost"
+                    style="padding: 6px 12px; font-size: 12px; border-radius: var(--radius-sm); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(248, 113, 113, 0.3); color: var(--accent-red); background: rgba(248, 113, 113, 0.05); transition: all 0.2s;"
+                    onmouseover="this.style.background='rgba(248, 113, 113, 0.15)'; this.style.borderColor='var(--accent-red)'"
+                    onmouseout="this.style.background='rgba(248, 113, 113, 0.05)'; this.style.borderColor='rgba(248, 113, 113, 0.3)'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
                     </svg>
                     <span>Ieșire</span>
                 </button>
@@ -1551,7 +1564,7 @@
 
         function startTimer() {
             if (timerInterval) clearInterval(timerInterval);
-            
+
             const countdownEl = $('#timer-countdown');
             const timerBadge = $('#quiz-timer');
             if (!countdownEl || !timerBadge) return;
@@ -1572,7 +1585,7 @@
                 const totalSeconds = Math.max(0, Math.floor(remaining / 1000));
                 const minutes = Math.floor(totalSeconds / 60);
                 const seconds = totalSeconds % 60;
-                
+
                 countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
                 if (remaining < 3 * 60 * 1000) {
@@ -2073,7 +2086,7 @@
                     state.startTime = parseInt(savedStartTime);
                     state.studentName = savedStudentName;
                     state.currentQuestion = savedCurrentQuestion ? parseInt(savedCurrentQuestion) : 0;
-                    
+
                     const parsedAnswers = JSON.parse(savedAnswers);
                     if (Array.isArray(parsedAnswers) && parsedAnswers.length === questions.length) {
                         state.answers = parsedAnswers;
