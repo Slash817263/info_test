@@ -46,7 +46,7 @@ INSERT INTO questions (difficulty, type, text, code, options_json, correct_index
     'int x = 7;\nif (x % 2 == 0)\n    cout << "par";\nelse\n    cout << "impar";',
     '["par", "impar", "7", "Eroare de compilare"]'::jsonb,
     1,
-    '7 % 2 = 1 (diferit de 0), deci se executa ramura else care afiseaza "impar".'
+    '7 % 2 == 1 (adica 7 % 2 != 0), deci se executa ramura else care afiseaza "impar".'
 ),
 (
     'easy',
@@ -69,11 +69,11 @@ INSERT INTO questions (difficulty, type, text, code, options_json, correct_index
 (
     'easy',
     'choice',
-    'Care dintre urmatoarele expresii are valoarea true (1) daca x = 5?',
+    'Care dintre urmatoarele expresii are valoarea true (1) daca x == 5?',
     NULL,
     '["x > 5", "x == 4", "x != 5", "x >= 5"]'::jsonb,
     3,
-    'x >= 5 inseamna "x mai mare sau egal cu 5". Cum x = 5, conditia este adevarata. Celelalte: 5 > 5 e fals, 5 == 4 e fals, 5 != 5 e fals.'
+    'x >= 5 inseamna "x mai mare sau egal cu 5". Cum x == 5, conditia este adevarata. Celelalte: 5 > 5 e fals, 5 == 4 e fals, 5 != 5 e fals.'
 ),
 (
     'easy',
@@ -82,7 +82,7 @@ INSERT INTO questions (difficulty, type, text, code, options_json, correct_index
     'int x = 3;\nx = x + 2;\nx = x * 2;',
     '["7", "10", "16", "12"]'::jsonb,
     1,
-    'x = 3, apoi x = 3 + 2 = 5, apoi x = 5 * 2 = 10.'
+    'x = 3, apoi x = 3 + 2 (adica 5), apoi x = 5 * 2 (adica 10).'
 ),
 (
     'easy',
@@ -111,7 +111,7 @@ INSERT INTO questions (difficulty, type, text, code, options_json, correct_index
     'int v[] = {3, 7, 1, 9, 4};\ncout << v[1] + v[3];',
     '["10", "16", "4", "12"]'::jsonb,
     1,
-    'Indexarea tablourilor incepe de la 0. v[1] = 7 (al doilea element) si v[3] = 9 (al patrulea element). 7 + 9 = 16.'
+    'Indexarea tablourilor incepe de la 0. v[1] are valoarea 7 (al doilea element) si v[3] are valoarea 9 (al patrulea element). 7 + 9 == 16.'
 ),
 (
     'medium',
@@ -134,7 +134,7 @@ INSERT INTO questions (difficulty, type, text, code, options_json, correct_index
 (
     'medium',
     'choice',
-    'Ce valoare are expresia urmatoare, daca a = 5 si b = 3?',
+    'Ce valoare are expresia urmatoare, daca a == 5 si b == 3?',
     '(a > 3) && (b < 2) || (a + b == 8)',
     '["1 (true)", "0 (false)", "8", "Eroare de compilare"]'::jsonb,
     0,
@@ -152,7 +152,7 @@ INSERT INTO questions (difficulty, type, text, code, options_json, correct_index
 (
     'medium',
     'choice',
-    'Ce va afisa urmatorul cod pentru n = 305?',
+    'Ce va afisa urmatorul cod pentru n == 305?',
     'int n = 305, c = 0;\nwhile (n) {\n    c++;\n    n /= 10;\n}\ncout << c;',
     '["305", "8", "3", "2"]'::jsonb,
     2,
@@ -183,7 +183,7 @@ INSERT INTO questions (difficulty, type, text, code, options_json, correct_index
     'int a[3][4] = {\n    {1, 2, 3, 4},\n    {5, 6, 7, 8},\n    {9, 10, 11, 12}\n};\ncout << a[1][2];',
     '["6", "7", "3", "10"]'::jsonb,
     1,
-    'a[1][2] = elementul de pe linia 1 (a doua linie, indexare de la 0), coloana 2 (a treia coloana) = 7.'
+    'a[1][2] reprezinta elementul de pe linia 1 (a doua linie, indexare de la 0) si coloana 2 (a treia coloana), adica valoarea 7.'
 ),
 
 -- ===================== GRELE (21-30) =====================

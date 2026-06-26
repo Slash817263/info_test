@@ -1371,7 +1371,8 @@
             // Code block
             if (q.code) {
                 els.codeWrapper.style.display = 'block';
-                const codeHtml = escapeHtml(q.code).replace(
+                const cleanCode = q.code.replace(/\\n/g, '\n');
+                const codeHtml = escapeHtml(cleanCode).replace(
                     /_{4,}/g,
                     '<span class="code-blank">????????</span>'
                 );
