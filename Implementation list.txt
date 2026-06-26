@@ -1,0 +1,2 @@
+Implementation list
+[x] Intrebarea 23 de modificat (inlocuita cu intrebare despre arbori/vector de tati)
