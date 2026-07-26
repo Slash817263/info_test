@@ -35,7 +35,17 @@ exports.handler = async function(event, context) {
 
     try {
         const body = JSON.parse(event.body);
-        const { student_name, score, total_points, time_taken_ms } = body;
+        const {
+            student_name,
+            student_email,
+            test_type,
+            score,
+            total_points,
+            time_taken_ms,
+            blur_count,
+            answers_json,
+            details_json
+        } = body;
 
         if (!student_name || score === undefined || total_points === undefined || time_taken_ms === undefined) {
             return {
@@ -45,6 +55,20 @@ exports.handler = async function(event, context) {
             };
         }
 
+        const insertData = {
+            student_name,
+            score,
+            total_points,
+            time_taken_ms
+        };
+
+        // Optional fields
+        if (student_email) insertData.student_email = student_email;
+        if (test_type) insertData.test_type = test_type;
+        if (blur_count !== undefined) insertData.blur_count = blur_count;
+        if (answers_json) insertData.answers_json = answers_json;
+        if (details_json) insertData.details_json = details_json;
+
         const response = await fetch(`${supabaseUrl}/rest/v1/results`, {
             method: 'POST',
             headers: {
@@ -53,12 +77,7 @@ exports.handler = async function(event, context) {
                 'Content-Type': 'application/json',
                 'Prefer': 'return=representation'
             },
-            body: JSON.stringify({
-                student_name,
-                score,
-                total_points,
-                time_taken_ms
-            })
+            body: JSON.stringify(insertData)
         });
 
         if (!response.ok) {

@@ -47,8 +47,11 @@ exports.handler = async function(event, context) {
                 options = JSON.parse(options);
             }
             return {
+                id: q.id,
                 difficulty: q.difficulty,
                 type: q.type,
+                category: q.category || null,
+                subcategory: q.subcategory || null,
                 text: q.text,
                 code: q.code,
                 options: options,

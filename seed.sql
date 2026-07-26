@@ -1,279 +1,439 @@
--- Seed data for questions table
+-- Seed data for questions table (50 questions with category/subcategory)
+-- Run ALTER TABLE commands first if upgrading from old schema:
+--   ALTER TABLE questions ADD COLUMN IF NOT EXISTS category TEXT;
+--   ALTER TABLE questions ADD COLUMN IF NOT EXISTS subcategory TEXT;
+
 TRUNCATE TABLE questions RESTART IDENTITY CASCADE;
 
-INSERT INTO questions (difficulty, type, text, code, options_json, correct_index, explanation) VALUES
--- ===================== USOARE (1-10) =====================
+INSERT INTO questions (difficulty, type, category, subcategory, text, code, options_json, correct_index, explanation) VALUES
+-- ===================== FUNDAMENTE — Citire si afisare date (3) =====================
 (
-    'easy',
-    'choice',
-    'Ce tip de date este potrivit pentru a memora nota unui elev (de exemplu, 9.50)?',
+    'easy', 'choice', 'Fundamente', 'Citire si afisare date',
+    'Ce se afiseaza pe ecran in urma executarii urmatoarei secvente, daca se introduc valorile 3 si 4?',
+    'int a, b;\ncin >> a >> b;\ncout << a * b;',
+    '["7", "12", "34", "a * b"]'::jsonb,
+    1,
+    'Se citesc valorile 3 pentru variabila a si 4 pentru variabila b. Produsul lor afisat este 12.'
+),
+(
+    'easy', 'choice', 'Fundamente', 'Citire si afisare date',
+    'Care este instructiunea corecta folosita in C++ pentru afisarea unui mesaj pe ecran?',
     NULL,
-    '["int", "char", "float", "bool"]'::jsonb,
+    '["cin >> \"Mesaj\";", "cout << \"Mesaj\";", "print(\"Mesaj\");", "scanf(\"Mesaj\");"]'::jsonb,
+    1,
+    'Se foloseste obiectul cout impreuna cu operatorul de insertie << pentru trimiterea datelor catre ecran.'
+),
+(
+    'medium', 'code', 'Fundamente', 'Citire si afisare date',
+    'Completati instructiunea pentru a citi o valoare reala de la tastatura direct in variabila x:',
+    'float x;\n________;',
+    '["cout << x", "read x", "cin >> x", "scan x"]'::jsonb,
     2,
-    'Tipul float (sau double) poate stoca numere cu parte zecimala, spre deosebire de int care stocheaza doar numere intregi.'
+    'Pentru citirea datelor din fluxul de intrare (tastatura) se foloseste cin urmat de >>.'
+),
+
+-- ===================== FUNDAMENTE — Operatori si expresii (5) =====================
+(
+    'easy', 'choice', 'Fundamente', 'Operatori si expresii',
+    'Ce valoare are expresia C/C++ urmatoare?',
+    '!(2 > 3 || 3 > 4)',
+    '["0", "1", "true", "Eroare de compilare"]'::jsonb,
+    1,
+    'Ambele conditii din paranteza sunt false (0 || 0 = 0). Negarea (operatorul !) lui 0 devine 1 (adevarat).'
 ),
 (
-    'easy',
-    'choice',
-    'Care dintre urmatoarele declarari de variabile este corecta in C++?',
+    'easy', 'choice', 'Fundamente', 'Operatori si expresii',
+    'Variabilele x si y sunt intregi. Care expresie are valoarea 1 daca si numai daca numerele au aceeasi paritate?',
     NULL,
-    '["int 2x = 10;", "float nota = 9.5;", "char = ''A'';", "int x y = 5;"]'::jsonb,
-    1,
-    'Numele unei variabile nu poate incepe cu o cifra (2x), trebuie specificat un nume (char), si nu pot fi doua nume separate de spatiu (x y).'
-),
-(
-    'easy',
-    'choice',
-    'Ce valoare va afisa urmatorul cod?',
-    'cout << 17 / 5;',
-    '["3.4", "3", "4", "2"]'::jsonb,
-    1,
-    'Impartirea intre doua valori de tip int produce un rezultat int (impartire intreaga). 17 / 5 = 3 (restul se pierde).'
-),
-(
-    'easy',
-    'choice',
-    'Ce valoare va afisa urmatorul cod?',
-    'cout << 17 % 5;',
-    '["3", "5", "2", "12"]'::jsonb,
+    '["(x * y) % 2 == 0", "x % 2 == 0 && y % 2 == 0", "(x + y) % 2 == 0", "!(x % 2 == y % 2)"]'::jsonb,
     2,
-    'Operatorul % (modulo) returneaza restul impartirii. 17 = 5 * 3 + 2, deci restul este 2.'
+    'Daca numerele au aceeasi paritate, suma lor va fi obligatoriu un numar par, deci restul impartirii sumei la 2 este 0.'
 ),
 (
-    'easy',
-    'choice',
-    'Ce va afisa urmatorul cod?',
-    'int x = 7;\nif (x % 2 == 0)\n    cout << "par";\nelse\n    cout << "impar";',
-    '["par", "impar", "7", "Eroare de compilare"]'::jsonb,
+    'medium', 'choice', 'Fundamente', 'Operatori si expresii',
+    'Ce valoare are expresia alaturata?',
+    '17 / 5 * 2',
+    '["6.8", "6", "1", "3"]'::jsonb,
     1,
-    '7 % 2 == 1 (adica 7 % 2 != 0), deci se executa ramura else care afiseaza "impar".'
+    'Divizarea intre numere intregi in C++ trunchiaza zecimalele. 17 / 5 = 3. Apoi 3 * 2 = 6.'
 ),
 (
-    'easy',
-    'choice',
-    'Care este instructiunea corecta pentru a citi o valoare de la tastatura in variabila x?',
+    'medium', 'choice', 'Fundamente', 'Operatori si expresii',
+    'Care este rezultatul evaluarii expresiei urmatoare?',
+    '10 % 3 + 4 / 2',
+    '["1", "3", "4", "5"]'::jsonb,
+    1,
+    '10 % 3 = 1. 4 / 2 = 2. 1 + 2 = 3. Operatorii multiplicativi se evalueaza primii.'
+),
+(
+    'hard', 'code', 'Fundamente', 'Operatori si expresii',
+    'Completati secventa astfel incat variabila z sa memoreze corect cifra zecilor numarului intreg n (unde n >= 10):',
+    'int n = 1234;\nint z = ________;',
+    '["n % 10 / 10", "n / 10 % 10", "n % 100", "n / 100 % 10"]'::jsonb,
+    1,
+    'Impartirea la 10 elimina cifra unitatilor (n / 10 = 123). Apoi aplicarea % 10 extrage ultima cifra ramasa, adica cifra zecilor (3).'
+),
+
+-- ===================== FUNDAMENTE — Structuri de control (4) =====================
+(
+    'easy', 'choice', 'Fundamente', 'Structuri de control',
+    'De cate ori se va afisa mesajul in secventa de mai jos?',
+    'for (int i = 1; i <= 10; i += 3)\n    cout << "Test ";',
+    '["10 ori", "4 ori", "3 ori", "Niciodata"]'::jsonb,
+    1,
+    'Variabila i va lua succesiv valorile 1, 4, 7 si 10. Conditia se indeplineste de 4 ori in total.'
+),
+(
+    'medium', 'choice', 'Fundamente', 'Structuri de control',
+    'Ce va afisa programul urmator?',
+    'int x = 2;\nswitch (x) {\n    case 1: cout << "A";\n    case 2: cout << "B";\n    case 3: cout << "C";\n}',
+    '["B", "BC", "A", "ABC"]'::jsonb,
+    1,
+    'Deoarece instructiunea ''break'' lipseste, executia "cade" automat in ramurile urmatoare, afisand atat B cat si C.'
+),
+(
+    'medium', 'code', 'Fundamente', 'Structuri de control',
+    'Completati spatiul liber din conditia if pentru a numara cate cifre pare are numarul:',
+    'int n = 4528, c = 0;\nwhile (n > 0) {\n    if (________) c++;\n    n /= 10;\n}',
+    '["n % 10 % 2 == 1", "n % 2 == 0", "n / 10 % 2 == 0", "c % 2 == 0"]'::jsonb,
+    1,
+    'Expresia n % 2 == 0 este perfect echivalenta matematic cu (n % 10) % 2 == 0, verificand direct paritatea ultimei cifre.'
+),
+(
+    'hard', 'choice', 'Fundamente', 'Structuri de control',
+    'Ce valoare afiseaza secventa de cod la finalizarea executiei?',
+    'int i = 0;\ndo {\n    i++;\n} while (i < 0);\ncout << i;',
+    '["0", "1", "Eroare de compilare", "Ciclu infinit"]'::jsonb,
+    1,
+    'Spre deosebire de un ciclu while, instructiunea do-while se executa garantat cel putin o data, modificand valoarea inainte de verificare.'
+),
+
+-- ===================== FUNDAMENTE — Complexitati (3) =====================
+(
+    'medium', 'choice', 'Fundamente', 'Complexitati',
+    'In cazul in care un element nu se gaseste intr-un vector nesortat de N elemente, ce complexitate are o cautare secventiala/liniara?',
     NULL,
-    '["cout >> x;", "cin << x;", "cin >> x;", "read(x);"]'::jsonb,
+    '["O(1)", "O(log N)", "O(N)", "O(N^2)"]'::jsonb,
     2,
-    'cin (console input) foloseste operatorul >> pentru citire. cout foloseste << pentru afisare.'
+    'In cazul defavorabil, algoritmul liniar trebuie sa verifice fiecare element rand pe rand inainte de a se opri, ajungand la N operatii.'
 ),
 (
-    'easy',
-    'code',
-    'Completati conditia buclei for astfel incat programul sa afiseze: 1 2 3 4 5',
-    'for (________)\n    cout << i << " ";',
-    '["int i = 0; i < 5; i++", "int i = 1; i <= 5; i++", "int i = 1; i < 5; i++", "int i = 0; i <= 5; i++"]'::jsonb,
-    1,
-    'Pentru a afisa 1, 2, 3, 4, 5 trebuie ca i sa inceapa de la 1 si sa mearga pana la 5 inclusiv (i <= 5).'
+    'medium', 'choice', 'Fundamente', 'Complexitati',
+    'Ce complexitate de timp are secventa necesara pentru parcurgerea integrala a unei matrice patratice n x n?',
+    'for (int i = 0; i < n; i++)\n    for (int j = 0; j < n; j++)\n        a[i][j] = i + j;',
+    '["O(n)", "O(n * log n)", "O(n^2)", "O(1)"]'::jsonb,
+    2,
+    'Exista doua structuri repetitive for complet imbricate, fiecare executand n pasi, de unde n inmultit cu n operatii totale.'
 ),
 (
-    'easy',
-    'choice',
-    'Care dintre urmatoarele expresii are valoarea true (1) daca x == 5?',
+    'hard', 'choice', 'Fundamente', 'Complexitati',
+    'Comparand o cautare binara cu o cautare liniara pe un sir gata sortat, ce avantaj asigura in medie algoritmul binar?',
     NULL,
-    '["x > 5", "x == 4", "x != 5", "x >= 5"]'::jsonb,
+    '["Are un timp constant O(1)", "Executa N/2 pasi, injumatatind complexitatea liniara", "Nu este mai rapid pe un sir sortat", "Reducerea dramatica a timpului la o complexitate logaritmica O(log N)"]'::jsonb,
     3,
-    'x >= 5 inseamna "x mai mare sau egal cu 5". Cum x == 5, conditia este adevarata. Celelalte: 5 > 5 e fals, 5 == 4 e fals, 5 != 5 e fals.'
-),
-(
-    'easy',
-    'choice',
-    'Ce valoare va avea variabila x dupa executarea secventei?',
-    'int x = 3;\nx = x + 2;\nx = x * 2;',
-    '["7", "10", "16", "12"]'::jsonb,
-    1,
-    'x = 3, apoi x = 3 + 2 (adica 5), apoi x = 5 * 2 (adica 10).'
-),
-(
-    'easy',
-    'code',
-    'Completati linia lipsa pentru a interschimba valorile variabilelor a si b:',
-    'int a = 5, b = 3, aux;\naux = a;\n________;\nb = aux;',
-    '["a = aux", "a = b", "b = a", "aux = b"]'::jsonb,
-    1,
-    'Interschimbarea clasica: aux = a (salvam a), a = b (a primeste valoarea lui b), b = aux (b primeste valoarea veche a lui a).'
+    'Algoritmul de cautare binara injumatateste repetat spatiul de cautare ramas, ceea ce conduce rapid la o complexitate liniara scazuta, reprezentata logaritmic.'
 ),
 
--- ===================== MEDII (11-20) =====================
+-- ===================== ORGANIZAREA DATELOR — Vectori (3) =====================
 (
-    'medium',
-    'choice',
-    'Ce va afisa urmatorul cod?',
-    'int n = 1234, s = 0;\nwhile (n > 0) {\n    s = s + n % 10;\n    n = n / 10;\n}\ncout << s;',
-    '["1234", "4", "10", "4321"]'::jsonb,
-    2,
-    'Codul calculeaza suma cifrelor: 4 + 3 + 2 + 1 = 10. La fiecare pas, n % 10 extrage ultima cifra, iar n / 10 elimina ultima cifra.'
-),
-(
-    'medium',
-    'choice',
-    'Ce va afisa urmatorul cod?',
-    'int v[] = {3, 7, 1, 9, 4};\ncout << v[1] + v[3];',
-    '["10", "16", "4", "12"]'::jsonb,
-    1,
-    'Indexarea tablourilor incepe de la 0. v[1] are valoarea 7 (al doilea element) si v[3] are valoarea 9 (al patrulea element). 7 + 9 == 16.'
-),
-(
-    'medium',
-    'code',
-    'Completati linia lipsa pentru a calcula suma elementelor vectorului:',
-    'int v[] = {2, 5, 3, 8}, s = 0;\nfor (int i = 0; i < 4; i++)\n    ________;\ncout << s;',
-    '["s = v[i]", "s = s + i", "s = s + v[i]", "v[i] = s + v[i]"]'::jsonb,
-    2,
-    'Pentru a calcula suma, adunam fiecare element v[i] la variabila s: s = s + v[i] (sau echivalent: s += v[i]).'
-),
-(
-    'medium',
-    'choice',
-    'Ce va afisa urmatorul cod?',
-    'int f(int x) {\n    return x * x + 1;\n}\nint main() {\n    cout << f(3);\n    return 0;\n}',
-    '["7", "9", "10", "4"]'::jsonb,
-    2,
-    'Functia f primeste x = 3 si returneaza 3 * 3 + 1 = 9 + 1 = 10.'
-),
-(
-    'medium',
-    'choice',
-    'Ce valoare are expresia urmatoare, daca a == 5 si b == 3?',
-    '(a > 3) && (b < 2) || (a + b == 8)',
-    '["1 (true)", "0 (false)", "8", "Eroare de compilare"]'::jsonb,
-    0,
-    'Operatorul && are prioritate mai mare decat ||. Deci: (true && false) || true = false || true = true (1).'
-),
-(
-    'medium',
-    'code',
-    'Completati conditia din if pentru ca variabila prim sa devina 0 daca n NU este prim:',
-    'int n = 7, prim = 1;\nfor (int d = 2; d * d <= n; d++)\n    if (________) prim = 0;',
-    '["n == d", "n % d == 0", "d % n == 0", "n / d == 0"]'::jsonb,
-    1,
-    'Un numar n nu este prim daca are un divizor d (altul decat 1 si n). Conditia n % d == 0 verifica daca d divide pe n.'
-),
-(
-    'medium',
-    'choice',
-    'Ce va afisa urmatorul cod pentru n == 305?',
-    'int n = 305, c = 0;\nwhile (n) {\n    c++;\n    n /= 10;\n}\ncout << c;',
-    '["305", "8", "3", "2"]'::jsonb,
-    2,
-    'Codul numara cifrele lui n. La fiecare pas, n se imparte la 10: 305 -> 30 -> 3 -> 0. Contorul c devine 3.'
-),
-(
-    'medium',
-    'choice',
-    'Care este diferenta principala dintre instructiunile do...while si while?',
+    'easy', 'choice', 'Organizarea Datelor', 'Vectori',
+    'Sintaxa corecta pentru a declara in memorie un sir de maxim 100 de numere intregi este:',
     NULL,
-    '["do...while nu foloseste conditie", "do...while executa corpul cel putin o data", "while este mai rapid decat do...while", "do...while nu poate contine variabile"]'::jsonb,
-    1,
-    'La do...while, corpul buclei se executa prima data, apoi se verifica conditia. La while, conditia se verifica inainte.'
+    '["int v[100];", "int v(100);", "vector v[100];", "int v{100};"]'::jsonb,
+    0,
+    'Limbajele C/C++ impun specificarea tipului de baza, urmat de identificator si numarul dorit de casute limitate prin paranteze patrate.'
 ),
 (
-    'medium',
-    'code',
-    'Completati conditia din if pentru a numara cate litere ''a'' contine sirul:',
-    'char s[] = "abracadabra";\nint nr = 0;\nfor (int i = 0; i < strlen(s); i++)\n    if (________) nr++;\ncout << nr;',
-    '["s[i] = ''a''", "s[i] == ''a''", "s == ''a''", "s[i] == \\"a\\""]'::jsonb,
+    'medium', 'choice', 'Organizarea Datelor', 'Vectori',
+    'Cum vor arata elementele vectorului imediat dupa aplicarea interschimbarilor din bucla repetitiva?',
+    'int v[5] = {1, 2, 3, 4, 5};\nfor (int i = 0; i < 2; i++) {\n    int aux = v[i];\n    v[i] = v[4 - i];\n    v[4 - i] = aux;\n}',
+    '["1 2 3 4 5", "5 4 3 2 1", "5 2 3 4 1", "1 4 3 2 5"]'::jsonb,
     1,
-    'Comparatia se face cu == (nu cu =, care este atribuire). Se compara caracterul s[i] cu constanta caracter ''a'' (nu cu sirul "a").'
+    'Algoritmul interschimba in pasi opusi pozitiile de la inceput cu cele de la coada (i cu n-1-i), avand efectul de a oglindi tabloul (reverse).'
 ),
 (
-    'medium',
-    'choice',
-    'Ce va afisa urmatorul cod?',
-    'int a[3][4] = {\n    {1, 2, 3, 4},\n    {5, 6, 7, 8},\n    {9, 10, 11, 12}\n};\ncout << a[1][2];',
-    '["6", "7", "3", "10"]'::jsonb,
-    1,
-    'a[1][2] reprezinta elementul de pe linia 1 (a doua linie, indexare de la 0) si coloana 2 (a treia coloana), adica valoarea 7.'
+    'hard', 'choice', 'Organizarea Datelor', 'Vectori',
+    'Stergerea celui de-al doilea element dintr-un vector care contine N elemente necesita rearanjarea unui numar de cate elemente?',
+    NULL,
+    '["1 element", "N / 2 elemente", "N - 1 elemente", "N - 2 elemente"]'::jsonb,
+    3,
+    'Pentru a mentine continuitatea fizica in memorie, elementele aflate pe pozitiile superioare de la 2 pana la N-1 trebuie glisate cu o treapta catre stanga (in total N-2 deplasari).'
 ),
 
--- ===================== GRELE (21-30) =====================
+-- ===================== ORGANIZAREA DATELOR — Matrice (3) =====================
 (
-    'hard',
-    'choice',
-    'Ce va afisa urmatorul cod?',
-    'void f(int n) {\n    if (n > 0) {\n        f(n - 1);\n        cout << n << " ";\n    }\n}\nint main() {\n    f(4);\n    return 0;\n}',
-    '["4 3 2 1", "1 2 3 4", "4 3 2 1 0", "0 1 2 3 4"]'::jsonb,
-    1,
-    'Functia se autoapeleaza recursiv cu n-1 inainte de afisare. Afisarea are loc la revenirea din recursie, deci in ordine crescatoare: 1 2 3 4.'
-),
-(
-    'hard',
-    'code',
-    'Completati instructiunea return pentru a calcula al n-lea termen Fibonacci\n(fib(0) = 0, fib(1) = 1, fib(2) = 1, fib(3) = 2, ...):',
-    'int fib(int n) {\n    if (n <= 1) return n;\n    return ________;\n}',
-    '["fib(n - 1) + fib(n + 1)", "fib(n - 1) + fib(n - 2)", "fib(n) + fib(n - 1)", "n * fib(n - 1)"]'::jsonb,
-    1,
-    'Sirul Fibonacci: fib(n) = fib(n-1) + fib(n-2). Fiecare termen este suma celor doi anteriori.'
-),
-(
-    'hard',
-    'choice',
-    'Se considera un arbore cu radacina cu 7 noduri, memorat cu ajutorul vectorului de tati: t = (4, 4, 0, 3, 1, 3, 5). Care este nodul radacina al acestui arbore?',
+    'easy', 'choice', 'Organizarea Datelor', 'Matrice',
+    'Presupunand ca am declarat o matrice ''int a[5][5];'', cum putem citi/scrie valoarea situata fizic pe randul 3, coloana 4, respectand indexarea implicita de la 0?',
     NULL,
-    '["Nodul 4", "Nodul 3", "Nodul 0", "Nodul 5"]'::jsonb,
+    '["a[4][3]", "a[2][3]", "a[3][4]", "a[2, 3]"]'::jsonb,
     1,
-    'Nodul radacina este singurul nod care nu are tata in arbore, reprezentat prin valoarea 0 in vectorul de tati. In vectorul t, valoarea 0 se afla pe pozitia 3, deci nodul 3 este radacina.'
+    'Deoarece numaratoarea incepe obligatoriu din 0, al treilea rand primeste indexul 2, iar a patra coloana are indexul 3.'
 ),
 (
-    'hard',
-    'choice',
-    'Ce va afisa urmatorul cod dupa o singura parcurgere a vectorului?',
-    'int v[] = {5, 3, 8, 1}, n = 4;\nfor (int i = 0; i < n - 1; i++)\n    if (v[i] > v[i + 1]) {\n        int aux = v[i];\n        v[i] = v[i + 1];\n        v[i + 1] = aux;\n    }\nfor (int i = 0; i < n; i++)\n    cout << v[i] << " ";',
-    '["1 3 5 8", "3 5 1 8", "5 3 8 1", "3 1 5 8"]'::jsonb,
+    'medium', 'code', 'Organizarea Datelor', 'Matrice',
+    'Pentru o matrice patratica n x n, ce operator relational trebuie pus in locul punctelor de suspensie, astfel incat transformarea sa se aplice doar elementelor aflate strict deasupra diagonalei principale?',
+    'for (int i = 0; i < n; i++)\n    for (int j = 0; j < n; j++)\n        if (i ________ j)\n            a[i][j] = 0;',
+    '["==", "<", ">", "+"]'::jsonb,
     1,
-    'Bubble Sort, o parcurgere: (5,3)->swap->{3,5,8,1}, (5,8)->ok, (8,1)->swap->{3,5,1,8}. Rezultat: 3 5 1 8.'
+    'Zona situata deasupra diagonalei principale contine elemente a caror ordonata pe linie este intotdeauna strict mai mica decat coordonata pozitiei de pe coloana (i < j).'
 ),
 (
-    'hard',
-    'code',
-    'Completati linia lipsa in algoritmul de cautare binara:',
-    'int st = 0, dr = n - 1, gasit = 0;\nwhile (st <= dr && !gasit) {\n    int mij = ________;\n    if (v[mij] == x) gasit = 1;\n    else if (v[mij] < x) st = mij + 1;\n    else dr = mij - 1;\n}',
-    '["(st + dr) / 2", "st + dr", "(st - dr) / 2", "st / 2 + dr"]'::jsonb,
+    'hard', 'choice', 'Organizarea Datelor', 'Matrice',
+    'Intr-o matrice avand numar impar egal de linii si coloane (n x n), elementul a[n/2][n/2] reprezinta geografic:',
+    NULL,
+    '["Coltul superior stang", "Punctul de intersectie exact al celor doua diagonale (centrul matricei)", "Ultimul element din cadranul patru", "Acest element nu exista, se iese din dimensiuni"]'::jsonb,
+    1,
+    'Pentru n=5, centrul corespunde indecsilor (5/2, 5/2) = (2,2) care corespund atat diagonalei principale cat si diagonalei secundare, fiind un element unic in mijloc.'
+),
+
+-- ===================== ORGANIZAREA DATELOR — Siruri de caractere (4) =====================
+(
+    'easy', 'choice', 'Organizarea Datelor', 'Siruri de caractere',
+    'Cate caractere considera functia strlen ca are cuvantul masurat, ignorand marcajul terminal obligatoriu?',
+    'cout << strlen("examen");',
+    '["5", "6", "7", "Rezulta o eroare in runtime"]'::jsonb,
+    1,
+    'Structura strlen parcurge byte cu byte si aduna marimea pana cand detecteaza null terminator-ul ''\0''. Textul "examen" are fix 6 litere utile.'
+),
+(
+    'medium', 'choice', 'Organizarea Datelor', 'Siruri de caractere',
+    'Daca plasam fortat un null terminator in interiorul sirului, cum va aparea sirul pe terminal la momentul afisarii?',
+    'char s[10] = "informatic";\ns[2] = ''\0'';\ncout << s;',
+    '["informatic", "in", "inf", "nformatic"]'::jsonb,
+    1,
+    'Comanda cout se opreste din imprimat cand intalneste primul terminator ''\0''. Deoarece pe pozitia 2 a fost taiat in mod abrupt, doar indicii 0 si 1 se afiseaza (literele ''i'' si ''n'').'
+),
+(
+    'medium', 'code', 'Organizarea Datelor', 'Siruri de caractere',
+    'Din multitudinea de functii disponibile, care subrutina este proiectata special pentru concatenarea textului (alipirea s2 la s1)?',
+    'char s1[20] = "Buna ";\nchar s2[] = "ziua!";\n________(s1, s2);\ncout << s1;',
+    '["strcpy", "strlen", "strcmp", "strcat"]'::jsonb,
+    3,
+    'Numele functiei deriva din termenii "string" si "concatenate", scriindu-se strcat. Aceasta alipeste sirul sursa la cel destinatie si muta terminatorul comun.'
+),
+(
+    'hard', 'choice', 'Organizarea Datelor', 'Siruri de caractere',
+    'Avand functia strchr care localizeaza la ce adresa este intalnit pentru prima data un anumit caracter, ce se va afisa?',
+    'char s[] = "bacalaureat";\nchar *p = strchr(s, ''a'');\ncout << p;',
+    '["bacalaureat", "acalaureat", "a", "O eroare de referinta"]'::jsonb,
+    1,
+    'Adresa transmisa indica primul ''a'' intalnit in citire (care vine fix dupa litera ''b''). Astfel fluxul cout reproduce din acel punct spre dreapta, rezultand "acalaureat".'
+),
+
+-- ===================== ORGANIZAREA DATELOR — Structuri de date (struct) (3) =====================
+(
+    'easy', 'choice', 'Organizarea Datelor', 'Structuri de date (struct)',
+    'De indata ce structura ''Elev'' a fost descrisa complet catre compilator, declaratia corecta a unei inregistrari e1 din program arata astfel:',
+    'struct Elev {\n    int varsta;\n    float medie;\n};',
+    '["Elev e1;", "struct e1;", "Elev() e1;", "new Elev e1;"]'::jsonb,
     0,
-    'Mijlocul intervalului [st, dr] se calculeaza ca (st + dr) / 2. Aceasta este formula clasica a cautarii binare.'
+    'Prin introducerea declaratiei complete, sablonul definit incepe sa functioneze identic oricarui alt tip de date primitiv preinstalat (precum un int).'
 ),
 (
-    'hard',
-    'choice',
-    'Care este complexitatea de timp a algoritmului de cautare binara intr-un vector sortat cu n elemente?',
+    'medium', 'choice', 'Organizarea Datelor', 'Structuri de date (struct)',
+    'Stiind ca diferenta logica intre doi termeni consecutivi intr-o progresie aritmetica poarta numele de ratie, ce expresie reprezinta cel de al 10-lea termen conform structurii declarate?',
+    'struct progresie {\n    int prim;\n    int ratie;\n} p;',
+    '["prim.p + ratie.p * 9", "p.prim + 9 * p.ratie", "p.prim + 10 * p.ratie", "progresie.prim + 9 * progresie.ratie"]'::jsonb,
+    1,
+    'Variabila p contine p.prim si p.ratie. Elementul al n-lea in succesiunea respectiva se extrage matematic cu formula clasica termen_1 + (n - 1) * ratie.'
+),
+(
+    'hard', 'choice', 'Organizarea Datelor', 'Structuri de date (struct)',
+    'Fie variabila s ce memoreaza indicativul unei sonate clasice si duratele (min, sec) divizate in trei acte muzicale diferite. Cum se deduce cantitatea transformata total in secunde pentru randul doi (partea a doua)?',
+    'struct sonata {\n    int indicativ;\n    struct {\n        int min, sec;\n    } unu, doi, trei;\n} s;',
+    '["s.doi.sec + 60 * s.doi.min", "sonata.doi.sec + 60 * sonata.doi.min", "sec.doi.s + 60 * min.doi.s", "doi.sec.sonata.s + 60 * doi.min.sonata.s"]'::jsonb,
+    0,
+    'Coborand treptat prin operatorul ierarhic punct, traseul pornit din instanta radacina s este: s urmat de membrul .doi si apoi membrul dependent .sec sau .min.'
+),
+
+-- ===================== SUBPROGRAME — Transmitere prin valoare (3) =====================
+(
+    'easy', 'choice', 'Subprograme', 'Transmitere prin valoare',
+    'Efectul transferarii unui numar real sau intreg prin intermediul mecanismului denumit ''prin valoare'' presupune:',
     NULL,
-    '["O(n)", "O(n²)", "O(log n)", "O(1)"]'::jsonb,
-    2,
-    'Cautarea binara injumatateste intervalul la fiecare pas, deci numarul de pasi este proportional cu log2(n).'
-),
-(
-    'hard',
-    'code',
-    'Completati conditia buclei for pentru a inversa (oglindi) elementele vectorului:',
-    'int v[] = {1, 2, 3, 4, 5}, n = 5;\nfor (int i = 0; ________; i++) {\n    int aux = v[i];\n    v[i] = v[n - 1 - i];\n    v[n - 1 - i] = aux;\n}',
-    '["i < n", "i < n / 2", "i <= n", "i < n - 1"]'::jsonb,
+    '["Suprascrierea directa pe aceeasi celula", "Manipularea izolata intr-o clona temporara a argumentului furnizat", "Alocarea unui pointer absolut spre memorie", "Generarea unui vector dinamic nou"]'::jsonb,
     1,
-    'Se interschimba elementele simetrice. Trebuie parcursa doar jumate din vector (i < n/2), altfel elementele s-ar interschimba de doua ori, revenind la forma initiala.'
+    'Transmiterea default izoleaza campurile predate. Subrutina poate prelucra doar un duplicat volatil in interiorul stivei, protejand datele de origine de corupere externa.'
 ),
 (
-    'hard',
-    'choice',
-    'Ce va afisa urmatorul cod?',
-    'void f(int &a, int b) {\n    a = a + 1;\n    b = b + 1;\n}\nint main() {\n    int x = 5, y = 10;\n    f(x, y);\n    cout << x << " " << y;\n    return 0;\n}',
-    '["5 10", "6 11", "6 10", "5 11"]'::jsonb,
-    2,
-    'Parametrul a este transmis prin referinta (&), deci modificarea lui a afecteaza x. Parametrul b este transmis prin valoare, deci y ramane neschimbat. Rezultat: 6 10.'
+    'medium', 'choice', 'Subprograme', 'Transmitere prin valoare',
+    'Studiati operatiunea incapsulata din subprogramul prezentat. Care va fi deznodamantul la afisare in consola?',
+    'void dublare(int x) {\n    x = x * 2;\n}\nint main() {\n    int a = 5;\n    dublare(a);\n    cout << a;\n    return 0;\n}',
+    '["10", "5", "0", "Apare un ciclu la compilare"]'::jsonb,
+    1,
+    'Dublarea a actionat strict vizualizand copia trimisa in fisa subrutinei. Drept raspuns, continutul variabilei originale a nu reflecta mutatiile dincolo de granita functiei main.'
 ),
 (
-    'hard',
-    'choice',
-    'Care este principiul de baza al tehnicii backtracking?',
+    'hard', 'choice', 'Subprograme', 'Transmitere prin valoare',
+    'Daca transmitem conventional un tablou unidimensional static (un array C formatat cu paranteze drepte si date interne) drept singurul paramentru catre un bloc definit:',
     NULL,
-    '["Sortarea datelor inainte de prelucrare", "Generarea solutiilor prin incercare si revenire", "Impartirea problemei in subprobleme independente", "Memorarea rezultatelor intermediare pentru eficienta"]'::jsonb,
+    '["Incapabilitate structurala fara import de librarii extra", "Muta o copie profunda (deep copy) de n biti perfect aliniati", "Intermediarul transferat cade sub categoria operatiunilor prin adresa/referinta pointer catre startul indicelui", "Cade la compilare pe eroare de limite (bounds)"]'::jsonb,
+    2,
+    'In standardul limbajului de baza, transferul ''duplicat'' al sirurilor statice nu se suporta din ratiuni de cost de procesor. Decurge automat degradarea numelui de array catre adresa sa pointerala principala.'
+),
+
+-- ===================== SUBPROGRAME — Transmitere prin referinta (3) =====================
+(
+    'easy', 'choice', 'Subprograme', 'Transmitere prin referinta',
+    'Specificarea expresa a transferului datelor catre o metoda utilizand aliasuri paralele (referinte directe) utilizeaza decorarea tipului cu urmatorul caracter simbolic:',
+    NULL,
+    '["Caracterul asterisc *", "Caracterul ampersand &", "Fara caractere aditionale, direct nume", "Cuvantul cheie ref"]'::jsonb,
     1,
-    'Backtracking construieste solutii pas cu pas, verifica conditii, si revine (backtrack) cand o cale nu duce la solutie. Optiunea c) descrie Divide et Impera, iar d) descrie Programarea Dinamica.'
+    'Conform designului, declararea ca alias stabil ce prelungeste ciclul de operatii vizibile necesita prefixarea numelui variabilei din antet cu un &.'
 ),
 (
-    'hard',
-    'code',
-    'Completati linia lipsa in algoritmul lui Euclid pentru calculul celui mai mare divizor comun (CMMDC):',
-    'int cmmdc(int a, int b) {\n    while (b != 0) {\n        int r = a % b;\n        ________;\n        b = r;\n    }\n    return a;\n}',
-    '["a = r", "a = b", "r = b", "a = a % b"]'::jsonb,
+    'medium', 'choice', 'Subprograme', 'Transmitere prin referinta',
+    'Prezenta marcatorilor referinta face posibila o roada comuna cand se scrie o interschimbare (swap) reala, astfel, se constata pe display rezultatul:',
+    'void interschimbare(int &a, int &b) {\n    int temp = a;\n    a = b;\n    b = temp;\n}\nint main() {\n    int x = 1, y = 2;\n    interschimbare(x, y);\n    cout << x << " " << y;\n}',
+    '["1 2", "2 1", "0 0", "temp temp"]'::jsonb,
     1,
-    'Algoritmul lui Euclid: se calculeaza restul r = a % b, apoi a primeste valoarea lui b, iar b primeste restul r. Se repeta pana cand b devine 0.'
+    'Delegarea directa cu semnalul ampersand a asigurat faptul ca spatiul procesului alocat se mapeaza intim. x preia identitatea finala descrisa de parametrul mutat, adica 2, la fel pt y devine 1.'
+),
+(
+    'hard', 'choice', 'Subprograme', 'Transmitere prin referinta',
+    'Rutina f mixeaza parametrii cerand-ul pe a printr-o legatura transparenta (referinta), pe cand argumentul secund b izolat (copie). Urmariti succesiunea mutarilor decisa in interior.',
+    'void f(int &a, int b) {\n    a += b;\n    b++;\n}\nint main() {\n    int x = 2, y = 3;\n    f(x, y);\n    f(y, x);\n    cout << x << y;\n}',
+    '["53", "58", "55", "35"]'::jsonb,
+    1,
+    'In primul impuls f(x, y): a legat la x(2), b incapsuleaza clonarea lui y(3). x salta cu 3 atingand 5. A doua runda f(y, x): ''a'' e mufat the y(3), ''b'' copiaza de la stadiul avansat a lui x(5). y incaseaza progres cu 5 crescand la 8.'
+),
+
+-- ===================== SUBPROGRAME — Recursivitate (2) =====================
+(
+    'medium', 'choice', 'Subprograme', 'Recursivitate',
+    'Deduceti comportamentul rutinei de explorare incapsulata intr-o parcurgere la nivel de cifre independente si raportati evaluarea pasului f(56579):',
+    'int f(int n) {\n    if (n == 0) return 0;\n    if (n % 2 == 1) return f(n / 10) + 1;\n    return f(n / 10) - 1;\n}',
+    '["2", "3", "4", "5"]'::jsonb,
+    1,
+    'Metoda analizeaza in profunzime extragand plus valoare cand ramura dezvaluie imparitati si scade un grad pentru cele ce dau par. Intr-un sumar global, secventa are patru reprezentanti impari (5, 5, 7, 9) si abia unul par (6), diferenta neta insumand 3.'
+),
+(
+    'hard', 'choice', 'Subprograme', 'Recursivitate',
+    'Inlocuiti punctele de suspensie din zona clauzei de neeligibilitate pentru ca arborele interogarilor recursive sa avanseze progresiv si sa culmineze cu emiterea valorii 7 din apelul extern f(35, 17):',
+    'void f(int n, int d) {\n    if (n % d == 0)\n        cout << d;\n    else\n        f(________);\n}',
+    '["n - 1, d", "n, d - 1", "n / d, d - 1", "n % d, d"]'::jsonb,
+    1,
+    'Conditia primara testeaza perfect divizori purificati. Daca numarul ramane in balanta se scade d treapta cu treapta spre limita sanatoasa care incadreaza rezultatul zero modulo perfect valabil divizor (la intersectia 35 cu 7 se activeaza output-ul).'
+),
+
+-- ===================== BACKTRACKING — Teorie si aplicare practica (4) =====================
+(
+    'easy', 'choice', 'Backtracking', 'Teorie si aplicare practica',
+    'Arhitectura paradigmei specifice de programare backtracking (cautare extinsa in profunzime limitata) stocheaza implicit etapele si solutiile partiale folosind:',
+    NULL,
+    '["O lista ordonata prin frecventa", "Un buffer circular FIFO de coada", "O reprezentare statica hashmap mapata continuu", "Stiva implicita pe nivel intern (stiva de executie/Stack)"]'::jsonb,
+    3,
+    'Toate mecanismele de intoarcere recursiva spre punctele valabile nodale din arbori utilizeaza obligatoriu memoria cu caracter LIFO ce apartine in integrabilitate stivei prealocate functiilor.'
+),
+(
+    'medium', 'choice', 'Backtracking', 'Teorie si aplicare practica',
+    'Procesul elaborat din spate responsabil in gasirea lexicografic asezata a tuturor permutarilor multimii liniare {1, 2, 3} va dezvalui solutia imediat urmatoare dupa suita pozitiilor {1, 3, 2} sub aspect de:',
+    NULL,
+    '["1, 2, 3", "2, 1, 3", "2, 3, 1", "3, 1, 2"]'::jsonb,
+    1,
+    'Respectarea regulamentului strict alfabetic numeric propune cresteri succesive organice predefinite natural de la dreapta. Imediat dupa inceperea fixata cu 1 ultimul prag atins va declansa modificarea elementului intai si trecerea la 2, secventa primind restartarea 1, 3.'
+),
+(
+    'medium', 'choice', 'Backtracking', 'Teorie si aplicare practica',
+    'Evaluarea ansamblului intreg de combinatii prezente sub forma de prezenta (bit 1) comparativ cu absent (bit 0) aferent gasirii submultimilor in situatia particulara a 4 numere va oferi drept capat un total calculat:',
+    NULL,
+    '["12 variante distincte", "8 solutii grupate uniform", "16 subseturi acoperind inclusiv multimea nula", "Aproximativ 24 structuri logice derivate in limite impuse fix"]'::jsonb,
+    2,
+    'Efectuarea selectiilor pur teoretice indica direct cate 2 alternative absolute (il pun in grup ori ba) cumulat simultan 4 nivele de lungime, rezultand produs constant calculat ca o putere a lui doi corespunzatoare (adica exponentul 4 de la baza 2).'
+),
+(
+    'hard', 'choice', 'Backtracking', 'Teorie si aplicare practica',
+    'Eficacitatea limitarii avansului in problema traditionala a pozitionarii de ranzboinici strategici pe sectiunile N x N cere formularea unor blocaje conditii ferme referitor interceptarea mutuala in diagonala incadrate asa (unde coordonatele candidate sunt linia si coloana i,j vs vechile alese k,l):',
+    NULL,
+    '["i != k si o interogare combinata la j != l pentru acuratete limitata", "Mentinerea distantelor cu abs(i - k) != abs(j - l)", "Proportionalitate adunata de gen i + j != k + l extinsa in conditii multiple", "Reducerea variabilitatii doar prin adaugarea unei verificari tip i+1 < j-1"]'::jsonb,
+    1,
+    'Modelarea pur geometrica a interceptarilor obisnuite de raze intre punctele tabelului trage concluzia validata universal unde o aliniere a inclinarilor transversale atesta in modulul matematic coordonate de linii perfect asortat diferentei coloanelor corespondente.'
+),
+
+-- ===================== GRAFURI SI ARBORI — Terminologie grafuri (4) =====================
+(
+    'easy', 'choice', 'Grafuri si Arbori', 'Terminologie grafuri',
+    'Vocabularul structural atribuit ansamblurilor neorientate specifica ca suma legaturilor (muchiilor) fizice care fuzioneaza un varf cu alte unitati este cuantificata generic definind:',
+    NULL,
+    '["Gradul matematic total aferent din punct de vedere local nodului respectiv", "Diametrul partial sau adancimea de intersectie a drumului", "Indicele extern fix referent incarcarii ramificate", "Volumul capacitatii totale absorbit treptat interzis a se cumula general"]'::jsonb,
+    0,
+    'Fiecare conexiune trasata vizual in retea de la un reper in plan echivaleaza adunarii unui segment la un prag numit grad, fara a face discriminari in intrari ori iesiri, datorita formei neorientate.'
+),
+(
+    'medium', 'choice', 'Grafuri si Arbori', 'Terminologie grafuri',
+    'Considerand reteaua vizuala stabilita din combinatia a 10 puncte izolate dar cuprinse de exact 15 legaturi in totalitate (neorientate), deduceti numarul obtinut daca adunam toate gradele fiecarui nod in parte.',
+    NULL,
+    '["15", "10", "30", "200"]'::jsonb,
+    2,
+    'Un principiu invariant de demonstratie din teoria retelelor stipuleaza obligatoriu ca orice legatura introdusa in schita adauga cate +1 pentru nodurile partajate (capete). Asta ridica scorul cu +2 per muchie adaugata vizual (15 inmultit cu 2 fix).'
+),
+(
+    'medium', 'choice', 'Grafuri si Arbori', 'Terminologie grafuri',
+    'Cate punturi logice incrucisate regasim obligatoriu la formarea structurii unui desen complet de retea neorientata constituita strict pe 5 varfuri distincte?',
+    NULL,
+    '["10 muchii", "15 muchii", "20 trasari de echivalenta", "25 conexiuni suprapuse central din total generat complet independent"]'::jsonb,
+    0,
+    'Generarea este completa (toate combinatiile posibile a doua elemente din 5 alese la intamplare neordonat). Formula ce simplifica calculul asigura combinarea de N(N-1) impartita in mod natural exact cu o reducere cu doi, ceea ce trage concluzia fixa (5*4/2=10).'
+),
+(
+    'hard', 'choice', 'Grafuri si Arbori', 'Terminologie grafuri',
+    'Conditia prealabila suficient de imperativa prin care o forma spatiala, presupunand ca e conectata integral dintr-o piesa solida, capata in final posibilitatea integrala de desfasurare a unui tur complet ciclic Eulerian presupune invariabil:',
+    NULL,
+    '["Un numar par al nodurilor continute din care pornesc lanturi izolate echivalente simetric in densitate paralela maxima din afara", "Absolut toate nodurile componente din lista se insumeaza si rezulta intr-o gradatie matematica individuala doar de valori strict de rang par", "Lipsa intersectiilor ciclice multiple formate si inexistenta inelului inchis redus cu valente asimetrice din start decodificat un numar sub zece varfuri minim", "Exact o combinatie selectata minim a doza din marginile cu indici si extremitati limitrofe sa posede grade exclusiv cu rezultanta o statistica complet arbitrara si variabila impar fara ciclicitate integrala din constructie minima dar garantand traseul"]'::jsonb,
+    1,
+    'Conceptul Eulerian te obliga teoretic mereu ca pentru orice vizita temporara intr-un varf in traversarea fara ridicari de creion, intrarea sa necesite organic si o portita paralela independenta de eliberare vizibila la plecare, motiv din care cantitatea si suma din porti intrare/iesire mentine bilantul par.'
+),
+
+-- ===================== GRAFURI SI ARBORI — Grafuri orientate (2) =====================
+(
+    'medium', 'choice', 'Grafuri si Arbori', 'Grafuri orientate',
+    'Conceptia diferentierii gradelor ce survine cand grafurile devin brusc retele prevazute prin semnalare cu sageti sensibile de propagare stabileste denumirea parametrului ''grad intern'' unui element reprezentand in fapt:',
+    NULL,
+    '["Cuantificarea emisiilor ramificate la start dirijate afara in afara", "Insumarea si monitorizarea sagetilor inregistrate la capat ce vizeaza ca destinatar fix acea tinta vizata frontal la aterizare pe el", "Ecuatia matematica a capacitatii diferentiale intre ce soseste masiv vs ce reuseste ulterior sa emita izolat direct in rest catre mediul inconjurator in mod continuu masurat matematic", "Numaratoarea pur orientativa aplicata unui nod intern daca are o traiectorie curbata intr-o bucla orientata circular in el insusi ca un grad fix de conexiune statica simplificata limitat la nivel intern structural strict si atat, considerata o valenta redundanta si fara impact suplimentar adnotat tehnic matematic detaliat din pacate pentru analiza generalizata simplificata maxim"]'::jsonb,
+    1,
+    'Sunt divizate natural valentele varfului in arce ce se opresc dinspre diverse surse tintind-l cu varful de traseu direct spre el ca reper principal de actiune pasiva localizata si numite generic interne din cauza directionarii limitrofe in ele, in timp celalalt spectru e numit opus activ pentru degajari si plecari din interior cu varful dus spre rest sub numele de externe active direct vizibil la o parcurgere normalizata logic in detaliile masuratorilor aplicate ulterior.'
+),
+(
+    'hard', 'choice', 'Grafuri si Arbori', 'Grafuri orientate',
+    'Modelati o structura unita cu sageti ce poseda initial arce (1->2), (2->3), (3->1), plus si inca unul singular de la 4 catre tinta 5. Modificarea ceruta ca arhitectura sa permita ca pornind din orice pozitie fixata la intamplare sa gasiti in final un traseu cursiv catre fiecare si absolut toate celelalte va depinde critic de:',
+    NULL,
+    '["Adunarea arcurilor ce se asigura de fuzionarea tuturor componentelor izolate separate partial prin uniri care alcatuiesc generic si sigur un mare si masiv circuit ciclic cuprinzator garantat la nivel general care trece cel putin pe la periferiile partilor rupte ca un mecanism continuu obligatoriu interschimband rute multiple ca rezerve garantate integral conectate circular la finalul procesului de conectivitate impus artificial aditional formand o harta coerenta conexa", "Faptul ca transformarea intr-un nivel complex global unificat e fizic restrictionata pentru formatiunile ce contin doua ramuri disjuncte in origine datorita absentei unui pod orientat la nastere care anuleaza iremediabil operatia teoretica cu orice tip de arc artificial pus izolat la test", "Doar sa injectam artificial minim si suficient teoretic inca un singur arc aruncat dintr-un varf de izolare ca reper (cum e nodul limitat 5) fortand destinatia lui inapoi ca ruta simplificata direct catre unul de inceput principal stabilit fix (cum e nodul referinta 1) rezolvand problema din intamplare favorabila a structurii existente si atat absolut izolat functional partial util fara alte costuri", "Tratamentul se opereaza exclusiv asigurand introducerea unui salt prin constructia fortata de muchie izolata aruncata complet fara criterii intamplator de la sursa reper cu indici 3 ce isi asigura scurgerea fluxului continuu directionat orb fix limitata spre izolatul vizat din exterior cu id 4 fara a avea in spate vreo teoretizare in consecinte matematice conexe profunde decat aplicare la un model simplu"]'::jsonb,
+    0,
+    'O retea dirijata atinge acel nivel remarcabil superior denumit tehnic global si garantat ''tare conex'' abia atunci exclusiv cand nu doar uneste piesele disjuncte intre ele singular linear cu poduri vulnerabile izolate orb, ci obliga sistemul integrat complex in totalitatea partilor unificate global intr-un urias circuit cuprinzator circular fortat unde reincarcarea inapoi din ultimele capete si varfuri limitrofe indepartate spre incepatori de surse principale asigura deblocarea returului ca posibilitate cursiva ciclica interioara valabila pentru absolut orice perechi evaluate separat din multimea completa formata ca o conditie standard din cerinte de siguranta garantand mereu circulatia la dublu sens.'
+),
+
+-- ===================== GRAFURI SI ARBORI — Grafuri neorientate (2) =====================
+(
+    'medium', 'choice', 'Grafuri si Arbori', 'Grafuri neorientate',
+    'Tabloul patratic reprezentativ asociat unui schelet logic sub denumirea matricei specifice utilizata in descrierea completa a conexiunilor neorientate se deosebeste esential grafic avand proprietatea garantata general ca:',
+    NULL,
+    '["Pastreaza complet simetria valorilor de la stanga dreapta orientat catre al doilea pilon secundar in oglinda", "Isi distribuie valorile intr-o simetrie izbitoare daca este rabatata fix deasupra diagonalei sale principale centrale", "Are pe toata intinderea liniei inferioare un format gol bazat in exclusivitate cu valori restrictionate din standardizare la zero curat stabilizat cu rol terminal la decodificari si incarcare de matrice in memorie fortata pe lungimi si pointeri externi standard la algoritm", "Marimea insumata ca valori de pe orice sectiune sau portiune aleasa va oferi garantat intotdeauna doar o suita fix de tip caracteristic mereu impara fara putinta de rasturnare paritara in context variabil ce aduna la un capat"]'::jsonb,
+    1,
+    'De vreme ce muchia nediferentiata de legatura stabilita din varful indexului intai catre coordonata doi marcheaza valoarea prezenta 1 si automat produce identic reflexia ei fizica garantata simbolic de la varful de sosire doi spre punctul intai cu alta valoare marcata de aceeasi cifra unu prezenta la incrucisarea liniei cu coloana inversata, tabloul complet rezulta rabatabil matematic fata in fata izbind strict si exclusiv trasajul format cu axa liniei de unire care este obligatoriu definita formal in algoritm de elementele diagonalei principale transversale.'
+),
+(
+    'hard', 'choice', 'Grafuri si Arbori', 'Grafuri neorientate',
+    'Intr-un peisaj virtual limitat alcatuit la inceput strict fix cu prezenta statica incadrata cu patru unitati independente dotate anterior complet intamplator si garantat cu cel putin 5 fire vizibile ca tronsoane fizice adaugate si prelucrate initial fara ordine si prioritati structurate detaliat grafic inca definitiv ci fixate pe o coala de studiu izolat matematic partial fara pretentii suplimentare complexe grafic detaliate, o intrebare apare legat de diversificarea formatiunilor limitate sub aspect combinatoriu: cate scheme derivate izolate cu titlul asumat de portiuni de retele extrase denumit partiale (extrase care pot incorpora la selectie atat forma maxima dar inclusiv reteaua redusa drastic golita) reusim in principiu total sa listam posibilitati teoretic derivate generabile matematic considerand optiuni variante la crearea lor limitata cu acele muchii listate la cerinta intiala si nu cele adaugate artificial ca lipsa intregire la retele complexe garantat izolate:',
+    NULL,
+    '["Aproximeaza maxim teoretic cu posibilitati si asigura la iesire 16 modele ce acopera structurile derivate in plaja limitata aleasa", "Valoarea dedusa prin multiplicare exponent asigura listare extinsa ce culmineaza fara retineri atingand 32 variante posibile derivabile selectate ca subcategorii pe un prag constant", "Extrage din limite deducand aplicat formula logicii asigura numar minim calculat ce coboara rezonabil in jurul unui plafon cu 25 situatii combinate izolat", "Masoara suma fortat combinata prin aditii simple in logica algoritmului scazut la rezultant de sub zece aducand totalul spre doar 10 variante limitate fortat restrictiv scurt asezate aleator"]'::jsonb,
+    1,
+    'O structura descrisa drept derivat partial poseda capacitatea fixa si neschimbata in a pastra fara alterari multimea punctelor nodale existente preluata original si operatiunea pur selectiva si independenta actionand cu o filigranare restrictiva si arbitrara strict fixata asupra submultimii firelor (muchiilor initiale de conexiune) prin regula includerii si omisiunii cu cate 2 alegeri da ori ba valabile simultan la nivel decizional de includere ori stergere si care cumulata ofera exponentul ca grad de variatie putere combinata fixat ca prag baza fixa ridicata la exponetialul format din dimensiunea intregii multimi primite adica muchii initial listate ca 5 izolate in totalitate (si rezulta din calul operatiunea clasica exponent baza numarul 2 elevat la treapta limitrof a exponentului cerut ca cinci si da la final produs stabil cu fix cifra izolata in numar exact de treizeci si doua de moduri distincte de generare teoretica valida matematica in teorie izolata complet logic si algoritm).'
+),
+
+-- ===================== GRAFURI SI ARBORI — Arbori (2) =====================
+(
+    'medium', 'choice', 'Grafuri si Arbori', 'Arbori',
+    'Scanand arhitectura simplificata sub prescriptia din vectorul tati incarcat fizic asa cum se arata in structura T = (4, 4, 0, 3, 1, 3, 5), ce element isi trage privilegiul originii neavand un ascensor desemnat figurand deci nod radacina?',
+    NULL,
+    '["Precursor cu titlul de Nod 4 fixat", "Index initial limitat Nod 0 fix orientat de studiu restrictiv pe eroare adresa index fals pozitiv generat din greseli tipar algoritm fara corectie stabilita", "Radacina valida stabilita ca fiind garantat indicata direct de Nod 3 limitrof cu informatii pozitive incarcate fix stabilite izolat matematic cu sens clar descifrat usor rapid", "Desemnare artificiala Nod 1 adaugat fortat in analiza de date cu valori false din test fara semnificatie la structura reala stabilita logic usor dovedibil limitat fix de regula generala aplicata garantat in arbori ca si in practica studiilor clasice izolate si corecte"]'::jsonb,
+    2,
+    'Punctul de origine initial al oricarui copac matematic din stucturile generice analizate sub forma in liste tati izolate pe date nu admite teoretic niciun precursor la baza care sa-l fi nascut limitrof vizibil pe harta ascendentei directe a arborelui cu varf fix in radacina superioara pozitionata ierarhic. Absenta aceasta e conventional fixata standardizat printr-un reper valoare nula (semnul conventional 0). Acel 0 marcat fizic cu un id vizibil in vectorul enumerat figureaza strict in dreptul a treia pozitii ocupate ierarhic ordonat (indexul trei alocarii initiale pozitive luata de la cap in numerotare incepand listare de la baza unu pana la limitativ sapte id nod intalnit fara adaugiri izolate). Se deduce prin coroborare cu id-ul pozitiv ca este sigur vorba strict fixat logic cu argument garantat doar de varful nod asociat si botezat clar cu cifra id trei si punct.'
+),
+(
+    'hard', 'choice', 'Grafuri si Arbori', 'Arbori',
+    'Studiati o reprezentare incarcata a arborelui radacina memorata integral sub conventia si aspectul tabloului ascensiunii parentale sub valoarea listei tati avand fixata ordinea formata: (3, 4, 0, 3, 4, 8, 2, 3). Acceptand prin impunere ierarhica formala logica in structura izolata considerand un inceput cu radacina sa situata (varful 3 id) plasata invariabil in baza la index prag de subsol considerat vizibil ca nivel zero cu id pozitiv absolut de incadrare ca inaltime pornire. Va intrebam ca extragere si calcul final fix sa stabiliti dupa cercetare atenta care se atinge ca limita maxima prag limita atins evaluat teoretic considerat in calcul distanta ca nivel cu valoare absoluta masurat complet ca lungime vizibila formata in extinderea ca cel mai departat nod indepartat fizic masurat la de radacina pana izolat ultim descendent din crengi terminale izolate ca masuratoare numerica valida izolat corect formulat?',
+    NULL,
+    '["O lungime coborata limitata simplu un etaj de masura considerat nivel unu valoare adunata restrictiva", "Traseul garantat extins dar taiat subit sub limitativ valoare izolata treapta adanca doi ca grad masurat pozitiv corelat cu descendenti formati artificial logic adnotat simplu fix considerat ca masuratoare valida izolata", "Lungimea ramurii extinsa culmineaza in structura fixata si izolata dupa adunari insumand prag terminal trei garantat dedus precis", "Lanturile izolate depasesc adancimea modesta prelungite extins incarcand reteaua spre nivel cu plafon asezat sub indice terminal la o adancime evaluata considerata stabil fix ca fiind sub treapta a patra inclusiv numarata general fara omisiuni si extinsa in practica ca valoare calculata real asezat patru id plafon"]'::jsonb,
+    2,
+    'Pornind de la reper id stabilit ca centru zero adica insasi radacina ce figureaza logic si fix stabil pe baza treapta zero (varful nod id 3). Progresul avansand ramifica ierarhic deducand prima extindere de urmasi fiii radacinii identificati in pozitiile vector (unde s-a id listat cifra reperului trei tati) descopera punctele id pozitive 1, varful 4 si capatul nod id 8 reprezentand coborare atingand prag pe nivel prim id masurat in trepte valoare grad unu extins din start izolat de sursa. Mergand inca adanc explorat generand pe fiii urmasilor limitrofi extrasi anterior listati coborata descendent (celei treapta nivel unu extinsa) gasim si identificam fiii dedusi varful id doi plus si varf cinci ambele din radacina intermediar id patru precum se asociaza si capat id 6 originat id 8 si ating limita asezare prag nivel a doua id treapta considerat logic din lant parcurs asezat clar izolat sub incidenta masuratorilor coborata. Iar ca varf terminal coborat extrem din descendenti descifrati mai adanc si localizat singuratic gasim fiu din parinte varf sub id doi care se extrage vizual listat capat izolat si este varful final nod id 7 el terminand traseu fix asezat atingand nivel maxim din lanturile extinse pe plafon al treilea si ultim evaluat ca un capat de drum fix adanc limitat izolat (si notat simplu 3 valoare nivel extinsa izolata). Daca nivelul incepe strict fix si masurat formal din zero rezultant total fixat logic se incadreaza si e atins doar izolat si precis treapta limitata la un maxim asezat valoare nivel trei izolat asezat la cap. Optiune corespondenta e 3 din cele oferite.'
 );
