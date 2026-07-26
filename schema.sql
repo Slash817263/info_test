@@ -1,6 +1,19 @@
 -- SQL Schema for Supabase
 
--- Table for quiz questions
+-- 1. Upgrade existing 'questions' table if it exists
+ALTER TABLE IF EXISTS questions 
+    ADD COLUMN IF NOT EXISTS category TEXT,
+    ADD COLUMN IF NOT EXISTS subcategory TEXT;
+
+-- 2. Upgrade existing 'results' table if it exists
+ALTER TABLE IF EXISTS results 
+    ADD COLUMN IF NOT EXISTS student_email TEXT,
+    ADD COLUMN IF NOT EXISTS test_type TEXT DEFAULT 'initial',
+    ADD COLUMN IF NOT EXISTS blur_count INTEGER DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS answers_json JSONB,
+    ADD COLUMN IF NOT EXISTS details_json JSONB;
+
+-- 3. Create 'questions' table if it doesn't exist at all
 CREATE TABLE IF NOT EXISTS questions (
     id SERIAL PRIMARY KEY,
     difficulty TEXT NOT NULL,          -- 'easy', 'medium', 'hard'
@@ -14,7 +27,7 @@ CREATE TABLE IF NOT EXISTS questions (
     explanation TEXT NOT NULL          -- Explanation for the answer
 );
 
--- Table for student test submissions
+-- 4. Create 'results' table if it doesn't exist at all
 CREATE TABLE IF NOT EXISTS results (
     id SERIAL PRIMARY KEY,
     student_name TEXT NOT NULL,
