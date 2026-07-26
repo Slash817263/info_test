@@ -12,6 +12,15 @@ exports.handler = async function(event, context) {
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+    const adminToken = process.env.ADMIN_SECRET || 'admin123';
+
+    if (event.headers['x-admin-token'] !== adminToken) {
+        return {
+            statusCode: 401,
+            headers,
+            body: JSON.stringify({ error: 'Unauthorized: Invalid Admin Token' })
+        };
+    }
 
     if (!supabaseUrl || !supabaseKey) {
         return {

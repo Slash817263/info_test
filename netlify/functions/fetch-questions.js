@@ -54,9 +54,7 @@ exports.handler = async function(event, context) {
                 subcategory: q.subcategory || null,
                 text: q.text,
                 code: q.code,
-                options: options,
-                correct: q.correct_index,
-                explanation: q.explanation
+                options: options
             };
         });
 

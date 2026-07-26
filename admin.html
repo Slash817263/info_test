@@ -346,6 +346,17 @@
         const API_MANAGE_Q = '/.netlify/functions/manage-questions';
         const API_DEL_RESULT = '/.netlify/functions/delete-result';
 
+        let adminToken = sessionStorage.getItem('adminToken');
+        if (!adminToken) {
+            adminToken = prompt('Introduceti parola de administrare:');
+            if (adminToken) sessionStorage.setItem('adminToken', adminToken);
+        }
+
+        const fetchWithToken = (url, options = {}) => {
+            const headers = { ...options.headers, 'x-admin-token': adminToken || '' };
+            return fetch(url, { ...options, headers });
+        };
+
         let resultsData = [];
         let questionsData = [];
 
@@ -384,7 +395,7 @@
         /* ==================== REZULTATE ==================== */
         async function loadResults() {
             try {
-                const res = await fetch(API_RESULTS);
+                const res = await fetchWithToken(API_RESULTS);
                 if(!res.ok) throw new Error();
                 resultsData = await res.json();
                 document.getElementById('loading-results').style.display = 'none';
@@ -415,13 +426,12 @@
 
         function renderResults() {
             const tbody = document.getElementById('results-body');
-            tbody.innerHTML = '';
+            const htmlArr = [];
             resultsData.forEach(r => {
                 const pct = Math.round((r.score / r.total_points) * 100);
                 let sc = 'score-low'; if(pct >= 85) sc = 'score-excellent'; else if(pct >= 60) sc = 'score-good'; else if(pct >= 35) sc = 'score-medium';
                 const bl = r.blur_count || 0;
-                
-                tbody.innerHTML += `
+                htmlArr.push(`
                     <tr>
                         <td>
                             <div class="student-name">${escapeHtml(r.student_name)}</div>
@@ -434,14 +444,15 @@
                         <td style="color:var(--text-secondary)">${formatDate(r.created_at)}</td>
                         <td><button class="btn btn-danger" onclick="deleteResult(${r.id})">Șterge</button></td>
                     </tr>
-                `;
+                `);
             });
+            tbody.innerHTML = htmlArr.join('');
         }
 
         async function deleteResult(id) {
             if(!confirm("Sigur ștergi acest rezultat?")) return;
             try {
-                const res = await fetch(`${API_DEL_RESULT}?id=${id}`, { method: 'DELETE' });
+                const res = await fetchWithToken(`${API_DEL_RESULT}?id=${id}`, { method: 'DELETE' });
                 if(res.ok) {
                     showToast('Rezultat șters!');
                     resultsData = resultsData.filter(r => r.id !== id);
@@ -476,13 +487,12 @@
 
         function renderQuestions() {
             const tbody = document.getElementById('questions-body');
-            tbody.innerHTML = '';
+            const htmlArr = [];
             questionsData.forEach(q => {
                 const diffMap = { easy: { l: 'Ușor', c: 'var(--accent-green)' }, medium: { l: 'Mediu', c: 'var(--accent-amber)' }, hard: { l: 'Greu', c: 'var(--accent-red)' } };
                 const df = diffMap[q.difficulty] || { l: q.difficulty, c: '#fff' };
                 const snippet = q.text.length > 50 ? q.text.substring(0, 50) + '...' : q.text;
-
-                tbody.innerHTML += `
+                htmlArr.push(`
                     <tr>
                         <td style="font-family:var(--font-code); color:var(--text-muted)">#${q.id}</td>
                         <td>
@@ -498,14 +508,15 @@
                             </div>
                         </td>
                     </tr>
-                `;
+                `);
             });
+            tbody.innerHTML = htmlArr.join('');
         }
 
         async function deleteQuestion(id) {
             if(!confirm("Sigur ștergi întrebarea din baza de date?")) return;
             try {
-                const res = await fetch(`${API_MANAGE_Q}?id=${id}`, { method: 'DELETE' });
+                const res = await fetchWithToken(`${API_MANAGE_Q}?id=${id}`, { method: 'DELETE' });
                 if(res.ok) {
                     showToast('Întrebare ștearsă!');
                     questionsData = questionsData.filter(q => q.id !== id);
@@ -591,7 +602,7 @@
             document.getElementById('btn-save-q').textContent = 'Se salvează...';
 
             try {
-                const res = await fetch(url, {
+                const res = await fetchWithToken(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

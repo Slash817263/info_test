@@ -736,15 +736,9 @@
             finishQuiz(true);
         }
 
-        async function submitResult(results, timeTakenMs) {
+        async function submitResult(timeTakenMs) {
             try {
-                const detailsForSave = results.details.map((d, i) => ({
-                    questionId: questions[i].id || i,
-                    difficulty: d.difficulty,
-                    category: questions[i].category || null,
-                    isCorrect: d.isCorrect,
-                    timeMs: state.questionTimings[i] || 0,
-                }));
+                const questionIds = questions.map(q => q.id);
 
                 const response = await fetch('/.netlify/functions/save-result', {
                     method: 'POST',
@@ -753,21 +747,51 @@
                         student_name: state.studentName,
                         student_email: state.studentEmail || null,
                         test_type: state.testType,
-                        score: results.totalPoints,
-                        total_points: results.maxPoints,
                         time_taken_ms: timeTakenMs,
                         blur_count: state.blurCount,
                         answers_json: state.answers,
-                        details_json: detailsForSave,
+                        question_ids: questionIds
                     })
                 });
+
                 if (!response.ok) {
                     console.error('Server error saving results');
+                    els.resultsContainer.innerHTML = '<div class="empty-state"><p style="color:var(--accent-red);">Eroare la salvarea rezultatelor pe server.</p></div>';
+                    return;
                 }
+
+                const data = await response.json();
+                
+                const results = {
+                    totalCorrect: data.evaluatedDetails.filter(d => d.isCorrect).length,
+                    totalPoints: data.score,
+                    maxPoints: data.totalPoints,
+                    easyCorrect: data.stats.easy.c, easyTotal: data.stats.easy.t,
+                    mediumCorrect: data.stats.medium.c, mediumTotal: data.stats.medium.t,
+                    hardCorrect: data.stats.hard.c, hardTotal: data.stats.hard.t,
+                    details: data.evaluatedDetails
+                };
+
+                const pct = results.totalPoints / results.maxPoints;
+                if (pct <= 0.33) {
+                    results.level = { key: 'beginner', name: 'Începător', icon: '🌱', class: 'level-beginner', description: 'Ai completat testul! Hai să construim împreună o fundație solidă în programare C++.' };
+                } else if (pct <= 0.58) {
+                    results.level = { key: 'intermediate', name: 'Intermediar', icon: '📘', class: 'level-intermediate', description: 'Bun lucru! Ai o bază pe care putem construi. Ne vom concentra pe exerciții practice și aprofundarea conceptelor.' };
+                } else if (pct <= 0.83) {
+                    results.level = { key: 'advanced', name: 'Avansat', icon: '🚀', class: 'level-advanced', description: 'Impresionant! Cunoștințele tale sunt puternice. Vom lucra pe probleme complexe și tehnici avansate.' };
+                } else {
+                    results.level = { key: 'expert', name: 'Expert', icon: '🏆', class: 'level-expert', description: 'Excelent! Ești foarte bine pregătit! Vom trece la antrenament intensiv de tip concurs.' };
+                }
+                
+                window.lastResults = results;
+                renderResults(results);
+                
             } catch (err) {
                 console.error('Network error saving results', err);
+                els.resultsContainer.innerHTML = '<div class="empty-state"><p style="color:var(--accent-red);">Eroare de rețea. Nu s-a putut conecta la server.</p></div>';
             }
         }
+
 
         /* ========================================================================
            ANSWER HANDLING
@@ -802,66 +826,9 @@
         }
 
         /* ========================================================================
-           RESULTS CALCULATION
+           RESULTS CALCULATION (Moved to server)
            ======================================================================== */
-        function calculateResults() {
-            const pointsMap = { easy: 1, medium: 2, hard: 3 };
 
-            // Count questions per difficulty dynamically
-            const difficultyCounts = { easy: 0, medium: 0, hard: 0 };
-            questions.forEach(q => difficultyCounts[q.difficulty]++);
-
-            const maxPoints = questions.reduce((sum, q) => sum + pointsMap[q.difficulty], 0);
-
-            const results = {
-                totalCorrect: 0,
-                totalPoints: 0,
-                maxPoints: maxPoints,
-                easyCorrect: 0, easyTotal: difficultyCounts.easy,
-                mediumCorrect: 0, mediumTotal: difficultyCounts.medium,
-                hardCorrect: 0, hardTotal: difficultyCounts.hard,
-                details: []
-            };
-
-            questions.forEach((q, i) => {
-                const isCorrect = state.answers[i] === q.correct;
-                const points = isCorrect ? pointsMap[q.difficulty] : 0;
-
-                if (isCorrect) {
-                    results.totalCorrect++;
-                    if (q.difficulty === 'easy') results.easyCorrect++;
-                    if (q.difficulty === 'medium') results.mediumCorrect++;
-                    if (q.difficulty === 'hard') results.hardCorrect++;
-                }
-
-                results.totalPoints += points;
-
-                results.details.push({
-                    number: i + 1,
-                    difficulty: q.difficulty,
-                    text: q.text,
-                    isCorrect,
-                    studentAnswer: state.answers[i],
-                    correctAnswer: q.correct,
-                    options: q.options,
-                    explanation: q.explanation
-                });
-            });
-
-            // Level classification (percentage-based)
-            const pct = results.totalPoints / results.maxPoints;
-            if (pct <= 0.33) {
-                results.level = { key: 'beginner', name: 'Începător', icon: '🌱', class: 'level-beginner', description: 'Ai completat testul! Hai să construim împreună o fundație solidă în programare C++.' };
-            } else if (pct <= 0.58) {
-                results.level = { key: 'intermediate', name: 'Intermediar', icon: '📘', class: 'level-intermediate', description: 'Bun lucru! Ai o bază pe care putem construi. Ne vom concentra pe exerciții practice și aprofundarea conceptelor.' };
-            } else if (pct <= 0.83) {
-                results.level = { key: 'advanced', name: 'Avansat', icon: '🚀', class: 'level-advanced', description: 'Impresionant! Cunoștințele tale sunt puternice. Vom lucra pe probleme complexe și tehnici avansate.' };
-            } else {
-                results.level = { key: 'expert', name: 'Expert', icon: '🏆', class: 'level-expert', description: 'Excelent! Ești foarte bine pregătit! Vom trece la antrenament intensiv de tip concurs.' };
-            }
-
-            return results;
-        }
 
         /* ========================================================================
            RESULTS RENDERING
@@ -1004,7 +971,7 @@
            SHARE FUNCTIONALITY
            ======================================================================== */
         function getResultsText() {
-            const results = calculateResults();
+            const results = window.lastResults;
             const elapsed = state.endTime - state.startTime;
             const timeStr = formatTime(elapsed);
             const percent = Math.round((results.totalPoints / results.maxPoints) * 100);
@@ -1062,27 +1029,38 @@
         /* ========================================================================
            TEST TYPE SELECTION
            ======================================================================== */
+        function fisherYatesShuffle(array) {
+            const arr = [...array];
+            let currentIndex = arr.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [arr[currentIndex], arr[randomIndex]] = [arr[randomIndex], arr[currentIndex]];
+            }
+            return arr;
+        }
+
         function selectTestType(type) {
             state.testType = type;
+            const easy = allQuestions.filter(q => q.difficulty === 'easy');
+            const medium = allQuestions.filter(q => q.difficulty === 'medium');
+            const hard = allQuestions.filter(q => q.difficulty === 'hard');
 
             if (type === 'intermediar') {
-                // Select 10 easy, 10 medium, 10 hard randomly
-                const easy = allQuestions.filter(q => q.difficulty === 'easy');
-                const medium = allQuestions.filter(q => q.difficulty === 'medium');
-                const hard = allQuestions.filter(q => q.difficulty === 'hard');
-
-                const shuffle = arr => arr.sort(() => Math.random() - 0.5);
                 questions = [
-                    ...shuffle(easy).slice(0, 10),
-                    ...shuffle(medium).slice(0, 10),
-                    ...shuffle(hard).slice(0, 10)
+                    ...fisherYatesShuffle(easy).slice(0, 10),
+                    ...fisherYatesShuffle(medium).slice(0, 10),
+                    ...fisherYatesShuffle(hard).slice(0, 10)
                 ];
-                // Shuffle the combined set so difficulties are mixed
-                questions = shuffle(questions);
+                questions = fisherYatesShuffle(questions);
 
                 timerDurationMs = CONFIG.timerIntermediar;
             } else {
-                questions = [...allQuestions];
+                questions = [
+                    ...fisherYatesShuffle(easy),
+                    ...fisherYatesShuffle(medium),
+                    ...fisherYatesShuffle(hard)
+                ];
                 timerDurationMs = CONFIG.timerInitial;
             }
 
@@ -1148,13 +1126,12 @@
                 cards.forEach(c => c.style.pointerEvents = 'none');
             }
 
-            const results = calculateResults();
             const elapsed = state.endTime - state.startTime;
 
             showScreen('results');
-            renderResults(results);
+            els.resultsContainer.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Se evaluează testul pe server...</p></div>';
 
-            await submitResult(results, elapsed);
+            await submitResult(elapsed);
         }
 
         function restartQuiz() {
@@ -1195,20 +1172,25 @@
         /* ========================================================================
            ANTI-CHEAT: BLUR/FOCUS TRACKING
            ======================================================================== */
+        function triggerBlur() {
+            if (!els.screenQuiz.classList.contains('active')) return;
+            state.blurCount++;
+            els.blurCountDisplay.textContent = state.blurCount;
+            saveStateToStorage();
+
+            if (state.blurCount >= 5) {
+                els.anticheatBadge.className = 'anticheat-badge danger';
+            } else if (state.blurCount >= 2) {
+                els.anticheatBadge.className = 'anticheat-badge warned';
+            }
+        }
+
         function setupAntiCheat() {
             document.addEventListener('visibilitychange', () => {
-                if (!els.screenQuiz.classList.contains('active')) return;
-                if (document.hidden) {
-                    state.blurCount++;
-                    els.blurCountDisplay.textContent = state.blurCount;
-                    saveStateToStorage();
-
-                    if (state.blurCount >= 5) {
-                        els.anticheatBadge.className = 'anticheat-badge danger';
-                    } else if (state.blurCount >= 2) {
-                        els.anticheatBadge.className = 'anticheat-badge warned';
-                    }
-                }
+                if (document.hidden) triggerBlur();
+            });
+            window.addEventListener('blur', () => {
+                triggerBlur();
             });
         }
 
