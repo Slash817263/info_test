@@ -152,7 +152,7 @@
         .question-item:hover { background: rgba(255,255,255,0.02); }
         .question-item:last-child { border-bottom: none; }
         .q-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-        .q-text { font-size: 14px; color: var(--text-primary); line-height: 1.5; }
+        .q-text { font-size: 14px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .badge-easy { background: rgba(52, 211, 153, 0.15); color: var(--accent-green); }
         .badge-medium { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); }
@@ -657,7 +657,7 @@
                                         <span class="badge ${df.c}">${df.l}</span>
                                         <span class="badge" style="background:rgba(102,126,234,0.15); color:var(--accent-blue)">${typeLabel}</span>
                                     </div>
-                                    <div class="q-text">${escapeHtml(q.text)}</div>
+                                    <div class="q-text">${escapeHtml(q.text.replace(/\\n/g, '\n'))}</div>
                                 </div>
                                 <div class="actions">
                                     <button class="btn btn-edit" onclick="editQuestion(${q.id})">Editează</button>
