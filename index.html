@@ -166,7 +166,7 @@
         .badge-hard { background: rgba(248, 113, 113, 0.15); color: var(--accent-red); }
         .badge-type { background: rgba(102, 126, 234, 0.12); color: var(--accent-blue); }
         .question-content { margin-bottom: 28px; }
-        .question-text { font-size: clamp(16px, 3.5vw, 19px); font-weight: 500; line-height: 1.7; color: var(--text-primary); }
+        .question-text { font-size: clamp(16px, 3.5vw, 19px); font-weight: 500; line-height: 1.7; color: var(--text-primary); white-space: pre-wrap; }
         .code-block-wrapper { margin-top: 20px; position: relative; border-radius: var(--radius-md); overflow: hidden; border: 1px solid rgba(102, 126, 234, 0.15); }
         .code-label { background: rgba(102, 126, 234, 0.12); color: var(--accent-blue); font-size: 11px; font-weight: 600; padding: 6px 14px; letter-spacing: 0.5px; font-family: var(--font-code); }
         .code-block { background: var(--bg-code); padding: 20px; font-family: var(--font-code); font-size: clamp(13px, 2.8vw, 15px); line-height: 1.8; color: #c8c8e8; overflow-x: auto; white-space: pre; margin: 0; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.1) transparent; font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
@@ -319,7 +319,7 @@
                     <span class="stat-label">Minute</span>
                 </div>
             </div>
-            <div class="input-group">
+            <div class="input-group" id="name-group" style="display: none;">
                 <label for="student-name">Cum te numești?</label>
                 <input type="text" id="student-name" placeholder="Introdu numele tău..." autocomplete="name"
                     maxlength="50">
@@ -346,41 +346,6 @@
         </div>
     </main>
 
-    <!-- ==================== TEST SELECT SCREEN ==================== -->
-    <main id="screen-select" class="screen">
-        <div class="select-container">
-            <h2>Alege tipul de <span class="gradient-text">testare</span></h2>
-            <p class="select-subtitle" id="select-greeting">Bine ai venit! Selectează tipul de test pe care dorești să-l susții.</p>
-            <div class="test-options">
-                <div class="test-option-card" id="opt-initial" onclick="selectTestType('initial')">
-                    <div class="test-option-icon">📋</div>
-                    <div class="test-option-title">Test Inițial</div>
-                    <div class="test-option-desc">Evaluare completă a cunoștințelor tale. Acoperă toate categoriile de materie.</div>
-                    <div class="test-option-specs">
-                        <span class="test-spec">50 întrebări</span>
-                        <span class="test-spec">30 minute</span>
-                    </div>
-                </div>
-                <div class="test-option-card" id="opt-intermediar" onclick="selectTestType('intermediar')">
-                    <div class="test-option-icon">🎯</div>
-                    <div class="test-option-title">Test Intermediar</div>
-                    <div class="test-option-desc">Evaluare rapidă cu selecție echilibrată de întrebări pe fiecare nivel.</div>
-                    <div class="test-option-specs">
-                        <span class="test-spec">30 întrebări</span>
-                        <span class="test-spec">20 minute</span>
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-ghost select-back" onclick="showScreen('welcome')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 12H5" />
-                    <path d="m12 19-7-7 7-7" />
-                </svg>
-                Înapoi
-            </button>
-        </div>
-    </main>
 
     <!-- ==================== QUIZ SCREEN ==================== -->
     <main id="screen-quiz" class="screen">
@@ -482,7 +447,7 @@
         /* ========================================================================
            QUESTIONS DATA — Loaded Dynamically from Supabase
            ======================================================================== */
-        let allQuestions = [];  // All 50 questions from DB
+  // All 50 questions from DB
         let questions = [];     // Active quiz questions (50 or 30 subset)
 
         /* ========================================================================
@@ -499,6 +464,7 @@
             blurCount: 0,
             questionTimings: [],     // ms spent on each question
             questionEnteredAt: null, // timestamp when current question was shown
+            needName: false,        // true when user is new and needs to enter name
         };
 
         /* ========================================================================
@@ -914,7 +880,7 @@
                                 <span class="review-icon">${icon}</span>
                                 <div class="review-answer-detail">
                                     <strong>${detail}</strong><br>
-                                    ${escapeHtml(d.explanation)}
+                                    ${escapeHtml(d.explanation || '')}
                                 </div>
                             </div>
                         `;
@@ -1027,62 +993,78 @@
         }
 
         /* ========================================================================
-           TEST TYPE SELECTION
+           QUESTION SELECTION & TEST TYPE
            ======================================================================== */
-        function fisherYatesShuffle(array) {
-            const arr = [...array];
-            let currentIndex = arr.length, randomIndex;
-            while (currentIndex !== 0) {
-                randomIndex = Math.floor(Math.random() * currentIndex);
-                currentIndex--;
-                [arr[currentIndex], arr[randomIndex]] = [arr[randomIndex], arr[currentIndex]];
-            }
-            return arr;
-        }
 
-        function selectTestType(type) {
+
+        async function selectTestType(type, email) {
             state.testType = type;
-            const easy = allQuestions.filter(q => q.difficulty === 'easy');
-            const medium = allQuestions.filter(q => q.difficulty === 'medium');
-            const hard = allQuestions.filter(q => q.difficulty === 'hard');
-
-            if (type === 'intermediar') {
-                questions = [
-                    ...fisherYatesShuffle(easy).slice(0, 10),
-                    ...fisherYatesShuffle(medium).slice(0, 10),
-                    ...fisherYatesShuffle(hard).slice(0, 10)
-                ];
-                questions = fisherYatesShuffle(questions);
-
-                timerDurationMs = CONFIG.timerIntermediar;
-            } else {
-                questions = [
-                    ...fisherYatesShuffle(easy),
-                    ...fisherYatesShuffle(medium),
-                    ...fisherYatesShuffle(hard)
-                ];
-                timerDurationMs = CONFIG.timerInitial;
+            els.btnContinue.innerHTML = '<span>Se pregătesc întrebările...</span>';
+            
+            try {
+                const res = await fetch(`/.netlify/functions/fetch-questions?type=${type}&email=${encodeURIComponent(email)}`);
+                if (!res.ok) throw new Error();
+                const fetchedQs = await res.json();
+                
+                questions = fetchedQs;
+                timerDurationMs = type === 'intermediar' ? CONFIG.timerIntermediar : CONFIG.timerInitial;
+                
+                localStorage.setItem('quiz_questions_ids', JSON.stringify(questions.map(q => q.id)));
+                startQuiz();
+            } catch(e) {
+                showToast('Eroare la încărcarea întrebărilor.');
+                els.btnContinue.innerHTML = '<span>Continuă</span>';
+                els.btnContinue.disabled = false;
             }
-
-            // Save question ids for session restore
-            localStorage.setItem('quiz_questions_ids', JSON.stringify(questions.map(q => q.id)));
-
-            startQuiz();
         }
 
         /* ========================================================================
            QUIZ LIFECYCLE
            ======================================================================== */
-        function goToSelect() {
-            const name = els.studentName.value.trim();
+        async function handleLogin() {
             const email = els.studentEmail.value.trim();
-            if (!name || !questionsLoaded) return;
-
-            state.studentName = name;
-            state.studentEmail = email;
-
-            els.selectGreeting.textContent = `Bine ai venit, ${name}! Selectează tipul de test pe care dorești să-l susții.`;
-            showScreen('select');
+            if (!email || !questionsLoaded) return;
+            
+            if (!state.needName) {
+                els.btnContinue.disabled = true;
+                const originalText = els.btnContinue.innerHTML;
+                els.btnContinue.innerHTML = '<span>Se verifică...</span>';
+                
+                try {
+                    const res = await fetch('/.netlify/functions/check-user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.exists) {
+                        state.studentName = data.name;
+                        state.studentEmail = email;
+                        await selectTestType('intermediar', email);
+                    } else {
+                        // New user
+                        state.needName = true;
+                        document.getElementById('name-group').style.display = 'block';
+                        els.btnContinue.innerHTML = '<span>Începe Testul</span>';
+                        els.btnContinue.disabled = true;
+                        els.studentName.focus();
+                    }
+                } catch(e) {
+                    showToast('Eroare la conectare.');
+                    els.btnContinue.innerHTML = originalText;
+                    els.btnContinue.disabled = false;
+                }
+            } else {
+                // New user submitted name
+                const name = els.studentName.value.trim();
+                if (!name) return;
+                state.studentName = name;
+                state.studentEmail = email;
+                els.btnContinue.disabled = true;
+                els.btnContinue.innerHTML = '<span>Se pornește...</span>';
+                await selectTestType('initial', email);
+            }
         }
 
         function startQuiz() {
@@ -1147,9 +1129,13 @@
             state.blurCount = 0;
             state.questionTimings = [];
             state.questionEnteredAt = null;
+            state.needName = false;
+            document.getElementById('name-group').style.display = 'none';
             showScreen('welcome');
-            els.studentName.value = state.studentName;
-            els.studentEmail.value = state.studentEmail;
+            els.studentName.value = '';
+            els.studentEmail.value = '';
+            state.studentName = '';
+            state.studentEmail = '';
             validateWelcomeForm();
 
             const timerBadge = $('#quiz-timer');
@@ -1164,9 +1150,13 @@
            FORM VALIDATION
            ======================================================================== */
         function validateWelcomeForm() {
+            const emailOk = els.studentEmail.value.trim().length > 0 && els.studentEmail.value.includes('@') && els.studentEmail.value.includes('.');
             const nameOk = els.studentName.value.trim().length > 0;
-            const emailOk = els.studentEmail.value.trim().length === 0 || els.studentEmail.value.includes('@');
-            els.btnContinue.disabled = !nameOk || !questionsLoaded || !emailOk;
+            if (state.needName) {
+                els.btnContinue.disabled = !nameOk || !emailOk || !questionsLoaded;
+            } else {
+                els.btnContinue.disabled = !emailOk || !questionsLoaded;
+            }
         }
 
         /* ========================================================================
@@ -1201,15 +1191,15 @@
         els.studentName.addEventListener('input', validateWelcomeForm);
         els.studentEmail.addEventListener('input', validateWelcomeForm);
 
-        // Continue button -> test selection
-        els.btnContinue.addEventListener('click', goToSelect);
+        // Continue button -> handles login logic
+        els.btnContinue.addEventListener('click', handleLogin);
 
         // Enter key on inputs
         els.studentName.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') els.studentEmail.focus();
         });
         els.studentEmail.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !els.btnContinue.disabled) goToSelect();
+            if (e.key === 'Enter' && !els.btnContinue.disabled) handleLogin();
         });
 
         // Option selection (delegated)
@@ -1269,9 +1259,7 @@
 
         async function initApp() {
             try {
-                const response = await fetch('/.netlify/functions/fetch-questions');
-                if (!response.ok) throw new Error('Nu s-au putut prelua intrebarile.');
-                allQuestions = await response.json();
+                // Questions are loaded dynamically on login
                 questionsLoaded = true;
 
                 // Check localStorage for active session
@@ -1281,21 +1269,29 @@
                 const savedAnswers = localStorage.getItem('quiz_answers');
                 const savedTestType = localStorage.getItem('quiz_test_type');
                 const savedQuestionsIds = localStorage.getItem('quiz_questions_ids');
+                const savedStudentEmail = localStorage.getItem('quiz_student_email');
 
-                if (savedStartTime && savedStudentName && savedAnswers && savedQuestionsIds) {
+                if (savedStartTime && savedStudentName && savedAnswers && savedQuestionsIds && savedStudentEmail) {
                     state.startTime = parseInt(savedStartTime);
                     state.studentName = savedStudentName;
-                    state.studentEmail = localStorage.getItem('quiz_student_email') || '';
+                    state.studentEmail = savedStudentEmail;
                     state.testType = savedTestType || 'initial';
                     state.blurCount = parseInt(localStorage.getItem('quiz_blur_count') || '0');
                     state.currentQuestion = savedCurrentQuestion ? parseInt(savedCurrentQuestion) : 0;
 
-                    // Restore question set
+                    // Fetch exactly the questions for the restored test
                     const savedIds = JSON.parse(savedQuestionsIds);
-                    questions = savedIds.map(id => allQuestions.find(q => q.id === id)).filter(Boolean);
+                    const idsParam = savedIds.join(',');
+                    const res = await fetch(`/.netlify/functions/fetch-questions?ids=${idsParam}`);
+                    if (res.ok) {
+                        const fetchedQs = await res.json();
+                        questions = fetchedQs;
+                    }
 
                     if (questions.length === 0) {
-                        questions = [...allQuestions];
+                        // fallback if failed to fetch
+                        clearStateFromStorage();
+                        return showScreen('welcome');
                     }
 
                     timerDurationMs = state.testType === 'intermediar' ? CONFIG.timerIntermediar : CONFIG.timerInitial;
@@ -1332,13 +1328,13 @@
                 }
             } catch (err) {
                 console.error('Initialization error:', err);
-                showToast('Eroare la incarcarea testului. Va rugam reincarcati pagina.');
+                showToast('Eroare la incarcarea testului.');
             }
         }
 
         // Initialize App
         initApp();
-        setTimeout(() => els.studentName.focus(), 500);
+        setTimeout(() => els.studentEmail.focus(), 500);
     </script>
 </body>
 

@@ -10,6 +10,10 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
     <style>
         /* ========== RESET & BASE ========== */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -131,6 +135,29 @@
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(52, 211, 153, 0.95); color: #07071a; padding: 12px 28px; border-radius: 40px; font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.4s ease; z-index: 2000; pointer-events: none; }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         .toast.error { background: rgba(248, 113, 113, 0.95); color: #fff; }
+
+        /* ========== CMS FILTERS & GROUPING ========== */
+        .filters-panel { background: rgba(15,15,40,0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { flex: 1; min-width: 150px; }
+        .filter-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .category-group { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden; box-shadow: var(--shadow-card); }
+        .category-header { background: rgba(102, 126, 234, 0.1); padding: 16px 24px; font-size: 16px; font-weight: 700; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; }
+        .subcategory-group { border-bottom: 1px solid var(--border-subtle); }
+        .subcategory-group:last-child { border-bottom: none; }
+        .subcategory-header { padding: 12px 24px; font-size: 14px; font-weight: 600; color: var(--accent-blue); background: rgba(255, 255, 255, 0.02); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; }
+        .subcategory-header:hover { background: rgba(255, 255, 255, 0.05); }
+        .questions-list { display: flex; flex-direction: column; display: none; }
+        .questions-list.open { display: flex; animation: fadeIn 0.3s ease; }
+        .question-item { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; justify-content: space-between; align-items: center; gap: 20px; transition: background 0.2s; }
+        .question-item:hover { background: rgba(255,255,255,0.02); }
+        .question-item:last-child { border-bottom: none; }
+        .q-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+        .q-text { font-size: 14px; color: var(--text-primary); line-height: 1.5; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .badge-easy { background: rgba(52, 211, 153, 0.15); color: var(--accent-green); }
+        .badge-medium { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); }
+        .badge-hard { background: rgba(248, 113, 113, 0.15); color: var(--accent-red); }
+        .CodeMirror { border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); font-family: var(--font-code); height: auto; min-height: 100px; max-height: 300px; font-size: 14px; }
     </style>
 </head>
 
@@ -211,34 +238,50 @@
 
         <!-- TAB INTREBARI -->
         <div id="tab-intrebari" class="tab-content">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h2 style="font-size: 18px; font-weight: 600;">Gestionează Întrebările</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 20px; font-weight: 700;">Bază de Întrebări</h2>
                 <button class="btn btn-primary" onclick="openQuestionModal()">+ Adaugă Întrebare</button>
             </div>
+
+            <!-- Filters -->
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label>Categorie</label>
+                    <select id="filter-cat" class="form-control" onchange="updateFilterSub(); renderQuestions();">
+                        <option value="">Toate categoriile</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Subcategorie</label>
+                    <select id="filter-sub" class="form-control" onchange="renderQuestions()">
+                        <option value="">Toate subcategoriile</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Dificultate</label>
+                    <select id="filter-diff" class="form-control" onchange="renderQuestions()">
+                        <option value="">Toate</option>
+                        <option value="easy">Ușoară</option>
+                        <option value="medium">Medie</option>
+                        <option value="hard">Grea</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="flex: 2;">
+                    <label>Căutare (text)</label>
+                    <input type="text" id="filter-search" class="form-control" placeholder="Caută cuvânt..." onkeyup="renderQuestions()">
+                </div>
+            </div>
             
-            <main class="table-card">
-                <div class="loading-state" id="loading-questions">
-                    <div class="spinner"></div>
-                    <p>Se încarcă baza de date...</p>
-                </div>
-                <div class="empty-state" id="empty-questions" style="display: none;">
-                    <p>Nu există întrebări în baza de date.</p>
-                </div>
-                <div class="table-wrapper" id="wrapper-questions" style="display: none;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Categorie / Subcategorie</th>
-                                <th>Dificultate</th>
-                                <th>Previzualizare Text</th>
-                                <th>Acțiuni</th>
-                            </tr>
-                        </thead>
-                        <tbody id="questions-body"></tbody>
-                    </table>
-                </div>
-            </main>
+            <div class="loading-state" id="loading-questions">
+                <div class="spinner"></div>
+                <p>Se încarcă baza de date...</p>
+            </div>
+            <div class="empty-state" id="empty-questions" style="display: none;">
+                <p>Nu s-au găsit întrebări care să corespundă filtrelor.</p>
+            </div>
+            <div id="wrapper-questions" style="display: none;">
+                <!-- Grouped rendering goes here -->
+            </div>
         </div>
     </div>
 
@@ -261,7 +304,7 @@
                             <option value="Organizarea Datelor">Organizarea Datelor</option>
                             <option value="Subprograme">Subprograme</option>
                             <option value="Backtracking">Backtracking</option>
-                            <option value="Grafuri și Arbori">Grafuri și Arbori</option>
+                            <option value="Grafuri si Arbori">Grafuri si Arbori</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -361,11 +404,11 @@
         let questionsData = [];
 
         const subcategoriesMap = {
-            "Fundamente": ["Citire și afișare date", "Operatori și expresii", "Structuri de control", "Complexități"],
-            "Organizarea Datelor": ["Vectori", "Matrice", "Șiruri de caractere", "Structuri de date (struct)"],
-            "Subprograme": ["Transmitere prin valoare", "Transmitere prin referință", "Recursivitate"],
-            "Backtracking": ["Teorie și aplicare practică"],
-            "Grafuri și Arbori": ["Terminologie grafuri", "Grafuri orientate", "Grafuri neorientate", "Arbori"]
+            "Fundamente": ["Citire si afisare date", "Operatori si expresii", "Structuri de control", "Complexitati"],
+            "Organizarea Datelor": ["Vectori", "Matrice", "Siruri de caractere", "Structuri de date (struct)"],
+            "Subprograme": ["Transmitere prin valoare", "Transmitere prin referinta", "Recursivitate"],
+            "Backtracking": ["Teorie si aplicare practica"],
+            "Grafuri si Arbori": ["Terminologie grafuri", "Grafuri orientate", "Grafuri neorientate", "Arbori"]
         };
 
         /* ==================== UTILS ==================== */
@@ -396,6 +439,14 @@
         async function loadResults() {
             try {
                 const res = await fetchWithToken(API_RESULTS);
+                if (res.status === 401) {
+                    sessionStorage.removeItem('adminToken');
+                    adminToken = prompt('Parola de administrare incorecta! Re-introduceti parola (ex: admin123):');
+                    if (adminToken) {
+                        sessionStorage.setItem('adminToken', adminToken);
+                        return loadResults();
+                    }
+                }
                 if(!res.ok) throw new Error();
                 resultsData = await res.json();
                 document.getElementById('loading-results').style.display = 'none';
@@ -409,7 +460,7 @@
                     calcResultStats();
                 }
             } catch(e) {
-                document.getElementById('loading-results').innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcare rezultate.</p>`;
+                document.getElementById('loading-results').innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcare rezultate. (Verificați dacă parola a fost introdusă corect)</p>`;
             }
         }
 
@@ -467,9 +518,33 @@
         }
 
         /* ==================== INTREBARI CMS ==================== */
+        function initFilters() {
+            const catSelect = document.getElementById('filter-cat');
+            catSelect.innerHTML = '<option value="">Toate categoriile</option>';
+            Object.keys(subcategoriesMap).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat; opt.textContent = cat;
+                catSelect.appendChild(opt);
+            });
+        }
+
+        function updateFilterSub() {
+            const cat = document.getElementById('filter-cat').value;
+            const subSelect = document.getElementById('filter-sub');
+            subSelect.innerHTML = '<option value="">Toate subcategoriile</option>';
+            if (cat && subcategoriesMap[cat]) {
+                subcategoriesMap[cat].forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s; opt.textContent = s;
+                    subSelect.appendChild(opt);
+                });
+            }
+        }
+
         async function loadQuestions() {
             try {
-                const res = await fetch(API_QUESTIONS);
+                initFilters();
+                const res = await fetch(API_QUESTIONS + '?admin=true');
                 if(!res.ok) throw new Error();
                 questionsData = await res.json();
                 document.getElementById('loading-questions').style.display = 'none';
@@ -485,32 +560,119 @@
             }
         }
 
+        function toggleSubcategory(id) {
+            const el = document.getElementById('sub-list-' + id);
+            if (el.classList.contains('open')) el.classList.remove('open');
+            else el.classList.add('open');
+        }
+
         function renderQuestions() {
-            const tbody = document.getElementById('questions-body');
-            const htmlArr = [];
-            questionsData.forEach(q => {
-                const diffMap = { easy: { l: 'Ușor', c: 'var(--accent-green)' }, medium: { l: 'Mediu', c: 'var(--accent-amber)' }, hard: { l: 'Greu', c: 'var(--accent-red)' } };
-                const df = diffMap[q.difficulty] || { l: q.difficulty, c: '#fff' };
-                const snippet = q.text.length > 50 ? q.text.substring(0, 50) + '...' : q.text;
-                htmlArr.push(`
-                    <tr>
-                        <td style="font-family:var(--font-code); color:var(--text-muted)">#${q.id}</td>
-                        <td>
-                            <div style="font-weight:600">${escapeHtml(q.category || '-')}</div>
-                            <div style="font-size:12px; color:var(--text-secondary)">${escapeHtml(q.subcategory || '-')}</div>
-                        </td>
-                        <td><span style="color:${df.c}; font-size:13px; font-weight:600;">${df.l}</span></td>
-                        <td>${escapeHtml(snippet)}</td>
-                        <td>
-                            <div class="actions">
-                                <button class="btn btn-edit" onclick="editQuestion(${q.id})">Editează</button>
-                                <button class="btn btn-danger" onclick="deleteQuestion(${q.id})">Șterge</button>
-                            </div>
-                        </td>
-                    </tr>
-                `);
+            const wrapper = document.getElementById('wrapper-questions');
+            const fCat = document.getElementById('filter-cat').value;
+            const fSub = document.getElementById('filter-sub').value;
+            const fDiff = document.getElementById('filter-diff').value;
+            const fSearch = document.getElementById('filter-search').value.toLowerCase();
+
+            // Filter data
+            const filtered = questionsData.filter(q => {
+                if (fCat && q.category !== fCat) return false;
+                if (fSub && q.subcategory !== fSub) return false;
+                if (fDiff && q.difficulty !== fDiff) return false;
+                if (fSearch && !q.text.toLowerCase().includes(fSearch)) return false;
+                return true;
             });
-            tbody.innerHTML = htmlArr.join('');
+
+            if (filtered.length === 0) {
+                wrapper.style.display = 'none';
+                document.getElementById('empty-questions').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('empty-questions').style.display = 'none';
+            wrapper.style.display = 'block';
+
+            // Group by category -> subcategory
+            const grouped = {};
+            filtered.forEach(q => {
+                const c = q.category || 'Altele';
+                const s = q.subcategory || 'Fără subcategorie';
+                if (!grouped[c]) grouped[c] = {};
+                if (!grouped[c][s]) grouped[c][s] = [];
+                grouped[c][s].push(q);
+            });
+
+            const htmlArr = [];
+            let subIdCounter = 0;
+
+            // Define the canonical order from subcategoriesMap + any 'Altele'
+            const orderedCategories = Object.keys(subcategoriesMap);
+            Object.keys(grouped).forEach(cat => {
+                if (!orderedCategories.includes(cat)) orderedCategories.push(cat);
+            });
+
+            orderedCategories.forEach(cat => {
+                if (!grouped[cat]) return; // no questions for this category
+                
+                htmlArr.push(`<div class="category-group">`);
+                
+                // Calc total in category
+                let catTotal = 0;
+                Object.values(grouped[cat]).forEach(arr => catTotal += arr.length);
+                
+                htmlArr.push(`<div class="category-header">
+                    <span>${escapeHtml(cat)}</span>
+                    <span style="font-size:12px; font-weight:600; color:var(--text-secondary)">${catTotal} întrebări</span>
+                </div>`);
+
+                const orderedSubcategories = subcategoriesMap[cat] ? [...subcategoriesMap[cat]] : [];
+                Object.keys(grouped[cat]).forEach(sub => {
+                    if (!orderedSubcategories.includes(sub)) orderedSubcategories.push(sub);
+                });
+
+                orderedSubcategories.forEach(sub => {
+                    if (!grouped[cat][sub]) return;
+                    const qs = grouped[cat][sub];
+
+                    subIdCounter++;
+                    // If filters are active, auto-expand
+                    const autoOpen = (fSub !== '' || fSearch !== '') ? 'open' : '';
+                    
+                    htmlArr.push(`<div class="subcategory-group">
+                        <div class="subcategory-header" onclick="toggleSubcategory(${subIdCounter})">
+                            <span>${escapeHtml(sub)}</span>
+                            <span>${qs.length} <span style="font-size:10px">▼</span></span>
+                        </div>
+                        <div class="questions-list ${autoOpen}" id="sub-list-${subIdCounter}">`);
+
+                    qs.forEach(q => {
+                        const diffMap = { easy: { l: 'Ușor', c: 'badge-easy' }, medium: { l: 'Mediu', c: 'badge-medium' }, hard: { l: 'Greu', c: 'badge-hard' } };
+                        const df = diffMap[q.difficulty] || { l: q.difficulty, c: 'badge-easy' };
+                        const typeLabel = q.type === 'code' ? 'Cod' : 'Grilă';
+                        
+                        htmlArr.push(`
+                            <div class="question-item">
+                                <div style="flex:1">
+                                    <div class="q-meta">
+                                        <span style="font-family:var(--font-code); color:var(--text-muted); font-size:12px;">#${q.id}</span>
+                                        <span class="badge ${df.c}">${df.l}</span>
+                                        <span class="badge" style="background:rgba(102,126,234,0.15); color:var(--accent-blue)">${typeLabel}</span>
+                                    </div>
+                                    <div class="q-text">${escapeHtml(q.text)}</div>
+                                </div>
+                                <div class="actions">
+                                    <button class="btn btn-edit" onclick="editQuestion(${q.id})">Editează</button>
+                                    <button class="btn btn-danger" onclick="deleteQuestion(${q.id})">Șterge</button>
+                                </div>
+                            </div>
+                        `);
+                    });
+
+                    htmlArr.push(`</div></div>`);
+                });
+                htmlArr.push(`</div>`);
+            });
+
+            wrapper.innerHTML = htmlArr.join('');
         }
 
         async function deleteQuestion(id) {
@@ -540,6 +702,19 @@
             if(selectedSub) subSel.value = selectedSub;
         }
 
+        let cmEditor = null;
+
+        function initCodeMirror() {
+            if (!cmEditor) {
+                cmEditor = CodeMirror.fromTextArea(document.getElementById('q-code'), {
+                    mode: "text/x-c++src",
+                    theme: "dracula",
+                    lineNumbers: true,
+                    viewportMargin: Infinity
+                });
+            }
+        }
+
         function openQuestionModal(q = null) {
             const m = document.getElementById('modal-question');
             m.style.display = 'flex';
@@ -552,17 +727,28 @@
                 document.getElementById('q-difficulty').value = q.difficulty;
                 document.getElementById('q-type').value = q.type;
                 document.getElementById('q-text').value = q.text;
-                document.getElementById('q-code').value = q.code || '';
                 document.getElementById('q-opt-0').value = q.options[0] || '';
                 document.getElementById('q-opt-1').value = q.options[1] || '';
                 document.getElementById('q-opt-2').value = q.options[2] || '';
                 document.getElementById('q-opt-3').value = q.options[3] || '';
-                document.getElementById('q-correct').value = q.correct;
+                document.getElementById('q-correct').value = q.correct_index;
                 document.getElementById('q-explanation').value = q.explanation || '';
+                
+                setTimeout(() => {
+                    initCodeMirror();
+                    cmEditor.setValue(q.code || '');
+                    cmEditor.refresh();
+                }, 50);
             } else {
                 document.getElementById('question-form').reset();
                 document.getElementById('q-id').value = '';
                 updateSubcategories();
+                
+                setTimeout(() => {
+                    initCodeMirror();
+                    cmEditor.setValue('');
+                    cmEditor.refresh();
+                }, 50);
             }
         }
 
@@ -578,6 +764,7 @@
         document.getElementById('question-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('q-id').value;
+            const codeVal = cmEditor ? cmEditor.getValue().trim() : '';
             
             const payload = {
                 category: document.getElementById('q-category').value,
@@ -585,7 +772,7 @@
                 difficulty: document.getElementById('q-difficulty').value,
                 type: document.getElementById('q-type').value,
                 text: document.getElementById('q-text').value,
-                code: document.getElementById('q-code').value || null,
+                code: codeVal ? codeVal : null,
                 options_json: [
                     document.getElementById('q-opt-0').value,
                     document.getElementById('q-opt-1').value,
@@ -608,12 +795,26 @@
                     body: JSON.stringify(payload)
                 });
                 
-                if(!res.ok) throw new Error();
+                if(!res.ok) {
+                    let errMsg = 'Eroare la salvare!';
+                    try {
+                        const errData = await res.json();
+                        if (errData.error) errMsg = errData.error;
+                        if (errData.details) errMsg += `: ${errData.details}`;
+                    } catch(err) {}
+                    if (res.status === 401) {
+                        sessionStorage.removeItem('adminToken');
+                        adminToken = prompt('Parola de administrare incorecta! Re-introduceti parola (ex: admin123):');
+                        if (adminToken) sessionStorage.setItem('adminToken', adminToken);
+                    }
+                    throw new Error(errMsg);
+                }
                 showToast(id ? 'Întrebare actualizată!' : 'Întrebare adăugată!');
                 closeQuestionModal();
                 loadQuestions(); // refresh list
             } catch(e) {
-                showToast('Eroare la salvare!', true);
+                console.error('Error saving question:', e);
+                showToast(e.message || 'Eroare la salvare!', true);
             } finally {
                 document.getElementById('btn-save-q').disabled = false;
                 document.getElementById('btn-save-q').textContent = 'Salvează Întrebarea';
