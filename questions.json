@@ -1,0 +1,2434 @@
+[
+  {
+    "id": 1,
+    "difficulty": "easy",
+    "type": "code",
+    "text": "Ce afișează următorul cod pe ecran, dacă introduci de la tastatură numărul 5?",
+    "code": "int x;\\ncin >> x;\\ncout << x * 2;",
+    "options_json": [
+      "5",
+      "10",
+      "x * 2",
+      "Eroare"
+    ],
+    "correct_index": 1,
+    "explanation": "Comanda cin citește valoarea 5 în variabila x. Apoi cout afișează 5 * 2, adică 10.",
+    "category": "Fundamente",
+    "subcategory": "Citire si afisare date",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 2,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Cum afișezi corect textul \"Salut\" pe ecran în C++?",
+    "code": null,
+    "options_json": [
+      "cin >> \"Salut\";",
+      "cout << \"Salut\";",
+      "print(\"Salut\");",
+      "scrie \"Salut\";"
+    ],
+    "correct_index": 1,
+    "explanation": "Pentru a afișa un text pe ecran în C++, folosim comanda cout urmată de operatorul <<.",
+    "category": "Fundamente",
+    "subcategory": "Citire si afisare date",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 3,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Dacă vrei să treci la rând nou pe ecran, ce poți folosi împreună cu cout?",
+    "code": null,
+    "options_json": [
+      "endl",
+      "space",
+      "next",
+      "enter"
+    ],
+    "correct_index": 0,
+    "explanation": "Cuvântul endl vine de la \"end line\" (sfârșit de rând) și mută textul următor pe un rând nou.",
+    "category": "Fundamente",
+    "subcategory": "Citire si afisare date",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 4,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce rezultat are expresia matematică 10 % 3 în C++?",
+    "code": null,
+    "options_json": [
+      "3",
+      "1",
+      "0",
+      "3.33"
+    ],
+    "correct_index": 1,
+    "explanation": "Operatorul % calculează restul împărțirii. 10 împărțit la 3 dă 3, rest 1. Deci rezultatul este 1.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 5,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Care este rezultatul calculului 5 / 2 în C++?",
+    "code": null,
+    "options_json": [
+      "2.5",
+      "3",
+      "2",
+      "0"
+    ],
+    "correct_index": 2,
+    "explanation": "În C++, când împarți două numere întregi (fără virgulă), rezultatul este tot întreg. Partea zecimală (0.5) este ștearsă.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 6,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce valoare va avea variabila x după codul următor?",
+    "code": "int x = 5;\\nx++;",
+    "options_json": [
+      "4",
+      "5",
+      "6",
+      "10"
+    ],
+    "correct_index": 2,
+    "explanation": "Operatorul ++ crește valoarea variabilei cu 1. Deci a devine 5 + 1 = 6.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 7,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce valoare are expresia următoare?",
+    "code": "10 - 5 / 2 * 3",
+    "options_json": [
+      "6",
+      "2.5",
+      "4",
+      "7.5"
+    ],
+    "correct_index": 2,
+    "explanation": "Înmulțirea și împărțirea se fac primele, de la stânga la dreapta. 5 / 2 = 2. Apoi 2 * 3 = 6. La final: 10 - 6 = 4.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 8,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce rezultat dă această condiție logică?",
+    "code": "!(2 > 3 || 3 > 4)",
+    "options_json": [
+      "0",
+      "1",
+      "2",
+      "Eroare"
+    ],
+    "correct_index": 1,
+    "explanation": "Ambele condiții din paranteză sunt false (0). Semnul ! înseamnă negație (NOT). Opusul lui 0 (Fals) este 1 (Adevărat).",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 9,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Câte numere va afișa următorul cod ?",
+    "code": "for (int i = 1; i <= 5; i++) {\\n    cout << i;\\n}",
+    "options_json": [
+      "4",
+      "5",
+      "6",
+      "Niciunul"
+    ],
+    "correct_index": 1,
+    "explanation": "Condiția este i <= 5, pornind de la 1. Deci va afișa: 1, 2, 3, 4, 5. În total 5 repetări.",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 10,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Completează condiția pentru a verifica dacă un număr x este strict pozitiv.",
+    "code": "if (________) {\\n    cout << \"Pozitiv\";\\n}",
+    "options_json": [
+      "x = 0",
+      "x > 0",
+      "x < 0",
+      "x == 0"
+    ],
+    "correct_index": 1,
+    "explanation": "Un număr este strict pozitiv dacă este strict mai mare decât zero (x > 0).",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 11,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Care va fi valoarea finală a variabilei p?",
+    "code": "int p = 1;\\nint i = 1;\\nwhile (i <= 3) {\\n    p = p * i;\\n    i++;\\n}",
+    "options_json": [
+      "3",
+      "4",
+      "6",
+      "12"
+    ],
+    "correct_index": 2,
+    "explanation": "Codul înmulțește numerele de la 1 la 3: 1 * 1 = 1; 1 * 2 = 2; 2 * 3 = 6. Rezultatul final (p) este 6.",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 12,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce afișează această secvență?",
+    "code": "for (int i = 1; i <= 5; i++) {\\n    if (i % 2 == 0) {\\n        cout << i << \" \";\\n    }\\n}",
+    "options_json": [
+      "1 2 3 4 5",
+      "1 3 5",
+      "2 4",
+      "0"
+    ],
+    "correct_index": 2,
+    "explanation": "Condiția i % 2 == 0 verifică dacă numărul este par. Din numerele 1,2,3,4,5, doar 2 și 4 sunt pare.",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 13,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Dacă un algoritm execută exact 10 pași indiferent de cât de mari sunt datele de intrare, ce complexitate (timp) are?",
+    "code": null,
+    "options_json": [
+      "O(n)",
+      "O(1)",
+      "O(n^2)",
+      "O(log n)"
+    ],
+    "correct_index": 1,
+    "explanation": "O(1) înseamnă \"timp constant\". Adică algoritmul face mereu același număr de pași, indiferent de cât de mare e numărul introdus de noi (n).",
+    "category": "Fundamente",
+    "subcategory": "Complexitati",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 14,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce complexitate de timp are acest cod?",
+    "code": "for (int i = 0; i < n; i++) {\\n    for (int j = 0; j < n; j++) {\\n        cout << i + j;\\n    }\\n}",
+    "options_json": [
+      "O(1)",
+      "O(n)",
+      "O(n^2)",
+      "O(log n)"
+    ],
+    "correct_index": 2,
+    "explanation": "Primul for se repetă de n ori. Pentru fiecare pas, al doilea for se repetă tot de n ori. Deci facem n * n pași, adică O(n^2).",
+    "category": "Fundamente",
+    "subcategory": "Complexitati",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 15,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Un agoritm eficient de căutare a unei valori într-un vector sortat de elemente este cel de căutare binară (Binary Search). Ce complexitate are acest algoritm?",
+    "code": "int binarySearch(int arr[], int size, int target) {\n    int left = 0;\n    int right = size - 1;\n    while (left <= right) {\n        int mid = left + (right - left) / 2;\n        if (arr[mid] == target)\n            return mid;\n        if (arr[mid] < target)\n            left = mid + 1;\n        else\n            right = mid - 1;\n    }\n    return -1;\n}",
+    "options_json": [
+      "O(1)",
+      "O(n)",
+      "O(n^2)",
+      "O(log n)"
+    ],
+    "correct_index": 3,
+    "explanation": "Orice algoritm care împarte repetat problema la 2 (cum face căutarea binară) are o complexitate de O(log n), fiind foarte eficient.",
+    "category": "Fundamente",
+    "subcategory": "Complexitati",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 16,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Pe ce poziție (index) se află primul element din vectorul v?",
+    "code": "int v[5] = {10, 20, 30, 40, 50};",
+    "options_json": [
+      "1",
+      "0",
+      "v",
+      "Nu se poate determina"
+    ],
+    "correct_index": 1,
+    "explanation": "În limbajul C++, indexarea vectorilor (numărătoarea elementelor) începe mereu de la poziția 0.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Vectori",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 17,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce valoare va avea suma calculată în acest cod?",
+    "code": "int v[4] = {1, 2, 3, 4};\\nint s = 0;\\nfor (int i = 0; i < 3; i++) {\\n    s = s + v[i];\\n}",
+    "options_json": [
+      "4",
+      "0",
+      "10",
+      "6"
+    ],
+    "correct_index": 3,
+    "explanation": "Codul parcurge și adună elementele de la indexul 0 până la indexul 2 în variabila s: 1 + 2 + 3 = 6. ",
+    "category": "Organizarea Datelor",
+    "subcategory": "Vectori",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 18,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Dacă avem un vector v, ce algoritm descrie următoarea secvență de cod?",
+    "code": "bool sortat = false;\\nwhile (!sortat) {\\n    sortat = true;\\n    for (int i = 0; i < n - 1; i++) {\\n        if (v[i] > v[i+1]) {\\n            int temp=v[i]; v[i]=v[i+1]; v[i+1]=temp;\\n            sortat = false;\\n        }\\n    }\\n}",
+    "options_json": [
+      "Cautare Liniara",
+      "Bubble Sort",
+      "Cautare Binara",
+      "Selection Sort"
+    ],
+    "correct_index": 1,
+    "explanation": "Acesta este algoritmul de sortare Bubble Sort (metoda bulelor). Verifică vecinii și îi inversează până când tot vectorul este ordonat.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Vectori",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 19,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Câte elemente are în total această matrice bidimensională?",
+    "code": "int a[3][3];",
+    "options_json": [
+      "3",
+      "6",
+      "9",
+      "1"
+    ],
+    "correct_index": 2,
+    "explanation": "Numărul total de elemente dintr-o matrice se află înmulțind numărul de linii cu numărul de coloane: 3 * 3 = 9.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 20,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Cum verifici dacă un element de la linia i și coloana j face parte din diagonala principală a unei matrice pătratice?",
+    "code": "if (________) {\\n    cout << \"Este pe diagonala principala\";\\n}",
+    "options_json": [
+      "i == j",
+      "i + j == n - 1",
+      "i < j",
+      "i > j"
+    ],
+    "correct_index": 0,
+    "explanation": "Pe diagonala principală, indicele liniei este mereu egal cu indicele coloanei (ex: 0,0 sau 1,1 sau 2,2). Deci condiția este i == j.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 21,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Unde se află elementele dintr-o matrice pentru care i < j (indexul liniei este mai mic decât indexul coloanei)?",
+    "code": null,
+    "options_json": [
+      "Sub diagonala principala",
+      "Deasupra diagonalei principale",
+      "Pe diagonala secundara",
+      "Pe prima linie"
+    ],
+    "correct_index": 1,
+    "explanation": "Elementele cu i==j se afla pe diagonala principală, cele cu i<j se afla deasupra diagonalei principale, iar cele cu i>j se afla sub diagonala principală.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 22,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce caracter special se află, invizibil, la finalul oricărui cuvânt (șir de caractere) în C++?",
+    "code": null,
+    "options_json": [
+      "\\n",
+      "\\0",
+      "\\t",
+      "."
+    ],
+    "correct_index": 1,
+    "explanation": "În C++, orice șir de caractere (text) se termină cu caracterul special null (\\0) pentru ca programul să știe unde se oprește textul.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Siruri de caractere",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 23,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Câte caractere (litere) va returna funcția strlen pentru cuvântul \"examen\"?",
+    "code": "cout << strlen(\"examen\");",
+    "options_json": [
+      "5",
+      "6",
+      "7",
+      "0"
+    ],
+    "correct_index": 1,
+    "explanation": "Funcția strlen numără exact literele pe care le vedem. \"examen\" are 6 litere.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Siruri de caractere",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 24,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce se va afișa pe ecran?",
+    "code": "char s[10] = \"examen\";\\ns[2] = '\\0';\\ncout << s;",
+    "options_json": [
+      "examen",
+      "ex",
+      "exa",
+      "eroare"
+    ],
+    "correct_index": 1,
+    "explanation": "Am pus \\0 pe poziția 2 (a treia literă, care era \"a\"). Afișarea se oprește la primul \\0, deci se vor afișa doar literele de pe pozițiile 0 și 1: \"ex\".",
+    "category": "Organizarea Datelor",
+    "subcategory": "Siruri de caractere",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 25,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce face funcția predefinită strcpy(destinatie, sursa)?",
+    "code": null,
+    "options_json": [
+      "Aduna doua texte",
+      "Copiaza textul din sursa in destinatie",
+      "Numara literele din sursa",
+      "Verifica daca sunt la fel"
+    ],
+    "correct_index": 1,
+    "explanation": "Numele strcpy vine de la \"string copy\" (copiere de șir). Ea șterge ce era în variabila destinație și scrie textul din sursă peste.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Siruri de caractere",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 26,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Cum accesăm nota unui elev (o variabilă) grupată într-un \"struct Elev\"?",
+    "code": "struct Elev { int nota; };\\nElev e;\\n// Cum ii dam nota 10?",
+    "options_json": [
+      "e(nota) = 10;",
+      "Elev[nota] = 10;",
+      "e.nota = 10;",
+      "nota = 10;"
+    ],
+    "correct_index": 2,
+    "explanation": "Pentru a accesa componentele unui struct, folosim operatorul punct (.). Variabila e urmată de punct și numele componentei: e.nota.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 27,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Pentru declaraţia de mai jos precizaţi care din instrucţiunile de atribuire este greşită:",
+    "code": "struct elev{\n char nume[20];\n int nota1;\n int nota2;\n} e1,e2;",
+    "options_json": [
+      "e1=e2+1;",
+      "e1.nume[2]=’x’;",
+      "e1=e2;",
+      "e1.nota1=e2.nota2+1;"
+    ],
+    "correct_index": 0,
+    "explanation": "Nu poți aduna un număr întreg direct la o variabilă de tip struct (e1 = e2 + 1 este o operație invalidă în C++).",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 28,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Dacă avem un vector de structuri, cum afișăm numele celui de-al doilea elev?",
+    "code": "struct Elev { char nume[20]; };\\nElev clasa[30];",
+    "options_json": [
+      "clasa[1].nume",
+      "clasa[2].nume",
+      "clasa.nume[1]",
+      "nume.clasa[2]"
+    ],
+    "correct_index": 0,
+    "explanation": "Primul elev e la pozitia 0, al doilea e la pozitia 1. Deci clasa[1] e elevul, iar .nume accesează câmpul lui.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 29,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Completează ce cuvânt cheie folosim pentru o funcție care NU trebuie să returneze niciun rezultat înapoi (doar afișează ceva)?",
+    "code": "________ afisareSalut() {\\n    cout << \"Salut!\";\\n}",
+    "options_json": [
+      "int",
+      "void",
+      "return",
+      "bool"
+    ],
+    "correct_index": 1,
+    "explanation": "Cuvântul void (care înseamnă \"gol\" în engleză) se pune înaintea unei funcții care doar execută acțiuni și nu trimite înapoi (return) nicio valoare.",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin valoare",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 30,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Care este rezultatul acestei funcții dacă o apelăm cu numar(4)?",
+    "code": "int numar(int x) {\\n    return x + 1;\\n}",
+    "options_json": [
+      "4",
+      "5",
+      "x",
+      "0"
+    ],
+    "correct_index": 1,
+    "explanation": "Funcția primește 4, adună 1 și returnează 5.",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin valoare",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 31,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce se va afișa pe ecran?",
+    "code": "void modifica(int x) {\\n    x = 10;\\n}\\n\\nint main() {\\n    int a = 5;\\n    modifica(a);\\n    cout << a;\\n}",
+    "options_json": [
+      "10",
+      "5",
+      "0",
+      "Eroare"
+    ],
+    "correct_index": 1,
+    "explanation": "Când o variabilă e trimisă prin valoare (normal, fără caracterul &), funcția primește doar o clonă (o copie). Deci modificarea lui x în 10 nu îl afectează pe a, care rămâne tot 5 în main.",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin valoare",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 32,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Variabilele create în interiorul unei funcții se numesc variabile locale. Ce se întâmplă cu ele la terminarea funcției?",
+    "code": null,
+    "options_json": [
+      "Se sterg din memorie",
+      "Raman salvate in calculator pe veci",
+      "Pot fi folosite in main",
+      "Se salveaza in fisiere"
+    ],
+    "correct_index": 0,
+    "explanation": "Variabilele locale trăiesc doar cât timp funcția lucrează. După ce funcția se termină (la acolada de închidere), ele sunt distruse automat.",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin valoare",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 33,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce simbol folosim în C++ în fața parametrului unei funcții pentru ca modificările să afecteze variabila originală (prin referință)?",
+    "code": "void schimba(int ___x) {\n\tx=x*2;\n}",
+    "options_json": [
+      "*",
+      "#",
+      "&",
+      "%"
+    ],
+    "correct_index": 2,
+    "explanation": "Simbolul & (ampersand) leagă variabila din funcție direct de variabila originală. Astfel, funcția modifică direct originalul.",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin referinta",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 34,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce se va afișa pe ecran?",
+    "code": "void swap(int &x, int &y) {\\n    int temp = x;\\n    x = y;\\n    y = temp;\\n}\\nint main() {\\n    int a = 1, b = 2;\\n    swap(a, b);\\n    cout << a << \" \" << b;\\n}",
+    "options_json": [
+      "1 2",
+      "2 1",
+      "0 0",
+      "1 1"
+    ],
+    "correct_index": 1,
+    "explanation": "Deoarece am folosit referința (&), funcția swap (interschimbare) a inversat direct valorile variabilelor originale a și b. Deci ele devin 2 și 1 (nu 1 și 2).",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin referinta",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 35,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Ce va afișa pe ecran apelul f(12345) în urma executării codului de mai jos?",
+    "code": "void f(int n) {\n    if (n!=0) {\n        if (n%2==0) cout<<n%10;\n        f(n/10);\n        if (n%2!=0) cout<<n%10;\n    }\n    else cout<<\"-\";\n}",
+    "options_json": [
+      "42-135",
+      "42-531",
+      "531-42",
+      "24-531"
+    ],
+    "correct_index": 0,
+    "explanation": "La apelul recursiv (pe coborâre), înainte de auto-apel se afișează cifrele pare (4, apoi 2). Când n ajunge la 0, se afișează caracterul \"-\". La revenirea din recursivitate (pe urcare), se afișează cifrele impare (1, apoi 3, apoi 5). Astfel, rezultatul concatenat este 42-135.",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 36,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Completează funcția recursivă pentru a calcula factorialul unui număr n. Dacă n este 0, rezultatul este 1.",
+    "code": "int fact(int n) {\\n    if (n == 0) return 1;\\n    return n * ________;\\n}",
+    "options_json": [
+      "fact(n)",
+      "fact(n-1)",
+      "n-1",
+      "fact(n+1)"
+    ],
+    "correct_index": 1,
+    "explanation": "Pentru a calcula factorialul, înmulțim n cu factorialul numerelor mai mici decât el, deci apelăm funcția cu n-1: fact(n-1).",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 37,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Generând șirurile de exact 2 caractere distincte din mulțimea {A, B, C, D}, ordonate lexicografic (alfabetic), obținem succesiv: AB, AC, AD, BC, ... Ce se va afișa imediat după BD?",
+    "code": null,
+    "options_json": [
+      "CA",
+      "CB",
+      "CD",
+      "Nu se va afișa nimic"
+    ],
+    "correct_index": 2,
+    "explanation": "Dupa epuizarea sirurilor care incep cu B (BC, BD), algoritmul trece la litera C. Singura varianta valida este CD.",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 38,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Dacă vrem să generăm toate Permutările mulțimii {1, 2, 3}, câte soluții în total ne va oferi algoritmul de Backtracking?",
+    "code": null,
+    "options_json": [
+      "3 solutii",
+      "6 solutii (3!)",
+      "9 solutii",
+      "1 solutie"
+    ],
+    "correct_index": 1,
+    "explanation": "Permutările de n elemente înseamnă toate așezările posibile. Numărul lor este n factorial (3!). 1*2*3 = 6 soluții.",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 39,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Utilizând metoda backtracking, se generează toate numerele de mașină formate din:\\n- indicativ județ {B, BR, HD, MM, SV, TL};\\n- număr din 2 cifre distincte din {2,4,6,8} în ordine strict crescătoare;\\n- 3 litere distincte din {A,B,C} cu mijlocul A.\\n\\nPrimele 7 generate sunt B-24-BAC, B-24-CAB, B-26-BAC, B-26-CAB, B-28-BAC, B-28-CAB, B-46-BAC. Indicați soluțiile generate imediat înainte, respectiv imediat după SV-68-CAB.",
+    "code": null,
+    "options_json": [
+      "MM-68-CAB, SV-86-BAC",
+      "SV-46-CAB, TL-24-BAC",
+      "SV-48-BAC, SV-68-BAC",
+      "SV-68-BAC, TL-24-BAC"
+    ],
+    "correct_index": 3,
+    "explanation": "Numerele se generează lexicografic. Înainte de SV-68-CAB este SV-68-BAC (schimbăm literele). Fiind ultima soluție pentru SV, următoarea trece la județul următor (TL-24-BAC).",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 40,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Utilizând metoda backtracking, s-au generat toate codurile posibile pentru deblocarea unor telefoane, coduri de câte 6 cifre distincte, din mulțimea cifrelor, ordonată crescător. Fiecare cod are primele trei cifre impare și ultimele trei cifre pare. Primele patru coduri sunt 135024, 135026, 135028, 135042. Indicați penultimul cod generat.",
+    "code": null,
+    "options_json": [
+      "957862",
+      "957846",
+      "975862",
+      "975846"
+    ],
+    "correct_index": 2,
+    "explanation": "Cel mai mare prefix de cifre impare este 975. Cele mai mari sufixe de cifre pare sunt 862 (penultimul) și 864 (ultimul). Deci penultimul cod este 975862.",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 41,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Din ce sunt formate grafurile neorientate?",
+    "code": null,
+    "options_json": [
+      "Doar din numere si plusuri",
+      "Din noduri (puncte) și muchii (linii între puncte)",
+      "Din cuvinte asezate in tabel",
+      "Din poze"
+    ],
+    "correct_index": 1,
+    "explanation": "Un graf matematic este format pur și simplu dintr-o mulțime de puncte (numite Noduri sau Vârfuri) și linii care le unesc, numite Muchii (grafuri neorientate) sau Arce (grafuri orientate).",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Terminologie grafuri",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 42,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce înseamnă că două noduri dintr-un graf sunt \"adiacente\"?",
+    "code": null,
+    "options_json": [
+      "Sunt vecine, adica au o linie (muchie) directa intre ele",
+      "Sunt cele mai indepartate noduri",
+      "Au acelasi numar de muchii",
+      "Nu au nicio legatura intre ele"
+    ],
+    "correct_index": 0,
+    "explanation": "Adiacent înseamnă practic \"vecin\". Dacă există o linie directă de la un punct la altul, ele sunt adiacente.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Terminologie grafuri",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 43,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce reprezintă \"gradul\" unui nod într-un graf neorientat?",
+    "code": null,
+    "options_json": [
+      "Numarul de arce care intră în el.",
+      "Numarul pe care il poarta (eticheta)",
+      "Numarul de linii (muchii) care se prind de el",
+      "Numarul de arce care ies din el."
+    ],
+    "correct_index": 2,
+    "explanation": "Gradul înseamnă câți \"prieteni\" direcți are acel nod. Numărăm pur și simplu câte muchii pornesc/ajung fix în el.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Terminologie grafuri",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 44,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce este un Graf Complet?",
+    "code": null,
+    "options_json": [
+      "Un graf in care toate muchiile au lungime 10",
+      "Un graf desenat perfect patrat",
+      "Un graf in care oricare doua noduri au linie intre ele",
+      "Un graf din care putem ajunge dintr-un nod în oricare alt nod prin noduri intermediare."
+    ],
+    "correct_index": 2,
+    "explanation": "Complet înseamnă că toată lumea e conectată cu toată lumea. Orice pereche de 2 noduri are obligatoriu muchie între ele.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Terminologie grafuri",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 45,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Într-un graf orientat, liniile au un sens clar (sunt niște săgeți care pleacă din x spre y). Cum se numesc aceste linii?",
+    "code": null,
+    "options_json": [
+      "Muchii",
+      "Arce",
+      "Linii de forta",
+      "Pointeri"
+    ],
+    "correct_index": 1,
+    "explanation": "La grafurile neorientate folosim termenul \"Muchii\". La grafurile orientate (cu săgeți, direcție precisă), le numim \"Arce\".",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri orientate",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 46,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce reprezintă gradul intern (d-) al unui nod într-un graf orientat?",
+    "code": null,
+    "options_json": [
+      "Cate sageti ies din acel nod spre altele",
+      "Suma tuturor numerelor",
+      "Cate sageti intra in acel nod",
+      "Gradul inmultit cu 2"
+    ],
+    "correct_index": 2,
+    "explanation": "Gradul intern înseamnă numărul de arce (săgeți) care INTRĂ (sosesc) în acel nod dinspre altele.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri orientate",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 47,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Care este o proprietate de bază a matricei de adiacență pentru un graf neorientat?",
+    "code": null,
+    "options_json": [
+      "Este plina doar de numarul 2",
+      "Este simetrică față de diagonala principală",
+      "Are doar cifre pare pe colturi",
+      "Toate valorile adunate dau un numar prim"
+    ],
+    "correct_index": 1,
+    "explanation": "Într-un graf neorientat, dacă nodul 1 are drum la 2, și 2 are drum înapoi la 1. Asta face ca matricea să arate ca o oglindă (simetrică) pe diagonala principală.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri neorientate",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 48,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Suma gradelor tuturor nodurilor dintr-un graf neorientat cu \"m\" muchii este egală cu:",
+    "code": null,
+    "options_json": [
+      "m!",
+      "m / 2",
+      "m * m",
+      "2 * m "
+    ],
+    "correct_index": 3,
+    "explanation": "Fiecare muchie unește exact 2 noduri. Deci ea \"adaugă\" grad și la un capăt, și la celălalt. Prin urmare, o muchie crește suma totală a gradelor cu 2.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri neorientate",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 49,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce este mai exact un \"Arbore\" în teoria grafurilor?",
+    "code": null,
+    "options_json": [
+      "Un graf cu o singura muchie",
+      "Un graf orientat care are cicluri",
+      "Un graf conex care nu are cicluri",
+      "Un graf care are n-1 muchii"
+    ],
+    "correct_index": 2,
+    "explanation": "Arborele e pur și simplu un graf neorientat, legat complet (conex), dar din care, dacă pleci de la un nod pe muchii, nu poți face un \"cerc\" ca să te întorci de unde ai plecat (fără cicluri).",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Arbori",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 50,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Câte muchii are garantat un Arbore format din \"n\" noduri?",
+    "code": null,
+    "options_json": [
+      "n",
+      "n + 1",
+      "n - 1",
+      "n * 2"
+    ],
+    "correct_index": 2,
+    "explanation": "Regula de bază spune că orice arbore are cu exact o muchie mai puțin decât numărul lui de noduri. Dacă are 10 puncte, are 9 linii de legătură (n - 1).",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Arbori",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 52,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Care dintre următoarele expresii C++ verifică dacă o variabilă întreagă x aparține intervalului închis [10, 50] și este totodată un număr divizibil cu 3 sau cu 5?",
+    "code": null,
+    "options_json": [
+      "(x >= 10 && x <= 50) && (x % 3 == 0 || x % 5 == 0)",
+      "(x > 10 || x < 50) && (x % 3 == 0 && x % 5 == 0)",
+      "x >= 10 || x <= 50 || x % 15 == 0",
+      "(x >= 10 && x <= 50) || (x % 3 == 0 || x % 5 == 0)"
+    ],
+    "correct_index": 0,
+    "explanation": "Prima parte (x >= 10 && x <= 50) garantează că x se află în intervalul închis [10, 50]. A doua parte (x % 3 == 0 || x % 5 == 0) verifică divizibilitatea cu 3 sau 5, legate prin operatorul logic AND (&&).",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 53,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Ce se va afișa pe ecran în urma executării următorului algoritm?",
+    "code": "int contor = 0;\nfor (int i = 1; i <= 4; i++) {\n    for (int j = 1; j <= 4; j++) {\n        if (i == j) continue;\n        if (i + j > 5) break;\n        contor++;\n    }\n}\ncout << contor;",
+    "options_json": [
+      "4",
+      "6",
+      "5",
+      "8"
+    ],
+    "correct_index": 2,
+    "explanation": "Pentru i=1: j=1 (continue), j=2 (+1), j=3 (+1), j=4 (1+4>5 break). (2 pași).\\nPentru i=2: j=1 (+1), j=2 (continue), j=3 (2+3=5 <=5 +1), j=4 (break). (2 pași).\\nPentru i=3: j=1 (+1), j=2 (3+2=5 <=5 +1), j=3 (continue/break). (2 pași -> i+j=5 <=5, dar j=3 i==j continue; j=4 break). Pentru i=3, j=1(+1), j=2(+1), j=3(continue), j=4(break). (2 pași).\\nPentru i=4: j=1 (4+1=5 +1), j=2 (4+2>5 break). (1 pas).\\nSuma totală de incrementări este 2 + 2 + 0(pentru j=3 i+j>5) = 5 pași valizi.",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Diverse"
+  },
+  {
+    "id": 54,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Considerăm secvența de cod C++ de mai jos. Câte stelute (*) vor fi tipărite în consolă la finalul execuției?",
+    "code": "int x = 20, y = 5;\ndo {\n    cout << \"*\";\n    x = x - y;\n    y++;\n} while (x > y);",
+    "options_json": [
+      "3",
+      "4",
+      "5",
+      "2"
+    ],
+    "correct_index": 0,
+    "explanation": "Pasul 1: tipărește *, x devine 15, y devine 6. Condiție (15 > 6) ADEVĂRATĂ.\\nPasul 2: tipărește *, x devine 9, y devine 7. Condiție (9 > 7) ADEVĂRATĂ.\\nPasul 3: tipărește *, x devine 2, y devine 8. Condiție (2 > 8) FALSĂ. Bucla se oprește. În total s-au afișat 3 steluțe.",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 55,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Determină complexitatea de timp a următoarei secvențe de cod C++ în funcție de n:",
+    "code": "int suma = 0;\nfor (int i = 1; i <= n; i *= 2) {\n    for (int j = 1; j <= i; j++) {\n        suma++;\n    }\n}",
+    "options_json": [
+      "O(n log n)",
+      "O(n)",
+      "O(n^2)",
+      "O(log n)"
+    ],
+    "correct_index": 1,
+    "explanation": "Buclele interioare rulează pentru i = 1, 2, 4, 8, ..., până la n. Suma totală a executărilor este 1 + 2 + 4 + ... + 2^k ≈ 2^(k+1) - 1 = 2n - 1. Aceasta este o serie geometrică a cărei sumă este direct proporțională cu n, deci complexitatea este O(n).",
+    "category": "Fundamente",
+    "subcategory": "Complexitati",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 56,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Care este valoarea expresiei C++ (17 / 4) * 4 + (17 % 4)?",
+    "code": null,
+    "options_json": [
+      "16",
+      "17",
+      "20",
+      "18"
+    ],
+    "correct_index": 1,
+    "explanation": "Aceasta reprezintă identitatea împărțirii cu rest: (17 / 4) este 4 (împărțire întreagă), 4 * 4 = 16. Restul (17 % 4) este 1. Rezultatul 16 + 1 este egal cu 17.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 57,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Se consideră un vector v cu 6 elemente întregi. Ce valoare va avea v[3] după executarea secvenței de cod de mai jos?",
+    "code": "int v[6] = {2, 4, 6, 8, 10, 12};\nfor (int i = 0; i < 5; i++) {\n    v[i] = v[i+1] - v[i];\n}",
+    "options_json": [
+      "2",
+      "4",
+      "6",
+      "0"
+    ],
+    "correct_index": 0,
+    "explanation": "Executăm pas cu pas:\\ni=0: v[0] = 4 - 2 = 2\\ni=1: v[1] = 6 - 4 = 2\\ni=2: v[2] = 8 - 6 = 2\\ni=3: v[3] = v[4] - v[3] = 10 - 8 = 2.\\nValoarea lui v[3] devine 2.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Vectori",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 58,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Se consideră o matrice pătratică A de dimensiune n x n (indici de la 0 la n-1). Care dintre următoarele condiții C++ identifică corect elementele aflate pe diagonala secundară a matricei?",
+    "code": null,
+    "options_json": [
+      "i == j",
+      "i + j == n - 1",
+      "i + j == n",
+      "i - j == 1"
+    ],
+    "correct_index": 1,
+    "explanation": "Pe diagonala secundară a unei matrice pătratice de n x n cu indici de la 0 la n-1, suma indicilor liniei și coloanei este întotdeauna constantă și egală cu n - 1 (ex: pentru n=4, elementele sunt (0,3), (1,2), (2,1), (3,0)).",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 59,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Ce afișează următoarea secvență de cod C++ care parcurge o matrice pătratică A de 3x3?",
+    "code": "int A[3][3] = {{1,2,3},\n               {4,5,6},\n               {7,8,9}};\nint s = 0;\nfor (int i = 0; i < 3; i++) {\n    for (int j = 0; j < 3; j++) {\n        if (i > j) s += A[i][j];\n    }\n}\ncout << s;",
+    "options_json": [
+      "19",
+      "11",
+      "12",
+      "15"
+    ],
+    "correct_index": 0,
+    "explanation": "Condiția i > j selectează elementele aflate STRICT SUB diagonala principală.\\nAcestea sunt:\\nA[1][0] = 4\\nA[2][0] = 7\\nA[2][1] = 8\\nSuma s = 4 + 7 + 8 = 19.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 60,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Ce va afișa secvența de cod C++ de mai jos dacă se apelează funcția strchr pe șirul de caractere dat?",
+    "code": "char text[] = \"informatica\";\nchar *p = strchr(text, 'm');\nif (p != NULL) {\n    cout << p;\n}",
+    "options_json": [
+      "m",
+      "matica",
+      "informatica",
+      "formatica"
+    ],
+    "correct_index": 1,
+    "explanation": "Funcția strchr returnează un pointer către prima apariție a caracterului 'm' în șirul text. Când afișăm prin cout un pointer la char (p), C++ afișează tot subșirul începând de la acea poziție până la NULL, adică \"matica\".",
+    "category": "Organizarea Datelor",
+    "subcategory": "Siruri de caractere",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 61,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Se consideră două șiruri de caractere s1 = \"bacalaureat\" și s2 = \"luni\". Ce valoare va conține s1 după executarea instrucțiunii C++ de mai jos?",
+    "code": "char s1[30] = \"bacalaureat\";\nchar s2[10] = \"luni\";\nstrncpy(s1 + 4, s2, 2);\ncout << s1;",
+    "options_json": [
+      "bacaluniat",
+      "bacalureat",
+      "bacaluureat",
+      "bacaexat"
+    ],
+    "correct_index": 2,
+    "explanation": "s1 + 4 este un pointer către caracterul de pe poziția 4 din s1 (litera 'l' din \"baca...\"). strncpy copiază exact primii 2 caractere din s2 (\"lu\") peste pozițiile 4 și 5 din s1 (\"lu\"). Astfel \"bacalaureat\" devine \"bacaluureat\".",
+    "category": "Organizarea Datelor",
+    "subcategory": "Siruri de caractere",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 62,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Ce valoare va fi afișată pe ecran la finalul executării secvenței de cod?",
+    "code": "int v[5] = {10, 20, 30, 40, 50};\nint temp = v[0];\nfor (int i = 0; i < 4; i++) {\n    v[i] = v[i+1];\n}\nv[4] = temp;\ncout << v[0] << \" \" << v[4];",
+    "options_json": [
+      "20 10",
+      "10 50",
+      "50 10",
+      "20 50"
+    ],
+    "correct_index": 0,
+    "explanation": "Codul mută fiecare element cu o poziție la stânga: v[0] devine v[1] (20), v[1] devine 30, v[2] devine 40, v[3] devine 50, iar la final v[4] primește primul element salvat în temp (10). Afișarea v[0] și v[4] produce \"20 10\".",
+    "category": "Organizarea Datelor",
+    "subcategory": "Vectori",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 63,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Considerăm următoarea definire a unei structuri în C++. Cum se declară un tablou de 100 de puncte și cum se accesează coordonata x a celui de-al treilea punct (indexat de la 0)?",
+    "code": "struct Punct {\n    double x, y;\n};",
+    "options_json": [
+      "Punct p[100]; p[2].x",
+      "Punct p(100); p(3).x",
+      "struct Punct p[100]; p[3]->x",
+      "Punct p[100]; p.x[2]"
+    ],
+    "correct_index": 0,
+    "explanation": "Tabloul de structuri se declară ca `Punct p[100];`. Accesarea celui de-al treilea element se face prin indexul 2 (`p[2]`), iar câmpul x prin operatorul punct (`.x`), rezultând `p[2].x`.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 64,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Dacă o matrice pătratică A de dimensiune n x n este simetrică față de diagonala principală, ce relație este întotdeauna adevărată pentru orice 0 <= i, j < n?",
+    "code": null,
+    "options_json": [
+      "A[i][j] == A[j][i]",
+      "A[i][j] == A[n-1-i][n-1-j]",
+      "A[i][j] == -A[j][i]",
+      "A[i][j] == A[i][n-1-j]"
+    ],
+    "correct_index": 0,
+    "explanation": "Simetria față de diagonala principală înseamnă că elementul de pe linia i și coloana j este egal cu elementul de pe linia j și coloana i (A[i][j] == A[j][i]).",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 65,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Ce valoare va afișa funcția main în urma executării codului C++ de mai jos?",
+    "code": "void f(int x, int y) {\n    x = x + y;\n    y = x - y;\n}\nint main() {\n    int a = 5, b = 3;\n    f(a, b);\n    cout << a << \" \" << b;\n}",
+    "options_json": [
+      "5 3",
+      "8 5",
+      "8 3",
+      "5 8"
+    ],
+    "correct_index": 0,
+    "explanation": "Parametrii x și y sunt reduși la transmitere prin valoare (copie locală). Orice reatribuire sau operare aritmetică în interiorul funcției f nu modifică variabilele originale a și b din funcția main. Deci a și b rămân 5 și 3.",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin valoare",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 66,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Ce valoare va avea variabila x în main după apelul funcției de mai jos care combină transmiterea prin valoare și prin referință?",
+    "code": "void calcul(int a, int &b) {\n    a = a * 2;\n    b = a + b;\n}\nint main() {\n    int x = 4, y = 10;\n    calcul(x, y);\n    cout << x << \" \" << y;\n}",
+    "options_json": [
+      "4 18",
+      "8 18",
+      "8 10",
+      "4 10"
+    ],
+    "correct_index": 0,
+    "explanation": "Parametrul a este transmis prin valoare (a primind o copie a lui x = 4, apoi devine 8). Parametrul b este transmis prin referință (&b este legat direct de y). În funcție: b = 8 + 10 = 18. Variabila x rămâne nemodificată (4), iar y devine 18. Afișarea este \"4 18\".",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin referinta",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 67,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Ce afișează secvența de cod C++ recursivă la apelul afisare(3)?",
+    "code": "void afisare(int n) {\n    if (n > 0) {\n        cout << n << \" \";\n        afisare(n - 1);\n        cout << n << \" \";\n    }\n}",
+    "options_json": [
+      "3 2 1 1 2 3",
+      "3 2 1",
+      "1 2 3 3 2 1",
+      "3 2 1 0 1 2 3"
+    ],
+    "correct_index": 0,
+    "explanation": "La coborârea recursivă se afișează n: 3, apoi 2, apoi 1. Când n ajunge la 0 condiția n>0 devine falsă. La urcare (revenirea din stivă), se execută instrucțiunea de după apel: 1, 2, 3. Textul rezultat este \"3 2 1 1 2 3 \".",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 68,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Care va fi valoarea variabilei v[0] în main după executarea codului de mai jos?",
+    "code": "void dublare(int t[]) {\n    t[0] = t[0] * 2;\n}\nint main() {\n    int v[3] = {7, 8, 9};\n    dublare(v);\n    cout << v[0];\n}",
+    "options_json": [
+      "14",
+      "7",
+      "Eroare de compilare",
+      "0"
+    ],
+    "correct_index": 0,
+    "explanation": "În C++, când un tablou (vector) este transmis ca parametru unei funcții, el este transmis automat prin  referință. Modificarea t[0] afectează direct vectorul original v[0], astfel 7 * 2 = 14.",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin referinta",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 69,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Generăm prin backtracking toate submulțimile mulțimii {1, 2, 3, 4} în ordine lexicografică. Dacă primele submulțimi sunt: {1}, {1,2}, {1,2,3}, {1,2,3,4}, {1,2,4}, {1,3}, care este submulțimea generată imediat după {1,3,4}?",
+    "code": null,
+    "options_json": [
+      "{1,4}",
+      "{2}",
+      "{2,4}",
+      "{2,3}"
+    ],
+    "correct_index": 0,
+    "explanation": "După completarea submulțimilor care încep cu {1,3} (ultima fiind {1,3,4}), algoritmul revine (backtrack) la poziția a doua și trece la elementul 4, obținând submulțimea {1,4}.",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 70,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Se generează prin backtracking numere de câte 3 cifre din mulțimea {1, 2, 3, 4, 5} cu proprietatea că cifrele sunt în ordine strict crescătoare. Primele 3 numere sunt 123, 124, 125: Care este a 5-a soluție generată?",
+    "code": null,
+    "options_json": [
+      "127",
+      "135",
+      "134",
+      "132"
+    ],
+    "correct_index": 1,
+    "explanation": "Soluțiile în ordine lexicografică sunt:\\n1) 123\\n2) 124\\n3) 125\\n4) 134\\n 5) 135\\nDeci a 4-a soluție generată este 134.",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 71,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Care este numărul maxim de muchii pe care le poate avea un graf neorientat cu n=6 noduri?",
+    "code": null,
+    "options_json": [
+      "15",
+      "30",
+      "12",
+      "36"
+    ],
+    "correct_index": 0,
+    "explanation": "Numărul maxim de muchii într-un graf neorientat este dat de formula n * (n - 1) / 2. Pentru n=6, avem 6 * 5 / 2 = 15 muchii.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Terminologie grafuri",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 72,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Se consideră un graf neorientat cu 7 noduri și 5 muchii. Care este numărul minim de componente conexe pe care le poate avea acest graf?",
+    "code": null,
+    "options_json": [
+      "2 componente conexe",
+      "1 componentă conexă",
+      "3 componente conexe",
+      "5 componente conexe"
+    ],
+    "correct_index": 0,
+    "explanation": "Pentru n=7 noduri și m=5 muchii, cel mai mic număr de componente se obține când m muchii leagă m+1 noduri (6 noduri) într-o componentă conexă, iar al 7-lea nod rămâne izolat. Astfel avem 2 componente conexe.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri neorientate",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 73,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Se consideră matricea de adiacență a unui graf orientat cu 4 noduri. Care este gradul exterior (d+) al nodului 2? (Considerăm indexarea liniilor și a coloanelor de la 1 la 4)",
+    "code": "int M[4][4] = {\n    {0, 1, 1, 0},\n    {1, 0, 1, 1},\n    {0, 0, 0, 1},\n    {0, 0, 0, 0}\n};",
+    "options_json": [
+      "3",
+      "2",
+      "1",
+      "4"
+    ],
+    "correct_index": 0,
+    "explanation": "Gradul exterior (d+) al nodului 2 reprezintă numărul de 1-uri de pe linia 2 din matricea de adiacență: M[1][0]=1, M[1][2]=1, M[1][3]=1. Suma este 3.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri orientate",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 74,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Un arbore cu rădăcină are 10 noduri. Câte muchii are garantat acest arbore și câte noduri de tip frunză poate avea cel puțin?",
+    "code": null,
+    "options_json": [
+      "9 muchii și cel puțin 1 frunză",
+      "10 muchii și cel puțin 2 frunze",
+      "9 muchii și cel puțin 2 frunze",
+      "8 muchii și cel puțin 1 frunză"
+    ],
+    "correct_index": 0,
+    "explanation": "Orice arbore cu n noduri are exact n - 1 muchii (deci 10 - 1 = 9 muchii). În plus, orice arbore cu rădăcină are cel puțin o frunză (nod fără fii).",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Arbori",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 75,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Se consideră vectorul de tați al unui arbore cu 7 noduri: T = (4, 4, 1, 0, 1, 2, 2) unde T[i] reprezintă tatăl nodului i (indici de la 1 la 7), iar 0 indică rădăcina. Care este rădăcina arborelui și care sunt frunzele sale?",
+    "code": null,
+    "options_json": [
+      "Rădăcina este nodul 4, iar frunzele sunt nodurile 3, 5, 6, 7",
+      "Rădăcina este nodul 1, iar frunzele sunt nodurile 2, 4",
+      "Rădăcina este nodul 4, iar frunzele sunt nodurile 1, 2",
+      "Rădăcina este nodul 0, iar frunzele sunt nodurile 4, 7"
+    ],
+    "correct_index": 0,
+    "explanation": "Rădăcina are T[i] = 0, deci nodul 4 este rădăcina. Frunzele sunt nodurile care NU apar deloc în vectorul de tați ca părinți. Valorile existente în T sunt {4, 1, 2}. Nodurile care nu apar în T sunt 3, 5, 6, 7. Acestea sunt frunzele.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Arbori",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 76,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Algoritmul alăturat este reprezentat în pseudocod. S-a notat cu x%y restul împărțirii numărului natural x la numărul natural nenul y și cu [z] partea întreagă a numărului real z. Indicați valoarea afișată în urma executării algoritmului, dacă se citesc în această ordine numerele: 4, 92, 718, 14, 21354.",
+    "code": "citește n (n număr natural nenul)\nm ← 0\n┌ pentru i ← 1, n execută\n|   citește a (număr natural)\n|   s ← 0\n|   ┌ cât timp a > 0 execută\n|   |   s ← s + a % 10\n|   |   a ← [a / 100]\n|   └\n|   ┌ dacă s > m atunci\n|   |   m ← s\n|   └\n└\nscrie m",
+    "options_json": [
+      "15",
+      "47",
+      "21354",
+      "16"
+    ],
+    "correct_index": 0,
+    "explanation": "Algoritmul determină suma cifrelor de pe pozițiile impare (de la dreapta la stânga) ale fiecărui număr citit și afișează valoarea maximă m. Pentru 92 suma este 2; pentru 718 este 8+7=15; pentru 14 este 4; pentru 21354 este 4+3+2=9. Maximul obținut este 15 (opțiunea A).",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 77,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Utilizând metoda backtracking se generează, în ordine crescătoare, toate numerele de trei cifre din mulțimea {1, 3, 4, 7, 8}, numere cu proprietatea că au cel mult două cifre impare. Primele 5 numere generate sunt, în această ordine: 114, 118, 134, 138, 141. Indicați al șaptelea număr generat.",
+    "code": null,
+    "options_json": [
+      "143",
+      "147",
+      "144",
+      "171"
+    ],
+    "correct_index": 2,
+    "explanation": "Generând în ordine lexicografică numerele de 3 cifre din {1, 3, 4, 7, 8} cu cel mult 2 cifre impare obținem:1: 114 (2 impare)2: 118 (2 impare)3: 134 (2 impare)4: 138 (2 impare)5: 141 (2 impare)6: 143 (2 impare)7: 144 (1 par, 1 impar - 1 impar <= 2 impare). Prin urmare, al 7-lea număr este 144 (opțiunea C).",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 78,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Fie a un tablou unidimensional cu 6 elemente de tip întreg ce conține elementele (4, 3, 7, 0, 1, 2) memorate începând cu poziția 1. Indicați varianta care precizează conținutul tabloului după executarea secvenței de instrucțiuni de mai jos.",
+    "code": "for(i=1; i<=n; i++)\n    if(a[i]%2==0)\n        a[i]=2*a[i]+1;\n    else\n        a[i]=a[i]-1;",
+    "options_json": [
+      "(9, 7, 15, 1, 3, 5)",
+      "(9, 2, 6, 1, 0, 5)",
+      "(3, 7, 15, 1, 0, 1)",
+      "(3, 2, 6, 0, 1, 5)"
+    ],
+    "correct_index": 1,
+    "explanation": "Parcurgem elementele:\na[1]=4 (par) -> 2*4+1 = 9\na[2]=3 (impar) -> 3-1 = 2\na[3]=7 (impar) -> 7-1 = 6\na[4]=0 (par) -> 2*0+1 = 1\na[5]=1 (impar) -> 1-1 = 0\na[6]=2 (par) -> 2*2+1 = 5\nRezultatul este (9, 2, 6, 1, 0, 5) - opțiunea B.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Vectori",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 79,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Un graf neorientat are 10 noduri și fiecare nod are gradul 2. Indicați numărul maxim de componente conexe ale acestui graf.",
+    "code": null,
+    "options_json": [
+      "2",
+      "1",
+      "4",
+      "3"
+    ],
+    "correct_index": 3,
+    "explanation": "Un graf neorientat simplu în care fiecare nod are gradul 2 este o reuniune de cicluri disjuncte. Pentru a maximiza numărul de componente conexe (cicluri), fiecare ciclu trebuie să aibă dimensiunea minimă posibilă, adică 3 noduri. Cu 10 noduri, putem avea cel mult două cicluri de 3 noduri și un ciclu de 4 noduri (3+3+4 = 10 noduri). Numărul maxim de componente conexe este 3 (opțiunea D).",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri neorientate",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 80,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Subprogramul f este definit mai jos. Indicați valoarea returnată în urma apelului f(6, 1).",
+    "code": "int f(int n, int d)\n{\n    if (d>=n)\n        return 0;\n    else\n        if (n%d==0)\n            return d+f(n, d+1);\n        else\n            return f(n, d+1);\n}",
+    "options_json": [
+      "5",
+      "6",
+      "12",
+      "0"
+    ],
+    "correct_index": 1,
+    "explanation": "Funcția f(n, d) însumează toți divizorii proprii ai lui n începând cu d. Pentru n=6 și d=1: divizorii mai mici decât 6 sunt 1, 2 și 3. Suma lor este 1 + 2 + 3 = 6 (opțiunea B).",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 81,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Variabila d declarată mai jos memorează data expirării unui produs. Indicați expresia adevărată dacă și numai dacă produsul expiră în 21 iulie 2026.",
+    "code": "struct data\n{\n    int zi, luna, an;\n} d;",
+    "options_json": [
+      "zi.d==21 && luna.d==7 && an.d==2026",
+      "d.zi==21 && d.luna==7 && d.an==2026",
+      "d.zi==21 || d.luna==7 || d.an==2026",
+      "zi.d==21 || luna.d==7 || an.d==2026"
+    ],
+    "correct_index": 1,
+    "explanation": "Accesarea câmpurilor unei structuri se face prin sintaxa d.zi, d.luna, d.an. Condiția ca toate cele 3 componente să aibă valorile specificate simultan necesită operatorul logic de conjuncție (&&). Expresia corectă este d.zi==21 && d.luna==7 && d.an==2026 (opțiunea B).",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 82,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Fie tablourile unidimensionale x=(24, 31, 45, 50) și y=(29, 34, 55, 76). Se aplică metoda interclasării în ordine crescătoare pe tablourile obținute prin înlocuirea fiecărui element cu suma cifrelor sale. Identificați tabloul obținut.",
+    "code": null,
+    "options_json": [
+      "(7, 10, 11, 13, 4, 5, 6, 9)",
+      "(4, 5, 6, 9, 7, 10, 11, 13)",
+      "(4, 5, 6, 7, 9, 10, 11, 13)",
+      "(6, 4, 9, 5, 11, 7, 10, 13)"
+    ],
+    "correct_index": 2,
+    "explanation": "Sumele cifrelor pentru tabloul x sunt: (6, 4, 9, 5). Sumele cifrelor pentru tabloul y sunt: (11, 7, 10, 13). Interclasarea în ordine crescătoare a tuturor acestor valori obține sirul ordonat: (4, 5, 6, 7, 9, 10, 11, 13) - opțiunea C.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Vectori",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 83,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "În secvența de instrucțiuni de mai jos x este o variabilă de tip real și y este o variabilă de tip întreg. Indicați valoarea variabilei z obținută în urma executării secvenței.",
+    "code": "x=3.527; y=5; z=floor(sqrt(y))-(int)(x*100)/100;",
+    "options_json": [
+      "0",
+      "5",
+      "6",
+      "-1"
+    ],
+    "correct_index": 3,
+    "explanation": "sqrt(5) ≈ 2.236, iar floor(2.236) este 2. (int)(x*100) devine (int)(352.7) = 352. Împărțirea (int)(x*100)/100 este întreagă (352 / 100 = 3). Prin urmare, z = 2 - 3 = -1 (opțiunea D).",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 84,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Variabila nenulă x este de tip întreg și divizibilă cu 10. Indicați expresia adevărată.",
+    "code": null,
+    "options_json": [
+      "x/2 + x/5 == 0",
+      "x*10/10%2 + x*10/10%5 != x%10",
+      "x%2 * x%5 != x%10",
+      "x%2 + x%5 == x%10"
+    ],
+    "correct_index": 3,
+    "explanation": "Deoarece x este divizibil cu 10, x este divizibil și cu 2 și cu 5. Prin urmare: x % 2 == 0, x % 5 == 0 și x % 10 == 0. Înlocuind în opțiunea D: 0 + 0 == 0, ceea ce este o egalitate adevărată (opțiunea D).",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 85,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce este un graf tare conex (sau o componentă tare conexă)?",
+    "code": null,
+    "options_json": [
+      "Un graf orientat în care pentru orice pereche de noduri (u, v) există drum de la u la v și drum de la v la u",
+      "Un graf neorientat fără cicluri",
+      "Un graf orientat în care toate nodurile au același grad",
+      "Un graf cu matrice de adiacență simetrică"
+    ],
+    "correct_index": 0,
+    "explanation": "Tare conexitatea se aplică grafurilor orientate și înseamnă că între oricare două noduri u și v există drum orientat atât de la u la v cât și de la v la u.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri orientate",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 86,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce reprezintă un \"Ciclul Eulerian\" într-un graf neorientat conex?",
+    "code": null,
+    "options_json": [
+      "Un ciclu care conține fiecare MUCHIE a grafului exact o singură dată",
+      "Un ciclu care conține fiecare NOD al grafului exact o singură dată",
+      "Un arbore de acoperire minimă",
+      "Drumul cel mai scurt între două noduri"
+    ],
+    "correct_index": 0,
+    "explanation": "Un ciclu Eulerian parcurge fiecare MUCHIE a grafului o singură dată și se întoarce la nodul de start. Condiția necesară și suficientă este ca toate nodurile să aibă grad par.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Terminologie grafuri",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 87,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Ce reprezintă un \"Ciclul Hamiltonian\" într-un graf?",
+    "code": null,
+    "options_json": [
+      "Un ciclu care trece prin fiecare NOD al grafului exact o singură dată",
+      "Un ciclu care trece prin fiecare muchie o singură dată",
+      "Un ciclu de lungime minimă egală cu 3",
+      "Un drum care unește doar frunzele"
+    ],
+    "correct_index": 0,
+    "explanation": "Un ciclu Hamiltonian este un ciclu simplu care trece prin fiecare NOD (vârf) al grafului exact o singură dată și revine la nodul inițial.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Terminologie grafuri",
+    "image_url": null,
+    "exam_type": "Initial"
+  },
+  {
+    "id": 89,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Indicați ce se afișează pe ecran în urma execuției secvenței de program următoare.",
+    "code": "void count(int value) {\n    int res = 0;\n    while (value > 0) {\n        if ((value % 10) % 2)\n            res += value % 10;\n        value = value / 10;\n    }\n    cout << res << \" \";\n}\nint main() {\n    count(4872319);\n    return 0;\n}",
+    "options_json": [
+      "16",
+      "18",
+      "20",
+      "19"
+    ],
+    "correct_index": 2,
+    "explanation": "Subprogramul adună în variabila res doar cifrele impare ale numărului primit ca parametru ((value % 10) % 2 este adevărat pentru cifre impare). Cifrele impare ale lui 4872319 sunt 9, 1, 3 și 7. Suma lor este 9 + 1 + 3 + 7 = 20.",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 90,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Fie un vector v de n elemente întregi distincte și sortate crescător. Se dorește determinarea numărului de elemente mai mici decât X, unde X este un element din vector. Care este complexitatea temporală pentru o implementare eficientă a algoritmului solicitat?",
+    "code": null,
+    "options_json": [
+      "O(2n)",
+      "O(1)",
+      "O(n)",
+      "O(log(n))"
+    ],
+    "correct_index": 3,
+    "explanation": "Deoarece vectorul v conține elemente distincte și este sortat crescător, numărul de elemente mai mici decât un element X din vector este egal cu indicele său, determinarea făcându-se în timp logaritmic O(log(n)) prin algoritmul de căutare binară.",
+    "category": "Fundamente",
+    "subcategory": "Complexitati",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 91,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Indicați valoarea variabilei sum, după execuția următoarei secvențe de cod.",
+    "code": "int matrix[9][9] = { 0 };\nint i, j, n = 9;\nint sum = 0;\n\nfor (i = 0; i < n; i++) {\n    matrix[i][n - i - 1] = 1;\n    matrix[i][i] = -1;\n}\n\nfor (i = 0; i < n; i++) {\n    for (j = 0; j < n; j++) {\n        sum += matrix[i][j];\n    }\n}",
+    "options_json": [
+      "1",
+      "0",
+      "-1",
+      "18"
+    ],
+    "correct_index": 2,
+    "explanation": "În primul for, diagonala secundară este setată pe 1 (9 elemente), iar diagonala principală este setată pe -1 (9 elemente). Elementul central matrix[4][4] aparține ambelor diagonale, fiind inițial setat pe 1 și apoi suprascris cu -1. Astfel, rămân 8 elemente egale cu 1 și 9 elemente egale cu -1. Suma elementelor este 8 * 1 + 9 * (-1) = 8 - 9 = -1.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 92,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Indicați ce se afișează pe ecran în urma execuției programului de mai jos.",
+    "code": "#include <iostream>\nusing namespace std;\nvoid fun(char s[], int index) {\n    if (s[index] == '\\0')\n        return;\n    cout << s[index];\n    fun(s, index + 3);\n}\nint main() {\n    char str[20] = \"Admitere ATM\";\n    fun(str, 0);\n    return 0;\n}",
+    "options_json": [
+      "AirA",
+      "AmrT",
+      "Admitere ATM",
+      "AmtrAM"
+    ],
+    "correct_index": 0,
+    "explanation": "Funcția recursivă afișează caracterul de pe poziția curentă index și se apelează din 3 în 3 poziții: poziția 0 ('A'), poziția 3 ('i'), poziția 6 ('r'), poziția 9 ('A'). La poziția 12 se găsește caracterul nul '\\0' și recursivitatea se oprește. Şirul afișat este AirA.",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 93,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Indicați ce valoare returnează funcția fun, dacă este apelată pentru matricea de mai jos. (Variabilele m și n reprezintă numărul de linii și de coloane ale matricei, adică 4, respectiv 4)\n[1 0 2 3]\n[4 5 2 5]\n[0 0 0 2]\n[1 0 0 5]",
+    "code": "int fun(int m, int n, int matrix[4][4])\n{\n    int i=0, j=0, c=0;\n    for (i = 0; i < m; i++) \n    {\n        for (j = 0; j <= i; j++) \n        {\n            if (matrix[i][j] == 0)\n                c++;\n        }\n    }\n    return c;\n}",
+    "options_json": [
+      "2",
+      "5",
+      "4",
+      "1"
+    ],
+    "correct_index": 0,
+    "explanation": "Parcurgerea se face pe și sub diagonala principală (j <= i). În această zonă a matricei, elementele egale cu 1 sunt matrix[0][0]=1 și matrix[3][0]=1 . În total sunt 2 elemente egale cu 1, astfel valoarea returnată de c este 2.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 94,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Se consideră subprogramul f, de mai jos. Indicați ce se afișează în urma apelului acestuia, dacă v = {5, 1, 8, 4} și n = 4?",
+    "code": "void f(int v[], int n) {\n    int i, j;\n    int maxVal, poz;\n    for (i = 0; i < n; i++) {\n        maxVal = -1;\n        j = 0;\n        while (j < n) {\n            if (v[j] > maxVal) {\n                maxVal = v[j];\n                poz = j;\n            }\n            j++;\n        }\n        cout << maxVal << \" \";\n        v[poz] = -1;\n    }\n}",
+    "options_json": [
+      "1 4 5 8",
+      "8 5 4 1",
+      "8 4 5 1",
+      "5 8 4 1"
+    ],
+    "correct_index": 1,
+    "explanation": "La prima parcurgere se determină maximul 8 de pe poziția 2, se afișează 8 și v[2] devine -1. La a doua parcurgere se determină 5 de pe poziția 0, se afișează 5 și v[0] devine -1. Urmează 4 de pe poziția 3 și în final 1 de pe poziția 1. Rezultatul afișat este 8 5 4 1.",
+    "category": "Subprograme",
+    "subcategory": "Transmitere prin valoare",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 95,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Fie graful neorientat complet G, cu noduri notate de la 1 la 10 inclusiv. Se dorește eliminarea succesivă a muchiilor, astfel încât graful G să fie conex și să conțină exact un ciclu elementar. Câte muchii trebuie să fie eliminate?",
+    "code": null,
+    "options_json": [
+      "0",
+      "35",
+      "1",
+      "26"
+    ],
+    "correct_index": 1,
+    "explanation": "Un graf complet cu 10 noduri are n*(n-1)/2 = 45 de muchii. Un graf conex cu n noduri ce conține exact un ciclu (graf uniciclic) are exact n = 10 muchii. Numărul de muchii ce trebuie eliminate este 45 - 10 = 35.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri neorientate",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 96,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Fie un arbore binar A cu n=2026 de noduri. Se numește arbore binar, un arbore în care fiecare nod are cel mult 2 fii. Se cunoaște faptul că arborele A conține același număr de noduri cu 1 fiu și cu 2 fii. Care este numărul de noduri frunză al arborelui A?",
+    "code": null,
+    "options_json": [
+      "676",
+      "675",
+      "1013",
+      "1012"
+    ],
+    "correct_index": 0,
+    "explanation": "Într-un arbore binar, numărul de frunze (n0) este egal cu numărul de noduri cu 2 fii (n2) plus 1: n0 = n2 + 1. Din enunț știm că n1 = n2. Totalul nodurilor este n0 + n1 + n2 = 2026. Înlocuind, obținem (n2 + 1) + n2 + n2 = 2026 => 3 * n2 = 2025 => n2 = 675. Astfel, numărul de frunze este n0 = 675 + 1 = 676.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Arbori",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 97,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Se consideră funcția f definită mai jos. Ce se va afișa în urma apelului f(578)?",
+    "code": "#include <iostream>\nusing namespace std;\n\nint f(int n) {\n    if (n < 10)\n        return 1;\n    else\n        return 2 * (n % 10) + f(n / 10);\n}\n\nint main() {\n    cout << f(578);\n    return 0;\n}",
+    "options_json": [
+      "16",
+      "31",
+      "15",
+      "30"
+    ],
+    "correct_index": 1,
+    "explanation": "Pentru n=578, f(578) returnează 2*8 + f(57) = 16 + f(57). Apoi f(57) returnează 2*7 + f(5) = 14 + f(5). La final, pentru n=5, 5 < 10, deci f(5) returnează 1. Adunând tot: 16 + 14 + 1 = 31.",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 98,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Pentru a verifica dacă în tabloul unidimensional (25, 20, 18, 11, 9, 6, 3) există elementul x=18, se aplică metoda căutării binare. Succesiunea de elemente a căror valoare se compară cu x pe parcursul aplicării metodei este:",
+    "code": null,
+    "options_json": [
+      "11, 6, 18",
+      "25, 20, 18",
+      "11, 20, 18",
+      "11, 9, 18"
+    ],
+    "correct_index": 2,
+    "explanation": "Tabloul este sortat descrescător. Se determină mijlocul: (0+6)/2 = 3. Elementul din mijloc este 11. Deoarece 18 > 11, căutăm în jumătatea stângă. Noul interval: (0+2)/2 = 1. Elementul este 20. Cum 18 < 20, căutăm în dreapta. Noul interval: (2+2)/2 = 2. Elementul este 18, pe care l-am găsit. Comparațiile au fost: 11, 20, 18.",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 99,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Variabila întreagă x are valoarea 2025. Indicați valoarea expresiei de mai jos:",
+    "code": "abs(x / 1000 - x % 10) - sqrt(x % 1000);",
+    "options_json": [
+      "-22",
+      "-2",
+      "-8",
+      "8"
+    ],
+    "correct_index": 1,
+    "explanation": "Pentru x = 2025, avem x/1000 = 2, iar x%10 = 5. Apoi x%1000 = 025 = 25. Expresia devine abs(2 - 5) - sqrt(25) = abs(-3) - 5 = 3 - 5 = -2.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 100,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Se consideră un graf neorientat complet cu 15 vârfuri. Indicați numărul de muchii care trebuie eliminate astfel încât graful rezultat să fie arbore.",
+    "code": null,
+    "options_json": [
+      "105",
+      "91",
+      "14",
+      "17"
+    ],
+    "correct_index": 1,
+    "explanation": "Un graf complet cu 15 vârfuri are n*(n-1)/2 = 15*14/2 = 105 muchii. Un arbore cu 15 vârfuri trebuie să aibă exact n-1 = 14 muchii. Prin urmare, trebuie eliminate 105 - 14 = 91 de muchii.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Arbori",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 101,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Se consideră declararea de mai jos. Indicați instrucțiunea care calculează aria dreptunghiului.",
+    "code": "struct dreptunghi {\n    int lung, lat, arie;\n} d;",
+    "options_json": [
+      "d.arie = d.lung * d.lat;",
+      "arie.d = lung.d * lat.d;",
+      "arie = lung * lat;",
+      "d.arie = d.(lung * lat);"
+    ],
+    "correct_index": 0,
+    "explanation": "Accesarea câmpurilor unei structuri se face prin operatorul punct (.). Variabila structurii este `d`, deci lungimea este `d.lung`, lățimea este `d.lat`, iar aria este `d.arie`. Instrucțiunea corectă este `d.arie = d.lung * d.lat;`.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 102,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Se consideră următorul algoritm scris în pseudocod. Indicați valorile afișate, dacă pentru variabila n se citește valoarea 27836.",
+    "code": "citește n (n număr natural nenul)\nmax <- -1\nmin <- 10\n┌ cât timp n≠0 execută\n│   cif <- n % 10\n│   ┌ dacă max < cif și cif % 2 = 0 atunci\n│   │   max <- cif\n│   └■\n│   ┌ dacă min > cif și cif % 2 ≠ 0 atunci\n│   │   min <- cif\n│   └■\n│   n <- [n/10]\n└■\nscrie min, ' ', max",
+    "options_json": [
+      "6 3",
+      "7 8",
+      "2 7",
+      "3 8"
+    ],
+    "correct_index": 3,
+    "explanation": "Algoritmul determină cifra maximă pară (max) și cifra minimă impară (min) din numărul citit. Pentru 27836, cifrele sunt 2, 7, 8, 3, 6. Cifrele pare sunt 6, 8, 2, deci max va fi 8. Cifrele impare sunt 3, 7, deci min va fi 3. La final se afișează 3 8.",
+    "category": "Fundamente",
+    "subcategory": "Structuri de control",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 103,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Variabilele a, b și x sunt reale, iar a <= b. Indicați expresia C/C++ care are valoarea 1 (true) dacă și numai dacă valoarea variabilei x aparține intervalului închis determinat de valorile variabilelor a și b.",
+    "code": null,
+    "options_json": [
+      "x > a && x < b",
+      "x < a || x < b",
+      "!(x < a || x > b)",
+      "x <= a || x >= b"
+    ],
+    "correct_index": 2,
+    "explanation": "Intervalul închis [a, b] se traduce matematic ca a <= x și x <= b (adică x >= a && x <= b). Conform legilor lui De Morgan, negarea disjuncției complementelor dă aceeași expresie: !(x < a || x > b) este echivalent cu (x >= a && x <= b).",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 104,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Utilizând metoda backtracking sunt generate numere de 4 cifre având următoarele proprietăți: toate cifrele sunt distincte, iar cifrele aflate pe poziții consecutive sunt de paritate diferită. Primele 5 soluții generate în ordine, sunt: 1032, 1034, 1036, 1038, 1052. Indicați soluția generată imediat după 3458.",
+    "code": null,
+    "options_json": [
+      "3610",
+      "3501",
+      "3470",
+      "3459"
+    ],
+    "correct_index": 2,
+    "explanation": "Avem numărul 3458, cu structura impar-par-impar-par. Următorul număr trebuie să înceapă cu 34 (nu mai sunt cifre pare distincte mai mari ca 8, deci nu putem crește ultima cifră păstrând prefixul 345). Trebuie să creștem a 3-a cifră: următoarea cifră impară după 5 este 7. Apoi punem cea mai mică cifră pară disponibilă pe a 4-a poziție, care este 0. Obținem astfel soluția 3470.",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 105,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Indicați conținutul variabilei s, de tip șir de caractere, după executarea secvenței de instrucțiuni de mai jos.",
+    "code": "char s[31];\n\nstrcpy(s, \"Inteligenta artificiala\");\ns[12] = '\\0';\nstrcat(s, \"nativa\");",
+    "options_json": [
+      "Inteligentanativa",
+      "artificiala nativa",
+      "Inteligenta nativa",
+      "Inteligenta"
+    ],
+    "correct_index": 2,
+    "explanation": "Inițial, s reține \"Inteligenta artificiala\". Caracterul de pe poziția 11 este un spațiu (' '), iar cel de pe poziția 12 este 'a'. Executând s[12] = '\\0', șirul este trunchiat și devine \"Inteligenta \" (observați spațiul rămas la final). Prin concatenarea cu \"nativa\", rezultatul final devine \"Inteligenta nativa\".",
+    "category": "Organizarea Datelor",
+    "subcategory": "Siruri de caractere",
+    "image_url": null,
+    "exam_type": "Admitere"
+  },
+  {
+    "id": 106,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Variabilele x și y sunt întregi. Indicați o expresie C/C++ care are valoarea 1 dacă și numai dacă numerele naturale memorate în variabilele x și y au aceeași paritate.",
+    "code": null,
+    "options_json": [
+      "(x*y)%2==0",
+      "x%2==0 && y%2==0",
+      "(x+y)%2==0",
+      "!(x%2==y%2)"
+    ],
+    "correct_index": 2,
+    "explanation": "Două numere au aceeași paritate dacă sunt ambele pare sau ambele impare. În ambele cazuri, suma lor (x+y) va fi un număr par, deci restul împărțirii la 2 va fi 0. Expresia (x+y)%2==0 verifică exact acest lucru.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 107,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Subprogramul alăturat, f, este incomplet definit. Indicați expresia cu care pot fi înlocuite punctele de suspensie, astfel încât, în urma apelului de mai jos, să se afișeze 7.\nApel: f(35, 17);",
+    "code": "void f(int n, int d) {\n    if(n % d == 0)\n        cout << d;\n    else\n        f(........);\n}\n\nint main() {\n    f(35, 17);\n    return 0;\n}",
+    "options_json": [
+      "n+1, d+1",
+      "n-1, d-1",
+      "n, d+1",
+      "n, d-1"
+    ],
+    "correct_index": 3,
+    "explanation": "Pentru a afișa 7, programul trebuie să ajungă la cazul de bază `n % d == 0` având d = 7. Întrucât n pleacă de la 35 și 35 este divizibil cu 7, valoarea lui n trebuie să rămână constantă, iar d trebuie să scadă la fiecare auto-apelare (de la 17 până la 7). Așadar, apelul corect este f(n, d-1).",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 108,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Variabila p, declarată alăturat, memorează primul termen și rația unei progresii aritmetice. Știind că diferența dintre un termen al progresiei și termenul anterior este egală cu rația, indicați expresia a cărei valoare este egală cu cel de-al 10-lea termen al progresiei.",
+    "code": "struct progresie {\n    int prim;\n    int ratie;\n} p;",
+    "options_json": [
+      "prim.p+ratie.p*9",
+      "p.prim+9*p.ratie",
+      "progresie.prim.p+9*progresie.ratie.p",
+      "p.progresie.prim+9*p.progresie.ratie"
+    ],
+    "correct_index": 1,
+    "explanation": "Formula termenului general dintr-o progresie aritmetică este a_n = a_1 + (n-1)*r. Astfel, al 10-lea termen este a_10 = a_1 + 9*r. Membrii structurii se accesează folosind numele variabilei (p) urmat de punct și numele câmpului. Expresia corectă este p.prim + 9 * p.ratie.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 109,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Un graf orientat cu 5 vârfuri, numerotate de la 1 la 5, este reprezentat prin matricea de adiacență de mai jos. Indicați numărul de vârfuri ale grafului cu proprietatea că valoarea absolută a diferenței gradelor intern și extern este 1.\n\n0 1 0 0 1\n1 0 0 0 0\n1 1 0 1 0\n0 0 1 0 1\n0 0 1 1 0",
+    "code": null,
+    "options_json": [
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "correct_index": 0,
+    "explanation": "Gradul extern (nr. de 1 pe linie) și intern (nr. de 1 pe coloană) pentru fiecare vârf sunt: v1 (ext=2, int=2), v2 (ext=1, int=2), v3 (ext=3, int=2), v4 (ext=2, int=2), v5 (ext=2, int=2). Vârfurile la care diferența absolută este 1 sunt v2 (|1-2|=1) și v3 (|3-2|=1). În total sunt 2 vârfuri.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri orientate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 110,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Un graf neorientat cu 6 noduri, numerotate de la 1 la 6, este reprezentat alăturat. Indicați numărul maxim de muchii care pot fi adăugate, astfel încât graful obținut să fie eulerian.",
+    "code": null,
+    "options_json": [
+      "9",
+      "6",
+      "3",
+      "2"
+    ],
+    "correct_index": 1,
+    "explanation": "Graful curent are 6 muchii. Pentru ca un graf să fie eulerian, toate vârfurile trebuie să aibă grad par. Gradul maxim par într-un graf cu 6 noduri este 4. Dacă toate cele 6 noduri au gradul 4, numărul total de muchii este 6*4/2 = 12. Astfel, numărul maxim de muchii ce poate fi atins este 12. Întrucât graful are deja 6 muchii, putem adăuga maxim 12 - 6 = 6 muchii.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri neorientate",
+    "image_url": "https://zarojtvcruwqywzkshbl.supabase.co/storage/v1/object/public/images/1785830563288-Screenshot2026-08-04105430.png",
+    "exam_type": "BAC"
+  },
+  {
+    "id": 111,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Indicați o expresie C/C++ cu valoarea 1.",
+    "code": null,
+    "options_json": [
+      "!(2>3 || 3>4)",
+      "!(2>3) && 3>4",
+      "2>3 && !(3>4)",
+      "4>3>2"
+    ],
+    "correct_index": 0,
+    "explanation": "Expresia (2>3) este falsă (0), iar (3>4) este tot falsă (0). Disjuncția lor 0 || 0 dă 0 (fals). Negând acest rezultat cu operatorul '!', obținem !0, adică 1 (adevărat).",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 112,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Subprogramul f este definit alăturat. Indicați valoarea lui f(56579).",
+    "code": "int f(int n) {\n    if (n == 0) return 0;\n    if (n % 2 == 1) return f(n/10) + 1;\n    return f(n/10) - 1;\n}",
+    "options_json": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "correct_index": 3,
+    "explanation": "Subprogramul adună 1 pentru fiecare cifră impară și scade 1 pentru fiecare cifră pară din număr. Numărul 56579 are cifrele impare 9, 7, 5, 5 (4 cifre) și cifra pară 6 (1 cifră). Rezultatul va fi 4 - 1 = 3.",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 113,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "În muzica clasică, o sonată este o lucrare compusă din trei părți. Variabila declarată alăturat memorează indicativul unei sonate și durata fiecăreia dintre cele trei părți ale acesteia, exprimată în minute și secunde. Indicați o expresie a cărei valoare este egală cu durata celei de a doua părți a sonatei, exprimată în secunde.",
+    "code": "struct sonata {\n    int indicativ;\n    struct {\n        int min, sec;\n    } unu, doi, trei;\n} s;",
+    "options_json": [
+      "s.doi.sec+60*s.doi.min",
+      "sonata.doi.sec+60*sonata.doi.min",
+      "sec.doi.s+60*min.doi.s",
+      "doi.sec.sonata.s+60*doi.min.sonata.s"
+    ],
+    "correct_index": 0,
+    "explanation": "Variabila se numește `s`. Partea a doua se accesează prin `s.doi`. Minutele și secundele acesteia sunt `s.doi.min` și `s.doi.sec`. Durata totală în secunde se calculează înmulțind minutele cu 60 și adunând secundele.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 114,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Într-un arbore cu rădăcină considerăm că un nod se află pe nivelul x dacă lanțul elementar care are o extremitate în nodul respectiv și cealaltă extremitate în rădăcina arborelui are lungimea x. Pe nivelul 0 se află un singur nod (rădăcina). Un arbore cu 8 noduri, numerotate de la 1 la 8, este reprezentat prin vectorul de tați: (3, 4, 0, 3, 4, 8, 2, 3). Indicați numărul de niveluri ale arborelui.",
+    "code": null,
+    "options_json": [
+      "7",
+      "5",
+      "4",
+      "2"
+    ],
+    "correct_index": 2,
+    "explanation": "Rădăcina (tatăl 0) este nodul 3 (nivel 0). Fiii lui 3 sunt 1, 4, 8 (nivel 1). Fiii nodurilor 1, 4, 8 sunt 2 și 5 (fiii lui 4) și 6 (fiul lui 8) -> nivel 2. Fiii nodurilor 2, 5, 6 sunt 7 (fiul lui 2) -> nivel 3. Nodul 7 nu are fii. Avem nivelele 0, 1, 2, 3, așadar un număr total de 4 niveluri.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Arbori",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 115,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Un graf orientat cu 7 vârfuri, numerotate de la 1 la 7, are arcele (1,2), (2,3), (3,1), (4,5), (4,6), (5,6), (6,7), (7,4). Indicați numărul minim de arce care pot fi adăugate și poziționate adecvat, astfel încât graful orientat obținut să fie tare conex.",
+    "code": null,
+    "options_json": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_index": 1,
+    "explanation": "Graful are două componente tare conexe disjuncte: C1 formată din nodurile {1, 2, 3} (care formează un ciclu 1->2->3->1) și C2 formată din nodurile {4, 5, 6, 7} (ciclu 4->5->6->7->4 și un arc adițional 4->6). Pentru a uni cele două componente într-una singură tare conexă, avem nevoie de minim 2 arce (unul de la C1 la C2 și unul de la C2 la C1).",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri orientate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 116,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Indicați expresia C/C++ a cărei valoare este egală cu 26.",
+    "code": null,
+    "options_json": [
+      "(2026-26)/100",
+      "2026/100",
+      "(2026-26)%100",
+      "2026%100"
+    ],
+    "correct_index": 3,
+    "explanation": "Operatorul % reprezintă restul împărțirii întregi (modulo). Împărțind 2026 la 100 obținem câtul 20 și restul 26. Așadar, 2026 % 100 are valoarea 26.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 117,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Subprogramul f este definit alăturat. Indicați valoarea f(1, 10).",
+    "code": "int f(int n, int m) {\n    if(n >= m) return 0;\n    else return 1 + f(n + 1, m - 2);\n}",
+    "options_json": [
+      "1",
+      "3",
+      "5",
+      "7"
+    ],
+    "correct_index": 1,
+    "explanation": "Apelul se desfășoară astfel: f(1,10) = 1 + f(2,8). Mai departe, f(2,8) = 1 + f(3,6), apoi f(3,6) = 1 + f(4,4). La apelul f(4,4) condiția n>=m (4>=4) este adevărată, deci returnează 0. Rezultatul final este 1 + 1 + 1 + 0 = 3.",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 118,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "O agenție de turism pune la dispoziție pachete de vacanță cu câte trei destinații, în ordinea: una pe Clisura Dunării, una la munte și una pe litoral. Utilizând metoda backtracking, se generează toate pachetele din mulțimile: {Dubova, Eșelnița, Șvinița} pentru Clisură, {Bușteni, Păltiniș, Predeal} pentru munte și {Venus, Neptun, Olimp} pentru litoral. Primele 5 soluții sunt: (Dubova, Bușteni, Venus), (Dubova, Bușteni, Neptun), (Dubova, Bușteni, Olimp), (Dubova, Păltiniș, Venus), (Dubova, Păltiniș, Neptun). Indicați pachetul generat imediat înainte de (Șvinița, Bușteni, Venus).",
+    "code": null,
+    "options_json": [
+      "(Eșelnița, Bușteni, Venus)",
+      "(Eșelnița, Predeal, Olimp)",
+      "(Șvinița, Păltiniș, Olimp)",
+      "(Șvinița, Predeal, Olimp)"
+    ],
+    "correct_index": 1,
+    "explanation": "Se generează produsul cartezian al celor 3 mulțimi (în ordinea elementelor date). Soluția (Șvinița, Bușteni, Venus) are primele elemente din mulțimea a doua și a treia, dar trece la al 3-lea element ('Șvinița') din prima mulțime. Soluția generată anterior ei va fi ultima combinație posibilă care are pe prima poziție elementul precedent ('Eșelnița'), așadar va avea ultimul element din a 2-a mulțime ('Predeal') și ultimul din a 3-a mulțime ('Olimp'). Rezultă (Eșelnița, Predeal, Olimp).",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 119,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Un graf orientat cu 4 vârfuri, numerotate de la 1 la 4, este reprezentat prin matricea de adiacență alăturată. Indicați un circuit elementar în acest graf.\n\n0 1 1 0\n1 0 1 0\n0 0 0 1\n1 1 0 0",
+    "code": null,
+    "options_json": [
+      "1, 2, 1, 3, 4, 1",
+      "1, 2, 3, 4",
+      "1, 3, 4, 2, 1",
+      "1, 4, 3, 2, 1"
+    ],
+    "correct_index": 2,
+    "explanation": "Matricea indică existența următoarelor arce: 1->2, 1->3, 2->1, 2->3, 3->4, 4->1, 4->2. Un circuit elementar începe și se termină în același nod fără a repeta alte noduri pe parcurs. Traseul 1->3->4->2->1 conține doar arce existente și îndeplinește condiția de circuit elementar.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri orientate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 120,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "O rețea din 12 centre e modelată ca un graf neorientat, cu muchiile: (1,2), (1,3), (2,3), (2,4), (3,5), (4,5), (4,6), (5,6), (6,7), (7,8), (7,9), (8,9), (9,10), (10,11), (10,12), (11,12). Indicați numărul minim de muchii care trebuie eliminate pentru ca graful parțial obținut să fie format din 3 componente conexe, fiecare cu câte 4 noduri.",
+    "code": null,
+    "options_json": [
+      "2",
+      "4",
+      "5",
+      "7"
+    ],
+    "correct_index": 2,
+    "explanation": "Componentele posibile de 4 noduri care necesită tăieri minime sunt: C1 = {1, 2, 3, 4}, C2 = {5, 6, 7, 8}, C3 = {9, 10, 11, 12}. Pentru a le izola: se taie (7,9) și (8,9) pentru a separa C3 de restul. Între C1 și C2 se taie muchiile care le unesc: (3,5), (4,5), (4,6). În total, 2 + 3 = 5 muchii tăiate.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri neorientate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 121,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Variabila x este de tip întreg. Indicați o expresie care are valoarea 1 dacă și numai dacă expresia C/C++ alăturată are valoarea 1.\n\nx<=20 || x>26",
+    "code": null,
+    "options_json": [
+      "!(x>20) || !(x<=26)",
+      "!(x>=20) && !(x>=26)",
+      "!(x<20 || x<=26)",
+      "!(x<20 && x<26)"
+    ],
+    "correct_index": 0,
+    "explanation": "Aplicând regulile logice și negația: expresia !(x>20) este echivalentă cu x<=20, iar !(x<=26) este echivalentă cu x>26. Astfel, !(x>20) || !(x<=26) este exact x<=20 || x>26.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 122,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Un mozaic este alcătuit din plăcuțe de formă pătrată, cu dimensiuni egale, de culoare albă sau roșie, așezate pe două rânduri și aliniate ca în exemplu. Mozaicul are un model în zig-zag dacă oricare două plăcuțe cu o latură comună au culoare diferită. Se știe că plăcuțele de pe latura din dreapta au culori diferite. Variabilele j și ok sunt întregi, iar variabila a este un tablou bidimensional cu două linii și 12 coloane, cu elemente de tip char, în care fiecare linie, în ordine, memorează succesiunea de plăcuțe aflate pe un rând al mozaicului, notându-se cu litera R cele roșii și cu litera A cele albe. Liniile și coloanele sunt numerotate începând de la 0.\nIndicați expresia care poate înlocui punctele de suspensie astfel încât, în urma executării secvenței C/C++ obținute, variabila ok să aibă valoarea 1, dacă mozaicul are un model în zig-zag, sau valoarea 0 în caz contrar.\nExemplu: în urma executării secvenței pentru tabloul de mai jos, unde sunt evidențiate două zone în care nu se respectă modelul, ok=0.",
+    "code": "ok=1;\nfor(j=0;j<11;j++)\n  if(........) ok=0;",
+    "options_json": [
+      "a[0][j]==a[0][j-1] || a[0][j]==a[1][j-1]",
+      "a[0][j]==a[0][j+1] || a[0][j]==a[1][j+1]",
+      "a[0][j]==a[0][j-1] || a[0][j]==a[1][j+1]",
+      "a[0][j]==a[0][j+1] || a[0][j]==a[1][j]"
+    ],
+    "correct_index": 3,
+    "explanation": "Pentru a menține modelul zig-zag, orice celulă a[0][j] trebuie să fie diferită de vecinii săi care împart o latură cu ea. Vecinii săi din aceeași porțiune iterată sunt a[0][j+1] (la dreapta) și a[1][j] (dedesubt). Așadar, dacă a[0][j] are aceeași culoare cu oricare dintre aceștia (a[0][j]==a[0][j+1] || a[0][j]==a[1][j]), modelul este încălcat și ok devine 0.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Matrice",
+    "image_url": "https://zarojtvcruwqywzkshbl.supabase.co/storage/v1/object/public/images/1785832553384-Screenshot2026-08-04113531.png",
+    "exam_type": "BAC"
+  },
+  {
+    "id": 123,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Subprogramul f este definit alăturat, iar variabila x este de tip întreg. Indicați ce se afișează în urma executării secvenței C/C++ de mai jos.\n\nx=3; f(x);",
+    "code": "void f(int &n)\n{\n  if(n>0) { \n    cout<<n; \n    n=n-1; \n    f(n);\n    cout<<n;\n  }\n}",
+    "options_json": [
+      "321000",
+      "321012",
+      "321123",
+      "3210123"
+    ],
+    "correct_index": 0,
+    "explanation": "Variabila n este transmisă prin referință (&n), ceea ce înseamnă că toate apelurile recursive modifică aceeași zonă de memorie. La prima trecere, se afișează 3, apoi n scade la 2. Se apelează f(n), care afișează 2 și scade n la 1. Apelul f(1) afișează 1 și scade n la 0. Se apelează f(0), care nu face nimic. La finalizarea apelurilor, din cauza referinței, n rămâne 0. Secvențele cout<<n de după auto-apelare vor afișa 0 de fiecare dată, rezultând 321000.",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 124,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "La balul absolvenților se acordă șase premii pe baza unei tombole cu 30 de bilete, numerotate de la 30 la 1, în această ordine. Utilizând metoda backtracking, se generează toate variantele de a alege biletele celor șase câștigători, care sunt anunțați în ordine descrescătoare a numerelor de pe bilete. Două soluții diferă prin cel puțin un bilet. Primele trei soluții generate sunt, în această ordine: (30,29,28,27,26,25), (30,29,28,27,26,24), (30,29,28,27,26,23). Indicați penultima soluție generată.",
+    "code": null,
+    "options_json": [
+      "(7,6,5,4,3,2)",
+      "(7,6,5,3,2,1)",
+      "(7,6,4,3,2,1)",
+      "(7,5,4,3,2,1)"
+    ],
+    "correct_index": 3,
+    "explanation": "Se generează combinări de 30 luate câte 6, în ordine strict descrescătoare. Ultima soluție absolută care poate fi generată este formată din cele mai mici 6 numere disponibile, adică (6, 5, 4, 3, 2, 1). Pentru a o obține pe penultima, ultima poziție care mai poate fi crescută este elementul cel mai din stânga posibil. Astfel, 6 se transformă în 7, iar restul elementelor rămân cele mai mici posibile în continuare, adică 5, 4, 3, 2, 1. Rezultă (7, 5, 4, 3, 2, 1).",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 125,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "Într-un arbore cu 7 noduri, numerotate de la 1 la 7, nodul 3 este rădăcină și pentru orice nod numerotat cu i (i∈[1,7]), dacă se notează cu F(i) numărul de descendenți direcți („fii”) ai lui, atunci F(i)=0, dacă i este „frunză”, sau F(i)=i-1, în caz contrar. Indicați numărul maxim de „frați” ai nodului 1.",
+    "code": null,
+    "options_json": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_index": 2,
+    "explanation": "Pentru a maximiza numărul de frați ai nodului 1, acesta trebuie să fie descendent al unui nod x cu cât mai mulți fii. Cum F(x) = x-1, vrem ca x să fie maxim. Dacă x=6, ar avea 5 fii. Cu rădăcina 3 (F(3)=2 fii), numărul total de noduri ar fi 1(rădăcina) + 2(fiii) + 5 = 8 noduri (prea multe, deoarece avem maxim 7). Astfel, nodul parinte maxim permis este x=5. F(5) = 4 fii. Nodurile ar fi: 3 (radacina) avand fiii 2 și 5, iar 5 avand fiii 1,4,6,7. În total 7 noduri (valid!). Nodul 1 este printre cei 4 fii ai lui 5, prin urmare are 3 frați.",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Arbori",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 126,
+    "difficulty": "easy",
+    "type": "choice",
+    "text": "Indicați valoarea expresiei C/C++ alăturate.\n\n20/25*20/2",
+    "code": null,
+    "options_json": [
+      "0",
+      "0.02",
+      "0.08",
+      "8"
+    ],
+    "correct_index": 0,
+    "explanation": "Operatorii / și * au aceeași prioritate și se evaluează de la stânga la dreapta. 20/25 este împărțire întrețegi, dând câtul 0. Apoi 0 * 20 = 0, iar 0 / 2 = 0. Rezultatul final este 0.",
+    "category": "Fundamente",
+    "subcategory": "Operatori si expresii",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 127,
+    "difficulty": "hard",
+    "type": "code",
+    "text": "Subprogramul f este definit alăturat.\nȘtiind că variabila x memorează un tablou unidimensional cu elementele (2,0,2,6,8), în această ordine, numerotate de la 0 la 4, indicați valoarea f(0,4,x).",
+    "code": "int f(int s,int d,int v[])\n{ if(s==d) if(v[d]==2*d) return 1;\n           else return 0;\n  else return f(s,(s+d)/2,v) + f(1+(s+d)/2,d,v);\n}",
+    "options_json": [
+      "1",
+      "2",
+      "4",
+      "5"
+    ],
+    "correct_index": 1,
+    "explanation": "Funcția folosește metoda Divide et Impera pentru a număra câte elemente din vector îndeplinesc condiția v[i] == 2*i. Verificăm elementele: v[0]=2 (fals), v[1]=0 (fals), v[2]=2 (fals), v[3]=6 (6==2*3, adevărat -> 1), v[4]=8 (8==2*4, adevărat -> 1). În total, condiția este îndeplinită de 2 ori, deci subprogramul returnează 2.",
+    "category": "Subprograme",
+    "subcategory": "Recursivitate",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 128,
+    "difficulty": "hard",
+    "type": "choice",
+    "text": "La un târg pentru copii, fiecare joc este asociat cu câte o singură abilitate – cheie... Utilizând metoda backtracking, se generează toate posibilitățile de a expune seturi de câte trei jocuri din mulțimea {jenga (motricitate), kendama (motricitate), lego (creativitate), șah (strategie), scrabble (vocabular)}, astfel încât să nu fie alese simultan două jocuri care dezvoltă aceeași abilitate - cheie, scrabble să NU apară pe prima poziție, iar șahul să NU fie înainte de jenga sau kendama. Două seturi sunt distincte dacă diferă prin cel puțin un joc sau dacă ordinea jocurilor este diferită. Primele cinci seturi generate sunt, în această ordine (jenga, lego, șah), (jenga, lego, scrabble), (jenga, șah, lego), (jenga, șah, scrabble), (jenga, scrabble, lego). Indicați penultimul set generat.",
+    "code": null,
+    "options_json": [
+      "șah, lego, scrabble",
+      "șah, scrabble, lego",
+      "lego, jenga, șah",
+      "lego, șah, jenga"
+    ],
+    "correct_index": 0,
+    "explanation": "Generarea se face în ordine lexicografică. Ultimul element pe prima poziție poate fi 'șah' (deoarece 'scrabble' nu are voie pe prima poziție). Dacă pe prima poziție e 'șah', pe următoarele nu au voie să fie 'jenga' sau 'kendama'. Așadar, singurele opțiuni valide care încep cu 'șah' sunt combinațiile dintre 'lego' și 'scrabble'. Cele 2 seturi generate la final vor fi (șah, lego, scrabble) și apoi (șah, scrabble, lego). Penultimul este, așadar, (șah, lego, scrabble).",
+    "category": "Backtracking",
+    "subcategory": "Teorie si aplicare practica",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 129,
+    "difficulty": "medium",
+    "type": "code",
+    "text": "Variabila z, declarată alăturat, memorează unele date despre 100 dintre zonele continentului. Știind că densitatea unei zone este egală cu raportul dintre numărul de locuitori și suprafața acesteia (exprimată în km^2), indicați o expresie a cărei valoare este egală cu numărul de locuitori ai primei zone.",
+    "code": "struct zona\n{ char nume[21];\n  int densitate;\n  int suprafata;\n}z[100];",
+    "options_json": [
+      "z[0].densitate*z[0].suprafata",
+      "z.densitate[0]*z.suprafata[0]",
+      "densitate[0].z*suprafata[0].z",
+      "densitate.z[0]*suprafata.z[0]"
+    ],
+    "correct_index": 0,
+    "explanation": "Vectorul se numește z. Prima zonă din vector se accesează prin z[0]. Din definiția densității, numărul de locuitori = densitate * suprafață. Deci expresia corectă va fi produsul atributelor pentru prima zonă: z[0].densitate * z[0].suprafata.",
+    "category": "Organizarea Datelor",
+    "subcategory": "Structuri de date (struct)",
+    "image_url": null,
+    "exam_type": "BAC"
+  },
+  {
+    "id": 130,
+    "difficulty": "medium",
+    "type": "choice",
+    "text": "Un graf neorientat are 7 noduri, numerotate de la 1 la 7, și 8 muchii, dintre care șase sunt: [1,2], [2,5], [2,6], [2,7], [3,7], [4,7]. Știind că unul dintre lanțurile elementare care au lungimea maximă este 3, 7, 4, 5, 2, 1, indicați care ar putea fi celelalte două muchii ale grafului.",
+    "code": null,
+    "options_json": [
+      "[1,6] și [4,5]",
+      "[2,3] și [2,4]",
+      "[2,3] și [4,5]",
+      "[2,4] și [5,7]"
+    ],
+    "correct_index": 2,
+    "explanation": "Lanțul dat este format din muchiile: (3,7), (7,4), (4,5), (5,2), (2,1). Printre muchiile date, nu se află (4,5). Deoarece lanțul maxim trebuie să fie valid, rezultă obligatoriu că (4,5) se află printre cele 2 muchii lipsă. Avem 2 variante cu (4,5). Dacă am adăuga și (1,6), lanțul ar putea continua din 2 (prin muchia 2-6) astfel: 3-7-4-5-2-6-1, dând o lungime mai mare (6), ceea ce contrazice enunțul. Deci varianta corectă este [2,3] și [4,5].",
+    "category": "Grafuri si Arbori",
+    "subcategory": "Grafuri neorientate",
+    "image_url": null,
+    "exam_type": "BAC"
+  }
+]

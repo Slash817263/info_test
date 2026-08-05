@@ -29,8 +29,9 @@ exports.handler = async function(event, context) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Email is required' }) };
         }
 
-        // Query the most recent result for this email
-        const url = `${supabaseUrl}/rest/v1/results?student_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=1`;
+        // Query recent results for this student across all identifier fields
+        const encodedEmail = encodeURIComponent(email);
+        const url = `${supabaseUrl}/rest/v1/results?or=(student_email.eq.${encodedEmail},student_username.eq.${encodedEmail},student_name.eq.${encodedEmail})&order=created_at.desc&limit=5`;
         const response = await fetch(url, {
             headers: {
                 'apikey': supabaseKey,
@@ -49,13 +50,22 @@ exports.handler = async function(event, context) {
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({ exists: true, name: data[0].student_name })
+                body: JSON.stringify({
+                    exists: true,
+                    name: data[0].student_name,
+                    history: data.map(d => ({
+                        test_type: d.test_type,
+                        score: d.score,
+                        total_points: d.total_points,
+                        created_at: d.created_at
+                    }))
+                })
             };
         } else {
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({ exists: false })
+                body: JSON.stringify({ exists: false, history: [] })
             };
         }
     } catch (error) {

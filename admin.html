@@ -158,10 +158,25 @@
         .badge-medium { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); }
         .badge-hard { background: rgba(248, 113, 113, 0.15); color: var(--accent-red); }
         .CodeMirror { border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); font-family: var(--font-code); height: auto; min-height: 100px; max-height: 300px; font-size: 14px; }
-    </style>
-</head>
 
-<body>
+        /* ========== DETAILS MODAL ========== */
+        .detail-card { background: rgba(15, 15, 40, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; margin-bottom: 14px; }
+        .detail-card.correct { border-left: 4px solid var(--accent-green); }
+        .detail-card.wrong { border-left: 4px solid var(--accent-red); }
+        .detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+        .detail-opt { padding: 10px 14px; border-radius: var(--radius-sm); margin-top: 6px; font-size: 13px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; }
+        .detail-opt.opt-correct { background: rgba(52, 211, 153, 0.15); border-color: rgba(52, 211, 153, 0.4); color: #e0fdf4; font-weight: 600; }
+        .detail-opt.opt-wrong { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.4); color: #fef2f2; font-weight: 600; }
+        .detail-opt-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
+        .detail-opt-tag.tag-correct { background: var(--accent-green); color: #07071a; }
+        .detail-opt-tag.tag-wrong { background: var(--accent-red); color: #fff; }
+        .detail-code { background: #0c0d1e; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; font-family: var(--font-code); font-size: 13px; color: #a6accd; white-space: pre-wrap; margin: 10px 0; overflow-x: auto; }
+        .detail-explanation { background: rgba(124, 106, 255, 0.08); border-left: 3px solid var(--accent-purple); padding: 10px 14px; font-size: 13px; margin-top: 12px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: #d0c8ff; }
+        .details-filter-btn.active { background: var(--accent-purple) !important; color: #fff !important; }
+        .details-filter-btn.active { background: var(--accent-purple) !important; color: #fff !important; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
     <div class="bg-orb bg-orb-1"></div>
     <div class="bg-orb bg-orb-2"></div>
     <div class="toast" id="toast"></div>
@@ -169,8 +184,8 @@
     <div class="container">
         <header>
             <div class="title-area">
-                <h1>Panou <span class="gradient-text">Administrare</span></h1>
-                <p>Monitorizare rezultate & Gestionare bază de date întrebări</p>
+                <h1>AcaDe-QUIZ <span class="gradient-text">Admin</span></h1>
+                <p>Monitorizare rezultate & Gestionare elevi</p>
             </div>
             <div class="actions">
                 <button id="btn-download" class="btn btn-primary" style="display: none;">Descarcă CSV</button>
@@ -180,7 +195,12 @@
 
         <div class="tabs">
             <button class="tab-btn active" data-target="tab-rezultate">Rezultate</button>
-            <button class="tab-btn" data-target="tab-intrebari">Bază de Întrebări (CMS)</button>
+            <button class="tab-btn" data-target="tab-elevi">Elevi (Conturi)</button>
+            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Initial')">Test Inițial <span id="tab-count-Initial" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
+            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Admitere')">Admitere <span id="tab-count-Admitere" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
+            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('BAC')">BAC <span id="tab-count-BAC" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
+            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Diverse')">Diverse <span id="tab-count-Diverse" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
+            <button class="tab-btn" data-target="tab-waiting">În Așteptare (<span id="badge-waiting-count" style="background:rgba(251,191,36,0.2); color:var(--accent-amber); padding:2px 8px; border-radius:10px; font-size:12px;">0</span>)</button>
         </div>
 
         <!-- TAB REZULTATE -->
@@ -239,7 +259,7 @@
         <!-- TAB INTREBARI -->
         <div id="tab-intrebari" class="tab-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="font-size: 20px; font-weight: 700;">Bază de Întrebări</h2>
+                <h2 id="tab-intrebari-title" style="font-size: 20px; font-weight: 700;">Bază de Întrebări</h2>
                 <button class="btn btn-primary" onclick="openQuestionModal()">+ Adaugă Întrebare</button>
             </div>
 
@@ -283,6 +303,89 @@
                 <!-- Grouped rendering goes here -->
             </div>
         </div>
+
+        <!-- TAB WAITING QUESTIONS (STAGING) -->
+        <div id="tab-waiting" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h2 style="font-size: 20px; font-weight: 700;">Evaluare Întrebări Noi (Staging)</h2>
+                    <p style="font-size: 13px; color: var(--text-secondary);">Revizuiți și aprobați întrebările propuse în waiting.sql pentru a fi inserate în Supabase & seed.sql</p>
+                </div>
+                <button class="btn btn-primary" style="background: linear-gradient(135deg, #00d4aa, #00a884);" onclick="approveAllWaitingQuestions()">🚀 Aprobă Toate Întrebările</button>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-panel">
+                <div class="filter-group">
+                    <label>Categorie</label>
+                    <select id="w-filter-cat" class="form-control" onchange="updateWFilterSub(); renderWaitingQuestions();">
+                        <option value="">Toate categoriile</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Subcategorie</label>
+                    <select id="w-filter-sub" class="form-control" onchange="renderWaitingQuestions()">
+                        <option value="">Toate subcategoriile</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Dificultate</label>
+                    <select id="w-filter-diff" class="form-control" onchange="renderWaitingQuestions()">
+                        <option value="">Toate</option>
+                        <option value="easy">Ușoară</option>
+                        <option value="medium">Medie</option>
+                        <option value="hard">Grea</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="flex: 2;">
+                    <label>Căutare (text)</label>
+                    <input type="text" id="w-filter-search" class="form-control" placeholder="Caută..." onkeyup="renderWaitingQuestions()">
+                </div>
+            </div>
+            
+            <div class="loading-state" id="loading-waiting">
+                <div class="spinner"></div>
+                <p>Se încarcă întrebările în așteptare...</p>
+            </div>
+            <div class="empty-state" id="empty-waiting" style="display: none;">
+                <p>🎉 Nu există nicio întrebare în așteptare pentru aprobare!</p>
+            </div>
+            <div id="wrapper-waiting" style="display: none; flex-direction: column; gap: 16px;">
+                <!-- Cards rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- TAB ELEVI -->
+        <div id="tab-elevi" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 20px; font-weight: 700;">Gestionare Elevi (Conturi AcaDe-QUIZ)</h2>
+                <button class="btn btn-primary" onclick="openStudentModal()">+ Adaugă Elev</button>
+            </div>
+            
+            <main class="table-card">
+                <div class="loading-state" id="loading-students">
+                    <div class="spinner"></div>
+                    <p>Se încarcă elevii...</p>
+                </div>
+                <div class="empty-state" id="empty-students" style="display: none;">
+                    <p>Nu există niciun elev înregistrat.</p>
+                </div>
+                <div class="table-wrapper" id="wrapper-students" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nume Utilizator</th>
+                                <th>Parolă (WhatsApp)</th>
+                                <th>Data Creării</th>
+                                <th>Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-body"></tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
     </div>
 
     <!-- MODAL ADD/EDIT QUESTION -->
@@ -296,6 +399,15 @@
                 <input type="hidden" id="q-id">
                 
                 <div class="form-grid">
+                    <div class="form-group">
+                        <label>Tip Examen (se pot bifa mai multe)</label>
+                        <div id="q-exam-type-group" style="display:flex; flex-wrap:wrap; gap:12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="Initial" class="q-exam-cb"> Test Inițial</label>
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="Admitere" class="q-exam-cb"> Admitere</label>
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="BAC" class="q-exam-cb"> BAC</label>
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="Diverse" class="q-exam-cb"> Diverse</label>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label>Categorie</label>
                         <select id="q-category" class="form-control" onchange="updateSubcategories()" required>
@@ -333,6 +445,15 @@
                 <div class="form-group full-width">
                     <label>Textul întrebării</label>
                     <textarea id="q-text" class="form-control" required placeholder="Ex: Ce va afișa următorul cod?"></textarea>
+                </div>
+
+                <div class="form-group full-width">
+                    <label>URL / Upload Imagine (Opțional)</label>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="url" id="q-image-url" class="form-control" placeholder="https://... (completat automat la upload)" style="flex: 1; min-width: 200px;">
+                        <input type="file" id="q-image-file" accept="image/*" class="form-control" style="flex: 1; min-width: 200px; padding: 6px;">
+                    </div>
+                    <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Selectează un fișier pentru a-l încărca automat la salvare, sau pune manual un link.</small>
                 </div>
 
                 <div class="form-group full-width">
@@ -383,17 +504,74 @@
         </div>
     </div>
 
+    <!-- MODAL ADD STUDENT -->
+    <div id="modal-student" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Generează Cont Elev</h2>
+                <button class="btn-close" onclick="closeStudentModal()">&times;</button>
+            </div>
+            <form id="student-form" onsubmit="handleCreateStudent(event)">
+                <div class="form-group full-width">
+                    <label>Nume utilizator (username)</label>
+                    <input type="text" id="new-student-username" class="form-control" required placeholder="ex: tudor123">
+                </div>
+                <div class="form-group full-width">
+                    <label>Parolă generată</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="new-student-password" class="form-control" required>
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-student-password').value = Math.random().toString(36).slice(-8);">🔄</button>
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top:20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">Anulează</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-student">Creează Cont</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DETAILS RESULT -->
+    <div id="modal-details" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 850px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="flex-shrink: 0;">
+                <div>
+                    <h2 id="details-student-name">Detalii Test Student</h2>
+                    <p id="details-student-meta" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;"></p>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;" onclick="exportResultsPDF()">📄 Exportă PDF</button>
+                    <button class="btn-close" onclick="closeDetailsModal()">&times;</button>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-shrink: 0; flex-wrap: wrap;">
+                <button id="filter-btn-all" class="btn btn-secondary details-filter-btn active" onclick="setDetailsFilter('all', this)">Toate (<span id="count-all">0</span>)</button>
+                <button id="filter-btn-wrong" class="btn btn-secondary details-filter-btn" style="border-color: rgba(248, 113, 113, 0.4);" onclick="setDetailsFilter('wrong', this)">❌ Greșite (<span id="count-wrong">0</span>)</button>
+                <button id="filter-btn-correct" class="btn btn-secondary details-filter-btn" style="border-color: rgba(52, 211, 153, 0.4);" onclick="setDetailsFilter('correct', this)">✔️ Corecte (<span id="count-correct">0</span>)</button>
+            </div>
+
+            <div id="details-list" style="overflow-y: auto; padding-right: 4px; flex: 1;">
+                <!-- Question breakdown cards loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_RESULTS = '/.netlify/functions/fetch-results';
         const API_QUESTIONS = '/.netlify/functions/fetch-questions';
         const API_MANAGE_Q = '/.netlify/functions/manage-questions';
         const API_DEL_RESULT = '/.netlify/functions/delete-result';
+        const API_FETCH_WAITING = '/.netlify/functions/fetch-waiting-questions';
+        const API_MANAGE_WAITING = '/.netlify/functions/manage-waiting-questions';
+        const API_MANAGE_STUDENTS = '/.netlify/functions/manage-students';
 
-        let adminToken = sessionStorage.getItem('adminToken');
-        if (!adminToken) {
-            adminToken = prompt('Introduceti parola de administrare:');
-            if (adminToken) sessionStorage.setItem('adminToken', adminToken);
+        const urlParams = new URLSearchParams(window.location.search);
+        let adminToken = urlParams.get('token') || sessionStorage.getItem('adminToken');
+        if (!adminToken || adminToken === 'null' || adminToken === 'undefined' || adminToken === 'admin') {
+            adminToken = prompt('Introduceți parola de admin (ADMIN_SECRET):');
         }
+        sessionStorage.setItem('adminToken', adminToken);
 
         const fetchWithToken = (url, options = {}) => {
             const headers = { ...options.headers, 'x-admin-token': adminToken || '' };
@@ -402,6 +580,9 @@
 
         let resultsData = [];
         let questionsData = [];
+        let waitingQuestionsData = [];
+        let currentWaitingEditId = null;
+        let studentsData = [];
 
         const subcategoriesMap = {
             "Fundamente": ["Citire si afisare date", "Operatori si expresii", "Structuri de control", "Complexitati"],
@@ -409,6 +590,13 @@
             "Subprograme": ["Transmitere prin valoare", "Transmitere prin referinta", "Recursivitate"],
             "Backtracking": ["Teorie si aplicare practica"],
             "Grafuri si Arbori": ["Terminologie grafuri", "Grafuri orientate", "Grafuri neorientate", "Arbori"]
+        };
+
+        let currentExamTab = 'Initial'; // Default
+        window.setExamTab = function(type) {
+            currentExamTab = type;
+            document.getElementById('tab-intrebari-title').textContent = 'Bază de Întrebări - ' + type;
+            renderQuestions();
         };
 
         /* ==================== UTILS ==================== */
@@ -432,6 +620,8 @@
                 document.getElementById(btn.dataset.target).classList.add('active');
                 
                 if(btn.dataset.target === 'tab-intrebari' && questionsData.length === 0) loadQuestions();
+                if(btn.dataset.target === 'tab-waiting') loadWaitingQuestions();
+                if(btn.dataset.target === 'tab-elevi' && studentsData.length === 0) loadStudents();
             });
         });
 
@@ -441,7 +631,7 @@
                 const res = await fetchWithToken(API_RESULTS);
                 if (res.status === 401) {
                     sessionStorage.removeItem('adminToken');
-                    adminToken = prompt('Parola de administrare incorecta! Re-introduceti parola (ex: admin123):');
+                    adminToken = prompt('Parola de administrare incorecta! Re-introduceti parola (ex: admin):');
                     if (adminToken) {
                         sessionStorage.setItem('adminToken', adminToken);
                         return loadResults();
@@ -493,7 +683,11 @@
                         <td><span class="blur-badge ${bl === 0 ? 'safe' : ''}">${bl} pierderi focus</span></td>
                         <td style="font-family:var(--font-code); color:var(--text-secondary)">${formatTime(r.time_taken_ms)}</td>
                         <td style="color:var(--text-secondary)">${formatDate(r.created_at)}</td>
-                        <td><button class="btn btn-danger" onclick="deleteResult(${r.id})">Șterge</button></td>
+                        <td>
+                            <button class="btn btn-edit" style="margin-right:6px;" onclick="openDetailsModal(${r.id})">👁️ Detalii</button>
+                            <button class="btn btn-edit" style="margin-right:6px; background: rgba(248, 113, 113, 0.1); color: var(--accent-red); border-color: rgba(248, 113, 113, 0.3);" onclick="openDetailsModal(${r.id}, 'wrong')">❌ Greșeli</button>
+                            <button class="btn btn-danger" onclick="deleteResult(${r.id})">Șterge</button>
+                        </td>
                     </tr>
                 `);
             });
@@ -517,7 +711,156 @@
             } catch(e) { showToast('Eroare de rețea', true); }
         }
 
+        /* ==================== MODAL DETALII RĂSPUNSURI ==================== */
+        let currentSelectedResult = null;
+        let currentDetailsFilter = 'all';
+
+        function openDetailsModal(resultId, defaultFilter = 'all') {
+            const r = resultsData.find(x => x.id == resultId);
+            if (!r) {
+                showToast('Eroare: Rezultatul nu a fost găsit în datele încărcate.', true);
+                return;
+            }
+            currentSelectedResult = r;
+            currentDetailsFilter = defaultFilter;
+
+            const pct = Math.round((r.score / r.total_points) * 100) || 0;
+            document.getElementById('details-student-name').textContent = `Rezultat: ${r.student_name || 'Anonim'}`;
+            document.getElementById('details-student-meta').textContent = `${r.student_email || 'Fără email'} • ${r.test_type === 'intermediar' ? 'Test Intermediar' : 'Test Inițial'} • Scor: ${r.score || 0}/${r.total_points || 0} (${pct}%) • Timp: ${formatTime(r.time_taken_ms || 0)} • ${r.blur_count || 0} pierderi focus`;
+
+            let details = r.details_json;
+            if (typeof details === 'string') {
+                try { details = JSON.parse(details); } catch(e) { details = []; }
+            }
+            if (!Array.isArray(details)) details = [];
+
+            const totalQs = details.length;
+            const correctQs = details.filter(d => d.isCorrect).length;
+            const wrongQs = totalQs - correctQs;
+
+            document.getElementById('count-all').textContent = totalQs;
+            document.getElementById('count-wrong').textContent = wrongQs;
+            document.getElementById('count-correct').textContent = correctQs;
+
+            // Reset filter buttons UI
+            document.querySelectorAll('.details-filter-btn').forEach(btn => btn.classList.remove('active'));
+            const defaultFilterBtn = document.getElementById('filter-btn-' + defaultFilter);
+            if (defaultFilterBtn) defaultFilterBtn.classList.add('active');
+
+            renderDetailsList(details, defaultFilter);
+            document.getElementById('modal-details').style.display = 'flex';
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('modal-details').style.display = 'none';
+        }
+
+        function setDetailsFilter(filterType, btn) {
+            currentDetailsFilter = filterType;
+            document.querySelectorAll('.details-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (!currentSelectedResult) return;
+            let details = currentSelectedResult.details_json;
+            if (typeof details === 'string') {
+                try { details = JSON.parse(details); } catch(e) {}
+            }
+            if (!Array.isArray(details)) details = [];
+            renderDetailsList(details, filterType);
+        }
+
+        function renderDetailsList(details, filter) {
+            const container = document.getElementById('details-list');
+            if (!details || details.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-secondary);">Nu există detalii stocate pentru acest test (răspunsurile individuale nu au fost salvate).</div>`;
+                return;
+            }
+
+            const filtered = details.filter(d => {
+                if (!d) return false;
+                if (filter === 'wrong') return !d.isCorrect;
+                if (filter === 'correct') return !!d.isCorrect;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-secondary);">Nicio întrebare găsită pentru filtrul selectat.</div>`;
+                return;
+            }
+
+            const html = filtered.map((item, idx) => {
+                if (!item) return '';
+                const isOk = !!item.isCorrect;
+                const statusBadge = isOk 
+                    ? `<span class="score-badge score-excellent">✔️ Corect</span>`
+                    : `<span class="score-badge score-low">❌ Greșit</span>`;
+                
+                const diffMap = { easy: 'Ușoară', medium: 'Medie', hard: 'Grea' };
+                const diffLabel = diffMap[item.difficulty] || item.difficulty || 'Normal';
+
+                const optsHtml = (item.options || []).map((optText, optIdx) => {
+                    const isStudentChoice = item.studentAnswer === optIdx;
+                    const isCorrectChoice = item.correctAnswer === optIdx;
+
+                    let optClass = '';
+                    let tagHtml = '';
+
+                    if (isCorrectChoice) {
+                        optClass = 'opt-correct';
+                        tagHtml = `<span class="detail-opt-tag tag-correct">Răspuns Corect</span>`;
+                    } else if (isStudentChoice && !isOk) {
+                        optClass = 'opt-wrong';
+                        tagHtml = `<span class="detail-opt-tag tag-wrong">Ales de student (Incorect)</span>`;
+                    }
+
+                    const optLetter = String.fromCharCode(65 + optIdx); // A, B, C, D
+                    return `
+                        <div class="detail-opt ${optClass}">
+                            <span><strong>${optLetter}.</strong> ${escapeHtml(optText)}</span>
+                            ${tagHtml}
+                        </div>
+                    `;
+                }).join('');
+
+                const codeHtml = item.code ? `<div class="detail-code">${escapeHtml(item.code)}</div>` : '';
+                const explanationHtml = item.explanation ? `<div class="detail-explanation"><strong>💡 Explicație:</strong> ${escapeHtml(item.explanation)}</div>` : '';
+
+                return `
+                    <div class="detail-card ${isOk ? 'correct' : 'wrong'}">
+                        <div class="detail-header">
+                            <div>
+                                <span style="font-weight:700; color:var(--accent-purple); font-size:13px;">#${item.number || (idx + 1)}</span>
+                                <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-secondary); margin-left:6px;">Dificultate: ${diffLabel}</span>
+                            </div>
+                            <div>${statusBadge}</div>
+                        </div>
+                        <div style="font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:8px; white-space:pre-wrap;">${escapeHtml(item.text || '')}</div>
+                        ${codeHtml}
+                        <div style="margin-top:12px;">${optsHtml}</div>
+                        ${explanationHtml}
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
         /* ==================== INTREBARI CMS ==================== */
+        
+        function updateFilterCounts() {
+            const catSelect = document.getElementById('filter-cat');
+            const currentCat = catSelect.value;
+            catSelect.innerHTML = '<option value="">Toate categoriile (' + questionsData.length + ')</option>';
+            Object.keys(subcategoriesMap).forEach(cat => {
+                const count = questionsData.filter(q => q.category === cat).length;
+                const opt = document.createElement('option');
+                opt.value = cat; 
+                opt.textContent = `${cat} (${count})`;
+                if(cat === currentCat) opt.selected = true;
+                catSelect.appendChild(opt);
+            });
+        }
+
         function initFilters() {
             const catSelect = document.getElementById('filter-cat');
             catSelect.innerHTML = '<option value="">Toate categoriile</option>';
@@ -547,6 +890,9 @@
                 const res = await fetch(API_QUESTIONS + '?admin=true');
                 if(!res.ok) throw new Error();
                 questionsData = await res.json();
+                
+                // ADDED DYNAMIC COUNTS
+                if(typeof updateFilterCounts === 'function') updateFilterCounts();
                 document.getElementById('loading-questions').style.display = 'none';
 
                 if(questionsData.length === 0) {
@@ -573,8 +919,25 @@
             const fDiff = document.getElementById('filter-diff').value;
             const fSearch = document.getElementById('filter-search').value.toLowerCase();
 
-            // Filter data
+            // Calculate counts for tabs
+            const counts = { 'Initial': 0, 'Admitere': 0, 'BAC': 0, 'Diverse': 0 };
+            questionsData.forEach(q => {
+                const qType = q.exam_type || 'Diverse';
+                ['Initial', 'Admitere', 'BAC', 'Diverse'].forEach(tab => {
+                    if (qType.includes(tab)) counts[tab]++;
+                });
+            });
+
+            // Update tab texts
+            ['Initial', 'Admitere', 'BAC', 'Diverse'].forEach(tab => {
+                const el = document.getElementById(`tab-count-${tab}`);
+                if (el) el.textContent = `(${counts[tab]})`;
+            });
+
+            // Filter data for the current view
             const filtered = questionsData.filter(q => {
+                const qType = q.exam_type || 'Diverse';
+                if (!qType.includes(currentExamTab) && currentExamTab !== 'Toate') return false;
                 if (fCat && q.category !== fCat) return false;
                 if (fSub && q.subcategory !== fSub) return false;
                 if (fDiff && q.difficulty !== fDiff) return false;
@@ -683,7 +1046,23 @@
                     showToast('Întrebare ștearsă!');
                     questionsData = questionsData.filter(q => q.id !== id);
                     renderQuestions();
-                } else showToast('Eroare la ștergere', true);
+                } else {
+                    let errMsg = 'Eroare la ștergere';
+                    try {
+                        const err = await res.json();
+                        if (err.error) errMsg = err.error;
+                    } catch(e) {}
+                    if (res.status === 401) {
+                        sessionStorage.removeItem('adminToken');
+                        const newToken = prompt('Parolă admin invalidă. Re-introduceți parola (ex: admin):');
+                        if (newToken) {
+                            sessionStorage.setItem('adminToken', newToken);
+                            adminToken = newToken;
+                            return deleteQuestion(id);
+                        }
+                    }
+                    showToast(errMsg, true);
+                }
             } catch(e) { showToast('Eroare de rețea', true); }
         }
 
@@ -718,15 +1097,20 @@
         function openQuestionModal(q = null) {
             const m = document.getElementById('modal-question');
             m.style.display = 'flex';
-            document.getElementById('modal-title').textContent = q ? 'Editează Întrebarea' : 'Adaugă Întrebare Nouă';
+            document.getElementById('modal-title').textContent = q ? 'Editează Întrebare' : 'Adaugă Întrebare Nouă';
             
             if(q) {
                 document.getElementById('q-id').value = q.id;
+                const examTypes = (q.exam_type || 'Diverse').split(',').map(s => s.trim());
+                document.querySelectorAll('.q-exam-cb').forEach(cb => {
+                    cb.checked = examTypes.includes(cb.value);
+                });
                 document.getElementById('q-category').value = q.category || '';
                 updateSubcategories(q.subcategory);
                 document.getElementById('q-difficulty').value = q.difficulty;
                 document.getElementById('q-type').value = q.type;
                 document.getElementById('q-text').value = q.text;
+                document.getElementById('q-image-url').value = q.image_url || '';
                 document.getElementById('q-opt-0').value = q.options[0] || '';
                 document.getElementById('q-opt-1').value = q.options[1] || '';
                 document.getElementById('q-opt-2').value = q.options[2] || '';
@@ -742,6 +1126,12 @@
             } else {
                 document.getElementById('question-form').reset();
                 document.getElementById('q-id').value = '';
+                document.getElementById('q-image-url').value = '';
+                document.getElementById('q-image-file').value = '';
+                const examTypes = currentExamTab === 'Toate' ? ['Diverse'] : [currentExamTab];
+                document.querySelectorAll('.q-exam-cb').forEach(cb => {
+                    cb.checked = examTypes.includes(cb.value);
+                });
                 updateSubcategories();
                 
                 setTimeout(() => {
@@ -754,6 +1144,7 @@
 
         function closeQuestionModal() {
             document.getElementById('modal-question').style.display = 'none';
+            currentWaitingEditId = null; // cleared on close
         }
 
         function editQuestion(id) {
@@ -767,11 +1158,13 @@
             const codeVal = cmEditor ? cmEditor.getValue().trim() : '';
             
             const payload = {
+                exam_type: Array.from(document.querySelectorAll('.q-exam-cb')).filter(cb => cb.checked).map(cb => cb.value).join(', '),
                 category: document.getElementById('q-category').value,
                 subcategory: document.getElementById('q-subcategory').value,
                 difficulty: document.getElementById('q-difficulty').value,
                 type: document.getElementById('q-type').value,
                 text: document.getElementById('q-text').value,
+                image_url: document.getElementById('q-image-url').value || null,
                 code: codeVal ? codeVal : null,
                 options_json: [
                     document.getElementById('q-opt-0').value,
@@ -785,10 +1178,54 @@
 
             const method = id ? 'PUT' : 'POST';
             const url = id ? `${API_MANAGE_Q}?id=${id}` : API_MANAGE_Q;
-            document.getElementById('btn-save-q').disabled = true;
-            document.getElementById('btn-save-q').textContent = 'Se salvează...';
+            const btnSave = document.getElementById('btn-save-q');
+            btnSave.disabled = true;
+            btnSave.textContent = 'Se procesează...';
 
             try {
+                // Handle image upload if a file is selected
+                const fileInput = document.getElementById('q-image-file');
+                if (fileInput.files && fileInput.files[0]) {
+                    const file = fileInput.files[0];
+                    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                        showToast('Imaginea e prea mare (max 5MB)', true);
+                        btnSave.disabled = false;
+                        btnSave.textContent = 'Salvează Întrebarea';
+                        return;
+                    }
+
+                    btnSave.textContent = 'Se încarcă imaginea...';
+                    const base64data = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+
+                    const uploadRes = await fetchWithToken('/.netlify/functions/upload-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            filename: file.name,
+                            contentType: file.type,
+                            base64data
+                        })
+                    });
+
+                    if (uploadRes.ok) {
+                        const { publicUrl } = await uploadRes.json();
+                        payload.image_url = publicUrl;
+                        document.getElementById('q-image-url').value = publicUrl; // sync input
+                    } else {
+                        const err = await uploadRes.json();
+                        showToast('Eroare upload imagine: ' + (err.error || ''), true);
+                        btnSave.disabled = false;
+                        btnSave.textContent = 'Salvează Întrebarea';
+                        return;
+                    }
+                }
+
+                btnSave.textContent = 'Se salvează...';
                 const res = await fetchWithToken(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
@@ -810,6 +1247,10 @@
                     throw new Error(errMsg);
                 }
                 showToast(id ? 'Întrebare actualizată!' : 'Întrebare adăugată!');
+                if (currentWaitingEditId) {
+                    rejectWaitingQuestion(currentWaitingEditId);
+                    currentWaitingEditId = null;
+                }
                 closeQuestionModal();
                 loadQuestions(); // refresh list
             } catch(e) {
@@ -822,8 +1263,12 @@
         });
 
         // Close modal on outside click
-        document.getElementById('modal-question').addEventListener('click', (e) => {
-            if (e.target.id === 'modal-question') closeQuestionModal();
+        // Removed to prevent accidental close
+        // document.getElementById('modal-question').addEventListener('click', (e) => {
+        //     if (e.target.id === 'modal-question') closeQuestionModal();
+        // });
+        document.getElementById('modal-details').addEventListener('click', (e) => {
+            if (e.target.id === 'modal-details') closeDetailsModal();
         });
 
         /* ==================== DOWNLOAD CSV ==================== */
@@ -848,8 +1293,385 @@
             showToast('CSV descărcat!');
         });
 
+        /* ==================== INTREBARI IN ASTEPTATE (STAGING) ==================== */
+        function initWFilters() {
+            const catSelect = document.getElementById('w-filter-cat');
+            if (!catSelect || catSelect.children.length > 1) return;
+            catSelect.innerHTML = '<option value="">Toate categoriile</option>';
+            Object.keys(subcategoriesMap).forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat; opt.textContent = cat;
+                catSelect.appendChild(opt);
+            });
+        }
+
+        function updateWFilterSub() {
+            const cat = document.getElementById('w-filter-cat').value;
+            const subSelect = document.getElementById('w-filter-sub');
+            subSelect.innerHTML = '<option value="">Toate subcategoriile</option>';
+            if (cat && subcategoriesMap[cat]) {
+                subcategoriesMap[cat].forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s; opt.textContent = s;
+                    subSelect.appendChild(opt);
+                });
+            }
+        }
+
+        async function loadWaitingQuestions() {
+            try {
+                initWFilters();
+                const res = await fetchWithToken(API_FETCH_WAITING);
+                if (!res.ok) throw new Error();
+                waitingQuestionsData = await res.json();
+                
+                document.getElementById('loading-waiting').style.display = 'none';
+                document.getElementById('badge-waiting-count').textContent = waitingQuestionsData.length;
+
+                if (waitingQuestionsData.length === 0) {
+                    document.getElementById('empty-waiting').style.display = 'block';
+                    document.getElementById('wrapper-waiting').style.display = 'none';
+                } else {
+                    document.getElementById('empty-waiting').style.display = 'none';
+                    document.getElementById('wrapper-waiting').style.display = 'flex';
+                    renderWaitingQuestions();
+                }
+            } catch (e) {
+                console.error('Error loading waiting questions:', e);
+                document.getElementById('loading-waiting').innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcare întrebări în așteptare.</p>`;
+            }
+        }
+
+        function renderWaitingQuestions() {
+            const container = document.getElementById('wrapper-waiting');
+            const fCat = document.getElementById('w-filter-cat').value;
+            const fSub = document.getElementById('w-filter-sub').value;
+            const fDiff = document.getElementById('w-filter-diff').value;
+            const fSearch = document.getElementById('w-filter-search').value.toLowerCase();
+
+            const filtered = waitingQuestionsData.filter(q => {
+                if (fCat && q.category !== fCat) return false;
+                if (fSub && q.subcategory !== fSub) return false;
+                if (fDiff && q.difficulty !== fDiff) return false;
+                if (fSearch && !(q.text || '').toLowerCase().includes(fSearch) && !(q.explanation || '').toLowerCase().includes(fSearch)) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-secondary);">Nicio întrebare în așteptare nu corespunde filtrelor.</div>`;
+                return;
+            }
+
+            const html = filtered.map((q, idx) => {
+                const diffClass = q.difficulty === 'hard' ? 'badge-hard' : (q.difficulty === 'medium' ? 'badge-medium' : 'badge-easy');
+                const diffLabel = q.difficulty === 'hard' ? 'Grea' : (q.difficulty === 'medium' ? 'Medie' : 'Ușoară');
+                
+                let opts = q.options_json;
+                if (typeof opts === 'string') {
+                    try { opts = JSON.parse(opts); } catch(e) { opts = []; }
+                }
+                if (!Array.isArray(opts)) opts = [];
+
+                const optsHtml = opts.map((optText, optIdx) => {
+                    const isCorrect = q.correct_index === optIdx;
+                    const optLetter = String.fromCharCode(65 + optIdx);
+                    return `
+                        <div class="detail-opt ${isCorrect ? 'opt-correct' : ''}" style="margin-top:6px;">
+                            <span><strong>${optLetter}.</strong> ${escapeHtml(optText)}</span>
+                            ${isCorrect ? '<span class="detail-opt-tag tag-correct">Răspuns Corect</span>' : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                const codeText = q.code ? q.code.replace(/\\n/g, '\n') : '';
+                const codeHtml = codeText ? `<div class="detail-code">${escapeHtml(codeText)}</div>` : '';
+                const explanationHtml = q.explanation ? `<div class="detail-explanation"><strong>💡 Explicație:</strong> ${escapeHtml(q.explanation)}</div>` : '';
+
+                const currentExam = q.exam_type || 'Initial';
+                return `
+                    <div class="detail-card" style="border-left: 4px solid var(--accent-amber); background: rgba(15, 15, 40, 0.75);">
+                        <div class="detail-header" style="flex-wrap: wrap; gap: 8px;">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <span style="font-weight:700; color:var(--accent-amber); font-size:13px;">#${q.id || (idx + 1)}</span>
+                                <span class="badge ${diffClass}">${diffLabel}</span>
+                                <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-secondary);">${escapeHtml(q.category || 'General')} • ${escapeHtml(q.subcategory || '')}</span>
+                                <select class="form-control" style="width: auto; padding: 3px 8px; font-size: 12px; height: 26px; border-color: var(--accent-purple);" onchange="updateWaitingExamType(${q.id}, this.value)">
+                                    <option value="Initial" ${currentExam === 'Initial' ? 'selected' : ''}>Test Inițial</option>
+                                    <option value="Admitere" ${currentExam === 'Admitere' ? 'selected' : ''}>Admitere</option>
+                                    <option value="BAC" ${currentExam === 'BAC' ? 'selected' : ''}>BAC</option>
+                                    <option value="Diverse" ${currentExam === 'Diverse' ? 'selected' : ''}>Diverse</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-primary" style="padding:6px 14px; font-size:12px; background:linear-gradient(135deg, #34d399, #10b981);" onclick="approveWaitingQuestion(${q.id})">✔️ Aprobă</button>
+                                <button class="btn btn-edit" style="padding:6px 12px; font-size:12px;" onclick="editAndApproveWaitingQuestion(${q.id})">✏️ Editează & Aprobă</button>
+                                <button class="btn btn-danger" style="padding:6px 12px; font-size:12px;" onclick="rejectWaitingQuestion(${q.id})">🗑️ Respinge</button>
+                            </div>
+                        </div>
+                        <div style="font-size:15px; font-weight:600; color:var(--text-primary); margin: 10px 0 6px; white-space:pre-wrap;">${escapeHtml(q.text || '')}</div>
+                        ${codeHtml}
+                        <div style="margin-top:10px;">${optsHtml}</div>
+                        ${explanationHtml}
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function updateWaitingExamType(id, val) {
+            const q = waitingQuestionsData.find(x => x.id === id);
+            if (q) q.exam_type = val;
+        }
+
+        async function approveWaitingQuestion(id) {
+            const q = waitingQuestionsData.find(x => x.id === id);
+            if (!q) return;
+
+            try {
+                const res = await fetchWithToken(`${API_MANAGE_WAITING}?id=${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'approve', question: q })
+                });
+
+                if (res.ok) {
+                    showToast('Întrebare aprobată și adăugată în Supabase & seed.sql!');
+                    waitingQuestionsData = waitingQuestionsData.filter(x => x.id !== id);
+                    document.getElementById('badge-waiting-count').textContent = waitingQuestionsData.length;
+                    renderWaitingQuestions();
+                    questionsData = []; // force reload on questions tab
+                } else {
+                    const err = await res.json();
+                    showToast(err.error || 'Eroare la aprobare', true);
+                }
+            } catch (e) {
+                showToast('Eroare de rețea la aprobare', true);
+            }
+        }
+
+        async function approveAllWaitingQuestions() {
+            if (waitingQuestionsData.length === 0) {
+                showToast('Nu există întrebări în așteptare!', true);
+                return;
+            }
+            if (!confirm(`Sigur doriți să aprobați TOATE cele ${waitingQuestionsData.length} întrebări? Ele vor fi adăugate în Supabase și seed.sql.`)) return;
+
+            try {
+                const res = await fetchWithToken(API_MANAGE_WAITING, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'approve_all' })
+                });
+
+                if (res.ok) {
+                    showToast('Toate întrebările au fost aprobate cu succes!');
+                    waitingQuestionsData = [];
+                    document.getElementById('badge-waiting-count').textContent = 0;
+                    document.getElementById('wrapper-waiting').style.display = 'none';
+                    document.getElementById('empty-waiting').style.display = 'block';
+                    questionsData = [];
+                } else {
+                    showToast('Eroare la aprobarea în masă', true);
+                }
+            } catch (e) {
+                showToast('Eroare de rețea la aprobarea în masă', true);
+            }
+        }
+
+        async function rejectWaitingQuestion(id) {
+            if (!confirm('Sigur dorești să respingi (ștergi) această întrebare din lista de așteptare?')) return;
+            try {
+                const res = await fetchWithToken(`${API_MANAGE_WAITING}?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Întrebare respinsă!');
+                    waitingQuestionsData = waitingQuestionsData.filter(x => x.id !== id);
+                    document.getElementById('badge-waiting-count').textContent = waitingQuestionsData.length;
+                    renderWaitingQuestions();
+                } else {
+                    showToast('Eroare la respingere', true);
+                }
+            } catch (e) {
+                showToast('Eroare de rețea', true);
+            }
+        }
+
+        
+        function decodeHtml(html) {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        }
+
+        function editAndApproveWaitingQuestion(id) {
+            const q = waitingQuestionsData.find(x => x.id === id);
+            if (!q) return;
+
+            let opts = q.options_json;
+            if (typeof opts === 'string') {
+                try { opts = JSON.parse(opts); } catch(e) { opts = []; }
+            }
+            if (!Array.isArray(opts)) opts = [];
+
+            currentWaitingEditId = id;
+            openQuestionModal({
+                id: null,
+                exam_type: q.exam_type,
+                category: q.category ? q.category.trim() : '',
+                subcategory: q.subcategory ? q.subcategory.trim() : '',
+                difficulty: q.difficulty,
+                type: q.type,
+                text: q.text || '',
+                code: q.code || '',
+                options: opts,
+                correct_index: q.correct_index,
+                explanation: q.explanation || ''
+            });
+        }
+
+
         // Init
         loadResults();
+        loadWaitingQuestions();
+
+        /* ==================== ELEVI ==================== */
+        async function loadStudents() {
+            try {
+                const res = await fetchWithToken(`${API_MANAGE_STUDENTS}?action=list`);
+                if (!res.ok) throw new Error();
+                studentsData = await res.json();
+                
+                document.getElementById('loading-students').style.display = 'none';
+                if (studentsData.length === 0) {
+                    document.getElementById('empty-students').style.display = 'block';
+                    document.getElementById('wrapper-students').style.display = 'none';
+                } else {
+                    document.getElementById('empty-students').style.display = 'none';
+                    document.getElementById('wrapper-students').style.display = 'block';
+                    renderStudents();
+                }
+            } catch (e) {
+                document.getElementById('loading-students').innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcarea elevilor.</p>`;
+            }
+        }
+
+        function renderStudents() {
+            const tbody = document.getElementById('students-body');
+            const htmlArr = studentsData.map(s => {
+                const dateStr = formatDate(s.created_at);
+                return `
+                    <tr>
+                        <td>${s.id}</td>
+                        <td style="font-weight:600;">${escapeHtml(s.username)}</td>
+                        <td style="font-family: monospace; letter-spacing: 1px;">${escapeHtml(s.password)}</td>
+                        <td style="color:var(--text-secondary); font-size:12px;">${dateStr}</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 6px; font-size:12px; border-color: rgba(248,113,113,0.3); color: var(--accent-red);" onclick="deleteStudent(${s.id}, '${escapeHtml(s.username)}')">Șterge</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = htmlArr.join('');
+        }
+
+        function openStudentModal() {
+            document.getElementById('new-student-username').value = '';
+            document.getElementById('new-student-password').value = Math.random().toString(36).slice(-8);
+            document.getElementById('modal-student').style.display = 'flex';
+        }
+
+        function closeStudentModal() {
+            document.getElementById('modal-student').style.display = 'none';
+        }
+
+        async function handleCreateStudent(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-student');
+            btn.disabled = true;
+            btn.textContent = 'Se creează...';
+
+            const username = document.getElementById('new-student-username').value.trim();
+            const password = document.getElementById('new-student-password').value.trim();
+
+            try {
+                const res = await fetchWithToken(API_MANAGE_STUDENTS, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'create', username, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Eroare la creare');
+
+                showToast('Cont creat cu succes!');
+                closeStudentModal();
+                loadStudents();
+            } catch (err) {
+                showToast(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Creează Cont';
+            }
+        }
+
+        async function deleteStudent(id, username) {
+            if (!confirm(`Sigur dorești să ștergi contul elevului ${username}? Rezultatele acestuia vor fi păstrate în tabelul results, dar nu se va mai putea autentifica.`)) return;
+
+            try {
+                const res = await fetchWithToken(API_MANAGE_STUDENTS, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete', id })
+                });
+
+                if (!res.ok) throw new Error();
+                showToast('Cont șters cu succes!');
+                loadStudents();
+            } catch (err) {
+                showToast('Eroare la ștergerea contului', true);
+            }
+        }
+
+        /* ==================== PDF EXPORT ==================== */
+        function exportResultsPDF() {
+            const modalContent = document.querySelector('#modal-details .modal-content');
+            if (!modalContent) return;
+
+            const studentName = document.getElementById('details-student-name').innerText.replace('Detalii Test Student', '').trim() || 'Student';
+            
+            // Temporary styles for PDF
+            const originalMaxHeight = modalContent.style.maxHeight;
+            const originalOverflow = document.getElementById('details-list').style.overflowY;
+            
+            modalContent.style.maxHeight = 'none';
+            document.getElementById('details-list').style.overflowY = 'visible';
+
+            const opt = {
+                margin:       10,
+                filename:     `Rezultate_AcaDe_QUIZ_${studentName.replace(/\\s+/g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Exclude buttons from PDF
+            const buttons = modalContent.querySelectorAll('button');
+            buttons.forEach(b => b.style.display = 'none');
+
+            html2pdf().set(opt).from(modalContent).save().then(() => {
+                // Restore styles
+                modalContent.style.maxHeight = originalMaxHeight;
+                document.getElementById('details-list').style.overflowY = originalOverflow;
+                buttons.forEach(b => b.style.display = '');
+                showToast('PDF generat cu succes!');
+            }).catch(e => {
+                modalContent.style.maxHeight = originalMaxHeight;
+                document.getElementById('details-list').style.overflowY = originalOverflow;
+                buttons.forEach(b => b.style.display = '');
+                showToast('Eroare la generare PDF.', true);
+                console.error(e);
+            });
+        }
     </script>
 </body>
 </html>

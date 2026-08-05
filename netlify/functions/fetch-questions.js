@@ -42,7 +42,7 @@ exports.handler = async function(event, context) {
 
         // Map database fields to the shape the frontend expects
         const isAdmin = (event.queryStringParameters || {}).admin === 'true';
-        const mappedQuestions = data.map(q => {
+        let mappedQuestions = data.map(q => {
             let options = q.options_json;
             if (typeof options === 'string') {
                 options = JSON.parse(options);
@@ -54,6 +54,7 @@ exports.handler = async function(event, context) {
                 category: q.category || null,
                 subcategory: q.subcategory || null,
                 text: q.text,
+                image_url: q.image_url || null,
                 code: q.code,
                 options: options
             };
@@ -61,13 +62,30 @@ exports.handler = async function(event, context) {
                 base.correct_index = q.correct_index;
                 base.explanation = q.explanation;
             }
+            base.exam_type = q.exam_type || 'Initial';
             return base;
         });
 
         const queryParams = event.queryStringParameters || {};
         const testType = queryParams.type || 'initial';
+        const examType = queryParams.examType || 'Initial'; // Default to Initial for new students
         const email = queryParams.email || '';
         const idsParam = queryParams.ids || '';
+
+        if (testType === 'counts') {
+            const counts = { 'Initial': 0, 'Admitere': 0, 'BAC': 0, 'Diverse': 0 };
+            mappedQuestions.forEach(q => {
+                const ex = q.exam_type || 'Diverse';
+                ['Initial', 'Admitere', 'BAC', 'Diverse'].forEach(tab => {
+                    if (ex.includes(tab)) counts[tab]++;
+                });
+            });
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify(counts)
+            };
+        }
 
         // If admin, just return all mapped questions in their original DB order
         if (isAdmin) {
@@ -76,6 +94,20 @@ exports.handler = async function(event, context) {
                 headers,
                 body: JSON.stringify(mappedQuestions)
             };
+        }
+
+        // For students, filter questions from the requested examType
+        // For students, filter questions from the requested examType
+        let categoryFiltered = [];
+        if (examType === 'Diverse') {
+            categoryFiltered = [...mappedQuestions]; // Take from all categories
+        } else {
+            categoryFiltered = mappedQuestions.filter(q => (q.exam_type || 'Diverse').includes(examType));
+        }
+
+        // Fallback if requested category has no questions
+        if (categoryFiltered.length > 0) {
+            mappedQuestions = categoryFiltered;
         }
 
         let selectedQuestions = [];
@@ -96,8 +128,9 @@ exports.handler = async function(event, context) {
             const requestedIds = idsParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
             selectedQuestions = requestedIds.map(id => mappedQuestions.find(q => q.id === id)).filter(Boolean);
         } else if (testType === 'intermediar' && email) {
-            // Fetch past results to dynamically pick questions
-            const resUrl = `${supabaseUrl}/rest/v1/results?student_email=eq.${encodeURIComponent(email)}&order=created_at.desc`;
+            // Fetch past results to dynamically pick questions (checking email, username, or name)
+            const encodedEmail = encodeURIComponent(email);
+            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_email.eq.${encodedEmail},student_username.eq.${encodedEmail},student_name.eq.${encodedEmail})&order=created_at.desc`;
             const resultsResponse = await fetch(resUrl, {
                 headers: {
                     'apikey': supabaseKey,
@@ -135,42 +168,75 @@ exports.handler = async function(event, context) {
                 shuffle(unseenQs);
                 shuffle(correctQs);
 
-                // Build test of 30 questions
-                const targetLength = 30;
-                
-                // 1. All wrong questions
-                for (const q of wrongQs) {
-                    if (selectedQuestions.length < targetLength) selectedQuestions.push(q);
+                // Build test of questions
+                let targetLength = 30;
+                if (examType === 'Admitere') targetLength = 9;
+                else if (examType === 'BAC') targetLength = 10;
+                else if (examType === 'Diverse') targetLength = 20;
+
+                const subcatCounts = {};
+
+                function pickDiverseAware(pool, needed) {
+                    if (pool.length === 0 || needed <= 0) return [];
+                    
+                    const bySub = {};
+                    for (const q of pool) {
+                        const sub = q.subcategory || 'Altele';
+                        if (!bySub[sub]) bySub[sub] = [];
+                        bySub[sub].push(q);
+                    }
+                    
+                    const picked = [];
+                    while (picked.length < needed) {
+                        let minCount = Infinity;
+                        let candidateSubcats = [];
+                        
+                        for (const sub of Object.keys(bySub)) {
+                            if (bySub[sub].length === 0) continue;
+                            const currentCount = subcatCounts[sub] || 0;
+                            if (currentCount < minCount) {
+                                minCount = currentCount;
+                                candidateSubcats = [sub];
+                            } else if (currentCount === minCount) {
+                                candidateSubcats.push(sub);
+                            }
+                        }
+                        
+                        if (candidateSubcats.length === 0) break;
+                        
+                        const chosenSub = candidateSubcats[Math.floor(Math.random() * candidateSubcats.length)];
+                        const q = bySub[chosenSub].pop();
+                        
+                        picked.push(q);
+                        subcatCounts[chosenSub] = (subcatCounts[chosenSub] || 0) + 1;
+                    }
+                    return picked;
                 }
-                
+
+                // 1. Wrong questions
+                selectedQuestions.push(...pickDiverseAware(wrongQs, targetLength - selectedQuestions.length));
                 // 2. Unseen questions
-                for (const q of unseenQs) {
-                    if (selectedQuestions.length < targetLength) selectedQuestions.push(q);
-                }
-                
+                selectedQuestions.push(...pickDiverseAware(unseenQs, targetLength - selectedQuestions.length));
                 // 3. Correct questions
-                for (const q of correctQs) {
-                    if (selectedQuestions.length < targetLength) selectedQuestions.push(q);
-                }
+                selectedQuestions.push(...pickDiverseAware(correctQs, targetLength - selectedQuestions.length));
                 
                 shuffle(selectedQuestions);
             } else {
                 // fallback if results fetch fails
+                let targetLength = 30;
+                if (examType === 'Admitere') targetLength = 9;
+                else if (examType === 'BAC') targetLength = 10;
+                else if (examType === 'Diverse') targetLength = 20;
+                
                 selectedQuestions = mappedQuestions;
                 shuffle(selectedQuestions);
-                selectedQuestions = selectedQuestions.slice(0, 30);
+                selectedQuestions = selectedQuestions.slice(0, targetLength);
             }
         } else {
-            // initial test -> order: easy -> medium -> hard
-            const easyQs = mappedQuestions.filter(q => q.difficulty === 'easy');
-            const mediumQs = mappedQuestions.filter(q => q.difficulty === 'medium');
-            const hardQs = mappedQuestions.filter(q => q.difficulty === 'hard');
-
-            shuffle(easyQs);
-            shuffle(mediumQs);
-            shuffle(hardQs);
-
-            selectedQuestions = [...easyQs, ...mediumQs, ...hardQs];
+            // initial test -> max 30 questions randomly selected
+            let pool = shuffle([...mappedQuestions]);
+            if (pool.length > 30) pool = pool.slice(0, 30);
+            selectedQuestions = pool;
         }
 
         return {

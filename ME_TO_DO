@@ -1,0 +1,7 @@
+
+Șocul Realității (Dificultate): Pentru ca testul inițial să fie cu adevărat un șoc, 
+propun să modificăm logica de selecție a întrebărilor (în fetch-questions.js) 
+pentru testul inițial:
+Nu vor mai fi 20 ușoare / 20 medii / 10 grele.
+Va fi o proporție brutală: ex. 20 grele, 10 medii complexe și doar 10 ușoare, 
+plus un timp mai strâns - 20 minute.

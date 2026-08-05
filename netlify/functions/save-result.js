@@ -24,20 +24,29 @@ exports.handler = async function(event, context) {
     try {
         const body = JSON.parse(event.body);
         const {
-            student_name,
-            student_email,
+            student_username,
+            student_id,
             test_type,
+            exam_type,
             time_taken_ms,
             blur_count,
             answers_json,
             question_ids
         } = body;
 
-        if (!student_name || time_taken_ms === undefined || !answers_json || !question_ids) {
+        if (!student_username || time_taken_ms === undefined || !answers_json || !question_ids) {
             return {
                 statusCode: 400,
                 headers,
                 body: JSON.stringify({ error: 'Missing required fields in request body.' })
+            };
+        }
+
+        if (!Array.isArray(answers_json) || !Array.isArray(question_ids) || answers_json.length !== question_ids.length) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Invalid answers payload format or length mismatch.' })
             };
         }
 
@@ -61,6 +70,12 @@ exports.handler = async function(event, context) {
         const pointsMap = { easy: 1, medium: 2, hard: 3 };
         let serverScore = 0;
         let serverMaxPoints = 0;
+        
+        // Add 10 default points for Admitere and Initial
+        if (exam_type === 'Admitere' || exam_type === 'Initial' || test_type === 'initial') {
+            serverScore = 10;
+            serverMaxPoints = 10;
+        }
         const serverDetails = [];
         const difficultyStats = { easy: {c:0, t:0}, medium: {c:0, t:0}, hard: {c:0, t:0} };
 
@@ -71,7 +86,19 @@ exports.handler = async function(event, context) {
 
             const studentAns = answers_json[i];
             const isCorrect = studentAns === q.correct_index;
-            const pts = pointsMap[q.difficulty] || 0;
+            
+            let pts = 0;
+            if (exam_type === 'BAC') {
+                pts = 10;
+            } else if (exam_type === 'Admitere') {
+                pts = 10;
+            } else if (exam_type === 'Diverse') {
+                pts = 5;
+            } else if (exam_type === 'Initial' || test_type === 'initial') {
+                pts = 3;
+            } else {
+                pts = pointsMap[q.difficulty] || 0; // fallback
+            }
             
             serverMaxPoints += pts;
             difficultyStats[q.difficulty].t += 1;
@@ -89,6 +116,7 @@ exports.handler = async function(event, context) {
                 id: q.id,
                 difficulty: q.difficulty,
                 text: q.text,
+                code: q.code || null,
                 isCorrect: isCorrect,
                 studentAnswer: studentAns,
                 correctAnswer: q.correct_index,
@@ -98,11 +126,11 @@ exports.handler = async function(event, context) {
         }
 
         const insertData = {
-            student_name,
+            student_name: student_username, // Fallback for old schema compatibility
+            student_username: student_username,
             score: serverScore,
             total_points: serverMaxPoints,
             time_taken_ms,
-            student_email: student_email || null,
             test_type: test_type || 'initial',
             blur_count: blur_count !== undefined ? blur_count : 0,
             answers_json: answers_json,

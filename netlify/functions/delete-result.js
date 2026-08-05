@@ -1,7 +1,7 @@
 exports.handler = async function(event, context) {
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
         'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
         'Content-Type': 'application/json'
     };
@@ -20,9 +20,10 @@ exports.handler = async function(event, context) {
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
-    const adminToken = process.env.ADMIN_SECRET || 'admin123';
+    const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
+    const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
 
-    if (event.headers['x-admin-token'] !== adminToken) {
+    if (!clientToken || !validTokens.includes(clientToken)) {
         return {
             statusCode: 401,
             headers,

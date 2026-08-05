@@ -15,6 +15,11 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         /* ========== RESET & BASE ========== */
         *,
@@ -80,9 +85,9 @@
         .screen { display: none; position: relative; z-index: 1; min-height: 100vh; animation: fadeIn 0.6s ease; }
         .screen.active { display: flex; }
 
-        /* ========== WELCOME SCREEN ========== */
-        #screen-welcome { align-items: center; justify-content: center; padding: 24px; }
-        .welcome-container { max-width: 560px; width: 100%; text-align: center; }
+        /* ========== WELCOME & DASHBOARD SCREENS ========== */
+        #screen-welcome, #screen-dashboard { align-items: center; justify-content: center; padding: 24px; flex-direction: column; width: 100%; }
+        .welcome-container { max-width: 560px; width: 100%; text-align: center; margin: 0 auto; }
         .welcome-icon { font-size: 64px; margin-bottom: 16px; animation: bounceIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.4)); }
         .welcome-container h1 { font-size: clamp(28px, 6vw, 42px); font-weight: 800; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.5px; }
         .gradient-text { background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
@@ -147,13 +152,32 @@
         .quiz-info-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
         .quiz-top-badges { display: flex; align-items: center; gap: 10px; }
         .quiz-timer-badge { background: rgba(15, 15, 40, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 6px 12px; display: flex; align-items: center; gap: 6px; font-family: var(--font-code); font-size: 14px; font-weight: 600; color: var(--text-primary); backdrop-filter: blur(8px); transition: all 0.3s ease; }
-        .quiz-timer-badge.warning { border-color: var(--accent-red); color: var(--accent-red); box-shadow: 0 0 15px rgba(248, 113, 113, 0.2); animation: pulse-timer 1s infinite alternate; }
-        @keyframes pulse-timer { from { transform: scale(1); } to { transform: scale(1.04); } }
-
-        /* Anti-cheat badge */
+        
         .anticheat-badge { background: rgba(15, 15, 40, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 5px 10px; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-muted); backdrop-filter: blur(8px); transition: all 0.3s ease; }
-        .anticheat-badge.warned { border-color: rgba(251, 191, 36, 0.4); color: var(--accent-amber); }
-        .anticheat-badge.danger { border-color: rgba(248, 113, 113, 0.4); color: var(--accent-red); animation: pulse-timer 1.5s infinite alternate; }
+        .anticheat-badge.warned { background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.4); color: var(--accent-amber); }
+        .anticheat-badge.danger { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.4); color: var(--accent-red); }
+
+        @keyframes pulseTimer {
+            0% { transform: scale(1); box-shadow: 0 0 0 rgba(248, 113, 113, 0.4); }
+            50% { transform: scale(1.06); box-shadow: 0 0 15px rgba(248, 113, 113, 0.8); }
+            100% { transform: scale(1); box-shadow: 0 0 0 rgba(248, 113, 113, 0.4); }
+        }
+        .quiz-timer.warning {
+            background: rgba(248, 113, 113, 0.25) !important;
+            border-color: var(--accent-red) !important;
+            color: var(--accent-red) !important;
+            animation: pulseTimer 1s infinite ease-in-out;
+        }
+
+        /* Custom Prism C++ Token Highlighting Colors */
+        code.language-cpp, pre.language-cpp { color: #f0f0ff !important; text-shadow: none !important; }
+        code.language-cpp .token.keyword, pre.language-cpp .token.keyword { color: #f472b6 !important; font-weight: 700 !important; }
+        code.language-cpp .token.function, pre.language-cpp .token.function { color: #60a5fa !important; font-weight: 600 !important; }
+        code.language-cpp .token.number, pre.language-cpp .token.number { color: #fbbf24 !important; font-weight: 600 !important; }
+        code.language-cpp .token.operator, pre.language-cpp .token.operator { color: #34d399 !important; font-weight: 600 !important; }
+        code.language-cpp .token.punctuation, pre.language-cpp .token.punctuation { color: #a78bfa !important; }
+        code.language-cpp .token.string, pre.language-cpp .token.string { color: #a3e635 !important; }
+        code.language-cpp .token.comment, pre.language-cpp .token.comment { color: #9ca3af !important; font-style: italic; }
 
         /* Quiz Container */
         .quiz-container { max-width: 680px; width: 100%; margin-top: 16px; }
@@ -297,52 +321,64 @@
     <!-- ==================== WELCOME SCREEN ==================== -->
     <main id="screen-welcome" class="screen active">
         <div class="welcome-container">
-            <div class="welcome-icon">💻</div>
-            <h1>Test Introductiv<br><span class="gradient-text">Informatică C++</span></h1>
+            <img src="SIGLA-AcaDe_Informatica.png" alt="AcaDe-QUIZ Logo" style="max-width: 250px; margin-bottom: 20px; border-radius: 10px; box-shadow: var(--shadow-glow);">
+            <h1><span class="gradient-text">AcaDe-QUIZ</span></h1>
             <p class="welcome-subtitle">
-                Descoperă-ți nivelul de cunoștințe în programare C++.<br>
-                Răspunde la întrebări pe 3 nivele de dificultate.
+                Platformă privată de evaluare a cunoștințelor în programare C++.<br>
+                Autentifică-te pentru a accesa testul tău.
             </p>
-            <div class="welcome-stats">
-                <div class="stat-card">
-                    <span class="stat-icon">📝</span>
-                    <span class="stat-value">50</span>
-                    <span class="stat-label">Întrebări</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-icon">📊</span>
-                    <span class="stat-value">3</span>
-                    <span class="stat-label">Nivele</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-icon">⏱️</span>
-                    <span class="stat-value">30</span>
-                    <span class="stat-label">Minute</span>
-                </div>
-            </div>
-            <div class="input-group" id="name-group" style="display: none;">
-                <label for="student-name">Cum te numești?</label>
-                <input type="text" id="student-name" placeholder="Introdu numele tău..." autocomplete="name"
-                    maxlength="50">
+            <div class="input-group">
+                <label for="student-username">Nume de utilizator</label>
+                <input type="text" id="student-username" placeholder="ex: tudor123" maxlength="50">
             </div>
             <div class="input-group">
-                <label for="student-email">Adresa ta de email</label>
-                <input type="email" id="student-email" placeholder="exemplu@email.com" autocomplete="email"
-                    maxlength="100">
-                <div class="input-hint">Rezultatele tale vor fi trimise pe acest email</div>
+                <label for="student-password">Parolă</label>
+                <input type="password" id="student-password" placeholder="Introdu parola" maxlength="100">
             </div>
-            <button id="btn-continue" class="btn btn-primary btn-full" disabled>
-                <span>Continuă</span>
+            <button id="btn-continue" class="btn btn-primary btn-full">
+                <span>Autentificare & Începe</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                     stroke-linecap="round" stroke-linejoin="round">
                     <path d="M5 12h14" />
                     <path d="m12 5 7 7-7 7" />
                 </svg>
             </button>
-            <div style="margin-top: 24px; font-size: 13px; text-align: center;">
+            <div style="margin-top: 24px; font-size: 13px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
+                <a href="#" onclick="logoutStudent(); return false;" style="color: var(--accent-red); text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#fca5a5'" onmouseout="this.style.color='var(--accent-red)'">Deconectare</a>
                 <a href="admin.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;"
                     onmouseover="this.style.color='var(--text-secondary)'"
                     onmouseout="this.style.color='var(--text-muted)'">Panou Administrare</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==================== DASHBOARD SCREEN ==================== -->
+    <main id="screen-dashboard" class="screen">
+        <div class="welcome-container" style="max-width: 500px;">
+            <img src="SIGLA-AcaDe_Informatica.png" alt="AcaDe-QUIZ Logo" style="max-width: 150px; margin-bottom: 20px; border-radius: 10px; box-shadow: var(--shadow-glow);">
+            <h2>Salut, <span id="dash-username" class="gradient-text">Elev</span>!</h2>
+            <p class="welcome-subtitle" style="margin-bottom: 30px;">
+                Ai finalizat deja testul introductiv.<br>Alege tipul de test intermediar pe care vrei să-l susții:
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+                <button id="btn-intermediar-admitere" onclick="startTest('intermediar', 'Admitere')" class="btn btn-primary btn-full" style="padding: 16px; font-size: 16px;">
+                    📝 Test Intermediar - Admitere
+                </button>
+                <button id="btn-intermediar-bac" onclick="startTest('intermediar', 'BAC')" class="btn btn-primary btn-full" style="padding: 16px; font-size: 16px; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                    🎓 Test Intermediar - BAC
+                </button>
+                <button id="btn-intermediar-diverse" onclick="startTest('intermediar', 'Diverse')" class="btn btn-primary btn-full" style="padding: 16px; font-size: 16px; background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
+                    🧠 Test Intermediar - Diverse
+                </button>
+            </div>
+            
+            <div style="margin-top: 30px; font-size: 13px; color: var(--text-muted);">
+                Timpul alocat pentru Admitere și BAC este de 30 minute, iar pentru Diverse 20 minute.
+            </div>
+
+            <div id="dash-history" style="margin-top: 25px; width: 100%; text-align: left;">
+                <!-- Populated dynamically with student's past attempts -->
             </div>
         </div>
     </main>
@@ -387,6 +423,7 @@
             </div>
             <div class="question-content" id="question-content">
                 <p class="question-text" id="question-text"></p>
+                <img id="question-image" src="" alt="Imagine întrebare" style="display:none; max-width: 100%; height: auto; margin-top: 15px; border-radius: 8px;">
                 <div class="code-block-wrapper" id="code-wrapper" style="display:none">
                     <div class="code-label">C++</div>
                     <pre class="code-block"><code id="code-content"></code></pre>
@@ -434,6 +471,11 @@
         </div>
     </div>
 
+    <!-- ==================== LIGHTBOX MODAL ==================== -->
+    <div id="lightbox-modal" class="lightbox-modal" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="Zoom Imagine">
+    </div>
+
     <script>
         /* ========================================================================
            CONFIGURATION
@@ -441,8 +483,8 @@
         const CONFIG = {
             tutorPhone: '',
             tutorEmail: '',
-            timerInitial: 30 * 60 * 1000,      // 30 minutes
-            timerIntermediar: 20 * 60 * 1000,   // 20 minutes
+            timerInitial: 20 * 60 * 1000,      // 20 minutes for "Șocul Realității"
+            timerIntermediar: 30 * 60 * 1000,   // 30 minutes for intermediate tests
         };
 
         /* ========================================================================
@@ -456,10 +498,9 @@
            ======================================================================== */
         const state = {
             currentQuestion: 0,
-            answers: [],
-            studentName: '',
-            studentEmail: '',
-            testType: 'initial',    // 'initial' or 'intermediar'
+            testType: 'initial', // always initial or decide logic later if we keep intermediate test
+            studentUsername: '',
+            studentId: null,
             startTime: null,
             endTime: null,
             blurCount: 0,
@@ -475,20 +516,17 @@
         const $$ = (sel) => document.querySelectorAll(sel);
 
         const els = {
-            screenWelcome: $('#screen-welcome'),
-            screenSelect: $('#screen-select'),
-            screenQuiz: $('#screen-quiz'),
-            screenResults: $('#screen-results'),
-            studentName: $('#student-name'),
-            studentEmail: $('#student-email'),
+            screens: document.querySelectorAll('.screen'),
+            studentUsername: $('#student-username'),
+            studentPassword: $('#student-password'),
             btnContinue: $('#btn-continue'),
-            selectGreeting: $('#select-greeting'),
             progressBar: $('#progress-bar'),
             progressText: $('#progress-text'),
             questionNumber: $('#question-number'),
             badgeDifficulty: $('#badge-difficulty'),
             badgeType: $('#badge-type'),
             questionText: $('#question-text'),
+            questionImage: $('#question-image'),
             codeWrapper: $('#code-wrapper'),
             codeContent: $('#code-content'),
             optionsContainer: $('#options-container'),
@@ -501,6 +539,7 @@
             questionContent: $('#question-content'),
             blurCountDisplay: $('#blur-count-display'),
             anticheatBadge: $('#anticheat-badge'),
+            screenQuiz: $('#screen-quiz'),
         };
 
         /* ========================================================================
@@ -512,8 +551,28 @@
             return div.innerHTML;
         }
 
-        function showToast(message, duration = 2500) {
+        function cleanSymbols(str) {
+            if (!str) return '';
+            return str
+                .replace(/≥/g, '>=')
+                .replace(/≤/g, '<=')
+                .replace(/≠/g, '!=')
+                .replace(/←/g, '=')
+                .replace(/→/g, '=')
+                .replace(/\\n/g, '\n');
+        }
+
+        function showToast(message, isError = false, duration = 2500) {
+            if (typeof isError === 'number') {
+                duration = isError;
+                isError = false;
+            }
             els.toast.textContent = message;
+            if (isError) {
+                els.toast.classList.add('error');
+            } else {
+                els.toast.classList.remove('error');
+            }
             els.toast.classList.add('show');
             setTimeout(() => els.toast.classList.remove('show'), duration);
         }
@@ -550,8 +609,19 @@
             }
             state.questionEnteredAt = Date.now();
 
-            const q = questions[state.currentQuestion];
             const idx = state.currentQuestion;
+            const q = questions[idx];
+            if (!q) return;
+
+            // Generate displayOrder for shuffling options
+            if (!q.displayOrder) {
+                q.displayOrder = [0, 1, 2, 3];
+                for (let i = q.displayOrder.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [q.displayOrder[i], q.displayOrder[j]] = [q.displayOrder[j], q.displayOrder[i]];
+                }
+            }
+
             const num = idx + 1;
 
             // Progress
@@ -576,17 +646,36 @@
             els.badgeType.textContent = q.type === 'code' ? 'Completare Cod' : 'Grilă';
 
             // Question text
-            els.questionText.textContent = q.text.replace(/\\n/g, '\n');
+            els.questionText.textContent = cleanSymbols(q.text);
 
-            // Code block
+            // Image (click to zoom)
+            if (q.image_url) {
+                els.questionImage.src = q.image_url;
+                els.questionImage.style.display = 'block';
+                els.questionImage.style.cursor = 'zoom-in';
+                els.questionImage.onclick = () => openLightbox(q.image_url);
+            } else {
+                els.questionImage.removeAttribute('src');
+                els.questionImage.style.display = 'none';
+                els.questionImage.onclick = null;
+                els.questionImage.style.cursor = 'default';
+            }
+
+            // Code block with Prism C++ Syntax Highlighting
             if (q.code) {
                 els.codeWrapper.style.display = 'block';
-                const cleanCode = q.code.replace(/\\n/g, '\n');
+                const cleanCode = cleanSymbols(q.code);
                 const codeHtml = escapeHtml(cleanCode).replace(
                     /_{4,}/g,
                     '<span class="code-blank">????????</span>'
                 );
-                els.codeContent.innerHTML = codeHtml;
+                els.codeContent.innerHTML = `<pre class="language-cpp" style="background:transparent; margin:0; padding:0;"><code class="language-cpp">${codeHtml}</code></pre>`;
+                if (window.Prism) {
+                    setTimeout(() => {
+                        const codeEl = els.codeContent.querySelector('code');
+                        if (codeEl) Prism.highlightElement(codeEl);
+                    }, 0);
+                }
             } else {
                 els.codeWrapper.style.display = 'none';
             }
@@ -594,15 +683,15 @@
             // Options
             const letters = ['A', 'B', 'C', 'D'];
             let optionsHtml = '';
-            q.options.forEach((opt, i) => {
-                const selectedClass = state.answers[idx] === i ? 'selected' : '';
+            q.displayOrder.forEach((originalIndex, displayIndex) => {
+                const opt = q.options[originalIndex];
+                const selectedClass = state.answers[idx] === originalIndex ? 'selected' : '';
                 const isCodeOption = q.type === 'code' ? ' code-option' : '';
                 optionsHtml += `
-                <div class="option-card ${selectedClass}" data-index="${i}" role="button" tabindex="0" aria-label="Opțiunea ${letters[i]}">
-                    <div class="option-letter">${letters[i]}</div>
+                <div class="option-card ${selectedClass}" data-index="${originalIndex}" role="button" tabindex="0" aria-label="Opțiunea ${letters[displayIndex]}">
+                    <div class="option-letter">${letters[displayIndex]}</div>
                     <div class="option-text${isCodeOption}">${escapeHtml(opt)}</div>
-                </div>
-            `;
+                </div>`;
             });
             els.optionsContainer.innerHTML = optionsHtml;
 
@@ -638,9 +727,10 @@
                 localStorage.setItem('quiz_current_question', state.currentQuestion);
                 localStorage.setItem('quiz_answers', JSON.stringify(state.answers));
                 localStorage.setItem('quiz_start_time', state.startTime);
-                localStorage.setItem('quiz_student_name', state.studentName);
-                localStorage.setItem('quiz_student_email', state.studentEmail);
+                localStorage.setItem('quiz_student_username', state.studentUsername);
+                localStorage.setItem('quiz_student_id', state.studentId || '');
                 localStorage.setItem('quiz_test_type', state.testType);
+                localStorage.setItem('quiz_exam_type', state.examType || 'Initial');
                 localStorage.setItem('quiz_blur_count', state.blurCount);
                 localStorage.setItem('quiz_question_timings', JSON.stringify(state.questionTimings));
             } catch (e) {
@@ -650,8 +740,8 @@
 
         function clearStateFromStorage() {
             try {
-                ['quiz_current_question', 'quiz_answers', 'quiz_start_time', 'quiz_student_name',
-                 'quiz_student_email', 'quiz_test_type', 'quiz_blur_count', 'quiz_question_timings',
+                 ['quiz_current_question', 'quiz_answers', 'quiz_start_time', 'quiz_student_username',
+                 'quiz_student_id', 'quiz_test_type', 'quiz_exam_type', 'quiz_blur_count', 'quiz_question_timings',
                  'quiz_questions_ids'].forEach(k => localStorage.removeItem(k));
             } catch (e) {
                 console.error('Failed to clear state from localStorage', e);
@@ -672,16 +762,40 @@
                 const elapsed = Date.now() - state.startTime;
                 const remaining = timerDurationMs - elapsed;
 
+                const isInitial = state.testType === 'initial' || state.examType === 'Initial';
+
                 if (remaining <= 0) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                    countdownEl.textContent = '00:00';
-                    timerBadge.classList.add('warning');
-                    autoSubmitQuiz();
-                    return;
+                    if (isInitial) {
+                        const overtimeLimit = -10 * 60 * 1000; // -10 minutes
+                        if (remaining <= overtimeLimit) {
+                            clearInterval(timerInterval);
+                            timerInterval = null;
+                            countdownEl.textContent = '-10:00';
+                            timerBadge.classList.add('warning');
+                            autoSubmitQuiz();
+                            return;
+                        } else {
+                            // Display overtime (negative timer)
+                            const overTimeSecs = Math.floor((-remaining) / 1000);
+                            const minutes = Math.floor(overTimeSecs / 60);
+                            const seconds = overTimeSecs % 60;
+                            countdownEl.textContent = `-${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                            timerBadge.classList.add('warning');
+                            timerBadge.style.color = 'var(--accent-red)';
+                            return; // skip the positive timer rendering below
+                        }
+                    } else {
+                        // For non-initial tests, strictly end at 0
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        countdownEl.textContent = '00:00';
+                        timerBadge.classList.add('warning');
+                        autoSubmitQuiz();
+                        return;
+                    }
                 }
 
-                const totalSeconds = Math.max(0, Math.floor(remaining / 1000));
+                const totalSeconds = Math.floor(remaining / 1000);
                 const minutes = Math.floor(totalSeconds / 60);
                 const seconds = totalSeconds % 60;
 
@@ -711,9 +825,10 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        student_name: state.studentName,
-                        student_email: state.studentEmail || null,
+                        student_username: state.studentUsername,
+                        student_id: state.studentId,
                         test_type: state.testType,
+                        exam_type: state.examType,
                         time_taken_ms: timeTakenMs,
                         blur_count: state.blurCount,
                         answers_json: state.answers,
@@ -739,15 +854,20 @@
                     details: data.evaluatedDetails
                 };
 
-                const pct = results.totalPoints / results.maxPoints;
+                const pct = results.totalCorrect / questions.length;
                 if (pct <= 0.33) {
-                    results.level = { key: 'beginner', name: 'Începător', icon: '🌱', class: 'level-beginner', description: 'Ai completat testul! Hai să construim împreună o fundație solidă în programare C++.' };
+                    results.level = { key: 'beginner', name: '🐣 Începător C++', icon: '🌱', class: 'level-beginner', description: 'Ai completat testul! Hai să construim împreună o fundație solidă în programare C++.' };
                 } else if (pct <= 0.58) {
-                    results.level = { key: 'intermediate', name: 'Intermediar', icon: '📘', class: 'level-intermediate', description: 'Bun lucru! Ai o bază pe care putem construi. Ne vom concentra pe exerciții practice și aprofundarea conceptelor.' };
+                    results.level = { key: 'intermediate', name: '⚔️ Coder Intermediar', icon: '📘', class: 'level-intermediate', description: 'Bun lucru! Ai o bază pe care putem construi. Ne vom concentra pe exerciții practice și aprofundarea conceptelor.' };
                 } else if (pct <= 0.83) {
-                    results.level = { key: 'advanced', name: 'Avansat', icon: '🚀', class: 'level-advanced', description: 'Impresionant! Cunoștințele tale sunt puternice. Vom lucra pe probleme complexe și tehnici avansate.' };
+                    results.level = { key: 'advanced', name: '🚀 Algo Specialist', icon: '🚀', class: 'level-advanced', description: 'Impresionant! Cunoștințele tale sunt puternice. Vom lucra pe probleme complexe și tehnici avansate.' };
                 } else {
-                    results.level = { key: 'expert', name: 'Expert', icon: '🏆', class: 'level-expert', description: 'Excelent! Ești foarte bine pregătit! Vom trece la antrenament intensiv de tip concurs.' };
+                    results.level = { key: 'expert', name: '👑 Master Mind (Nivel Top)', icon: '🏆', class: 'level-expert', description: 'Excelent! Ești foarte bine pregătit! Vom trece la antrenament intensiv de tip concurs.' };
+                }
+
+                // Confetti for score >= 80%
+                if (pct >= 0.80 && window.confetti) {
+                    window.confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
                 }
                 
                 window.lastResults = results;
@@ -803,19 +923,19 @@
         function renderResults(results) {
             const elapsed = state.endTime - state.startTime;
             const timeStr = formatTime(elapsed);
-            const percent = Math.round((results.totalPoints / results.maxPoints) * 100);
+            const percent = Math.round((results.totalCorrect / questions.length) * 100);
 
             let html = `
             <div class="results-header">
                 <div class="results-icon">${results.level.icon}</div>
                 <h2>Rezultatele tale</h2>
-                <p class="results-name">${escapeHtml(state.studentName)}</p>
+                <p class="results-name">${escapeHtml(state.studentUsername)}</p>
             </div>
 
             <div class="score-display">
                 <div class="score-value">
                     <span class="score-number" id="score-animated">0</span>
-                    <span class="score-max">/${results.maxPoints}</span>
+                    <span class="score-max">/${questions.length}</span>
                 </div>
                 <div class="score-percent">${percent}% din punctaj</div>
             </div>
@@ -867,12 +987,11 @@
                 const diffClass = `review-diff-${d.difficulty}`;
                 const correctClass = d.isCorrect ? 'review-correct' : 'review-wrong';
                 const icon = d.isCorrect ? '✓' : '✗';
-                const letters = ['A', 'B', 'C', 'D'];
-                const studentAns = d.studentAnswer !== null ? letters[d.studentAnswer] : '—';
-                const correctAns = letters[d.correctAnswer];
+                const studentOptText = d.studentAnswer !== null ? (d.options[d.studentAnswer] || '—') : '—';
+                const correctOptText = d.options[d.correctAnswer] || '—';
                 const detail = d.isCorrect
-                    ? `Răspuns corect: ${correctAns}`
-                    : `Răspunsul tău: ${studentAns} — Corect: ${correctAns}`;
+                    ? `Răspuns corect: ${escapeHtml(correctOptText)}`
+                    : `Tu: ${escapeHtml(studentOptText)} <br> Corect: ${escapeHtml(correctOptText)}`;
                 return `
                             <div class="review-item ${correctClass}" onclick="this.classList.toggle('expanded')">
                                 <span class="review-num">${d.number}</span>
@@ -914,7 +1033,7 @@
         `;
 
             els.resultsContainer.innerHTML = html;
-            animateScore(results.totalPoints);
+            animateScore(results.totalCorrect);
         }
 
         function animateScore(target) {
@@ -943,12 +1062,11 @@
             const timeStr = formatTime(elapsed);
             const percent = Math.round((results.totalPoints / results.maxPoints) * 100);
             const date = new Date().toLocaleDateString('ro-RO');
-            const testLabel = state.testType === 'initial' ? 'Test Inițial (50 întrebări)' : 'Test Intermediar (30 întrebări)';
+            const testLabel = `Test ${state.examType} (${questions.length} întrebări)`;
 
             return `📋 Test Introductiv Informatică C++
 ━━━━━━━━━━━━━━━━━━━━━━━
-👤 Nume: ${state.studentName}
-📧 Email: ${state.studentEmail || '—'}
+👤 Elev: ${state.studentUsername}
 📄 Tip: ${testLabel}
 📊 Scor: ${results.totalPoints}/${results.maxPoints} puncte (${percent}%)
 🏆 Nivel: ${results.level.name}
@@ -986,7 +1104,7 @@
         }
 
         function shareEmail() {
-            const subject = encodeURIComponent(`Rezultate Test C++ — ${state.studentName}`);
+            const subject = encodeURIComponent(`Rezultate Test C++ — ${state.studentUsername}`);
             const body = encodeURIComponent(getResultsText());
             const email = CONFIG.tutorEmail;
             const mailtoUrl = email ? `mailto:${email}?subject=${subject}&body=${body}` : `mailto:?subject=${subject}&body=${body}`;
@@ -998,73 +1116,162 @@
            ======================================================================== */
 
 
-        async function selectTestType(type, email) {
+        window.startTest = function(type, examType) {
+            selectTestType(type, state.studentUsername, examType);
+        };
+
+        async function selectTestType(type, username, examType = 'Initial') {
             state.testType = type;
-            els.btnContinue.innerHTML = '<span>Se pregătesc întrebările...</span>';
+            state.examType = examType;
+            
+            if (type === 'initial') {
+                els.btnContinue.innerHTML = '<span>Se pregătesc întrebările...</span>';
+            } else {
+                const btns = document.querySelectorAll('#screen-dashboard .btn');
+                btns.forEach(b => { b.disabled = true; b.style.opacity = '0.7'; });
+            }
             
             try {
-                const res = await fetch(`/.netlify/functions/fetch-questions?type=${type}&email=${encodeURIComponent(email)}`);
+                const res = await fetch(`/.netlify/functions/fetch-questions?type=${type}&email=${encodeURIComponent(username)}&examType=${encodeURIComponent(examType)}`);
                 if (!res.ok) throw new Error();
                 const fetchedQs = await res.json();
                 
+                if (fetchedQs.length === 0) {
+                    showToast(`Nu există întrebări pentru categoria ${examType}.`);
+                    if (type === 'initial') {
+                        els.btnContinue.innerHTML = '<span>Continuă</span>';
+                        els.btnContinue.disabled = false;
+                    } else {
+                        const btns = document.querySelectorAll('#screen-dashboard .btn');
+                        btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+                    }
+                    return;
+                }
+
                 questions = fetchedQs;
-                timerDurationMs = type === 'intermediar' ? CONFIG.timerIntermediar : CONFIG.timerInitial;
+                timerDurationMs = (examType === 'Admitere' || examType === 'BAC') ? 30 * 60 * 1000 : 20 * 60 * 1000;
                 
                 localStorage.setItem('quiz_questions_ids', JSON.stringify(questions.map(q => q.id)));
                 startQuiz();
             } catch(e) {
                 showToast('Eroare la încărcarea întrebărilor.');
-                els.btnContinue.innerHTML = '<span>Continuă</span>';
-                els.btnContinue.disabled = false;
+                if (type === 'initial') {
+                    els.btnContinue.innerHTML = '<span>Continuă</span>';
+                    els.btnContinue.disabled = false;
+                }
             }
         }
 
         /* ========================================================================
            QUIZ LIFECYCLE
            ======================================================================== */
-        async function handleLogin() {
-            const email = els.studentEmail.value.trim();
-            if (!email || !questionsLoaded) return;
+        async function loadDashboard(username, studentId) {
+    try {
+        const resultsRes = await fetch('/.netlify/functions/check-user', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email: username }) 
+        });
+        
+        const resultsData = await resultsRes.json();
+        
+        if (resultsData.exists) {
+            document.getElementById('dash-username').textContent = username;
             
-            if (!state.needName) {
-                els.btnContinue.disabled = true;
-                const originalText = els.btnContinue.innerHTML;
-                els.btnContinue.innerHTML = '<span>Se verifică...</span>';
-                
-                try {
-                    const res = await fetch('/.netlify/functions/check-user', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email })
-                    });
-                    const data = await res.json();
+            const historyEl = document.getElementById('dash-history');
+            if (historyEl && resultsData.history && resultsData.history.length > 0) {
+                let historyHtml = '<h4 style="font-size:13px; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">Istoricul tău de teste</h4><div style="display:flex; flex-direction:column; gap:8px;">';
+                resultsData.history.forEach(h => {
+                    const scorePct = h.score !== undefined && h.total_points ? Math.round((h.score / h.total_points) * 100) : 0;
+                    const dateStr = h.created_at ? new Date(h.created_at).toLocaleDateString('ro-RO', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+                    historyHtml += `
+                        <div style="background:rgba(15,15,40,0.6); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-weight:600; font-size:13px; color:var(--text-primary);">${h.test_type === 'initial' ? 'Test Inițial' : 'Test Intermediar'}</div>
+                                <div style="font-size:11px; color:var(--text-muted);">${dateStr}</div>
+                            </div>
+                            <div style="font-weight:700; font-size:14px; color:${scorePct >= 80 ? 'var(--accent-green)' : (scorePct >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)')};">
+                                ${scorePct}%
+                            </div>
+                        </div>
+                    `;
+                });
+                historyHtml += '</div>';
+                historyEl.innerHTML = historyHtml;
+            }
+            
+            try {
+                const countRes = await fetch('/.netlify/functions/fetch-questions?type=counts');
+                if (countRes.ok) {
+                    const counts = await countRes.json();
+                    const btnAdmitere = document.getElementById('btn-intermediar-admitere');
+                    const btnBac = document.getElementById('btn-intermediar-bac');
+                    const btnDiverse = document.getElementById('btn-intermediar-diverse');
                     
-                    if (data.exists) {
-                        state.studentName = data.name;
-                        state.studentEmail = email;
-                        await selectTestType('intermediar', email);
-                    } else {
-                        // New user
-                        state.needName = true;
-                        document.getElementById('name-group').style.display = 'block';
-                        els.btnContinue.innerHTML = '<span>Începe Testul</span>';
-                        els.btnContinue.disabled = true;
-                        els.studentName.focus();
-                    }
-                } catch(e) {
-                    showToast('Eroare la conectare.');
+                    if (counts['Admitere'] && btnAdmitere) btnAdmitere.innerHTML = `📝 Test Intermediar - Admitere <br><span style="font-size:13px; opacity:0.9">(${counts['Admitere']} întrebări totale)</span>`;
+                    if (counts['BAC'] && btnBac) btnBac.innerHTML = `🎓 Test Intermediar - BAC <br><span style="font-size:13px; opacity:0.9">(${counts['BAC']} întrebări totale)</span>`;
+                    if (counts['Diverse'] && btnDiverse) btnDiverse.innerHTML = `🧠 Test Intermediar - Diverse <br><span style="font-size:13px; opacity:0.9">(${counts['Diverse']} întrebări totale)</span>`;
+                }
+            } catch(e) {
+                console.error('Eroare fetch counts', e);
+            }
+
+            showScreen('dashboard');
+        } else {
+            await selectTestType('initial', username, 'Initial');
+        }
+    } catch(e) {
+        showToast('Eroare la încărcarea istoricului.');
+        showScreen('welcome');
+    }
+}
+
+        function logoutStudent() {
+            localStorage.removeItem('active_student_username');
+            localStorage.removeItem('active_student_id');
+            state.studentUsername = '';
+            state.studentId = null;
+            showScreen('welcome');
+        }
+
+        async function handleLogin() {
+            const username = els.studentUsername.value.trim();
+            const password = els.studentPassword.value.trim();
+            if (!username || !password) {
+                showToast('Te rugăm să introduci userul și parola.');
+                return;
+            }
+            
+            els.btnContinue.disabled = true;
+            const originalText = els.btnContinue.innerHTML;
+            els.btnContinue.innerHTML = '<span>Se autentifică...</span>';
+            
+            try {
+                const res = await fetch('/.netlify/functions/auth-student', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    state.studentUsername = data.student.username;
+                    state.studentId = data.student.id;
+                    
+                    els.btnContinue.innerHTML = '<span>Se verifică istoricul...</span>';
+                    
+                    localStorage.setItem('active_student_username', state.studentUsername);
+                    localStorage.setItem('active_student_id', state.studentId);
+                    await loadDashboard(username, data.student.id);
+                } else {
+                    showToast(data.error || 'Eroare la conectare.', true);
                     els.btnContinue.innerHTML = originalText;
                     els.btnContinue.disabled = false;
                 }
-            } else {
-                // New user submitted name
-                const name = els.studentName.value.trim();
-                if (!name) return;
-                state.studentName = name;
-                state.studentEmail = email;
-                els.btnContinue.disabled = true;
-                els.btnContinue.innerHTML = '<span>Se pornește...</span>';
-                await selectTestType('initial', email);
+            } catch(e) {
+                showToast('Eroare la conectare la server.', true);
+                els.btnContinue.innerHTML = originalText;
+                els.btnContinue.disabled = false;
             }
         }
 
@@ -1130,14 +1337,26 @@
             state.blurCount = 0;
             state.questionTimings = [];
             state.questionEnteredAt = null;
-            state.needName = false;
-            document.getElementById('name-group').style.display = 'none';
-            showScreen('welcome');
-            els.studentName.value = '';
-            els.studentEmail.value = '';
-            state.studentName = '';
-            state.studentEmail = '';
-            validateWelcomeForm();
+            const activeUser = localStorage.getItem('active_student_username');
+            const activeId = localStorage.getItem('active_student_id');
+            if (activeUser && activeId) {
+                state.studentUsername = activeUser;
+                state.studentId = activeId;
+                loadDashboard(activeUser, activeId);
+            } else {
+                state.studentUsername = '';
+                state.studentId = null;
+                showScreen('welcome');
+            }
+            els.studentUsername.value = '';
+            els.studentPassword.value = '';
+            els.btnContinue.disabled = false;
+            els.btnContinue.innerHTML = `<span>Autentificare & Începe</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14" />
+                    <path d="m12 5 7 7-7 7" />
+                </svg>`;
 
             const timerBadge = $('#quiz-timer');
             if (timerBadge) {
@@ -1151,22 +1370,24 @@
            FORM VALIDATION
            ======================================================================== */
         function validateWelcomeForm() {
-            const emailOk = els.studentEmail.value.trim().length > 0 && els.studentEmail.value.includes('@') && els.studentEmail.value.includes('.');
-            const nameOk = els.studentName.value.trim().length > 0;
-            if (state.needName) {
-                els.btnContinue.disabled = !nameOk || !emailOk || !questionsLoaded;
-            } else {
-                els.btnContinue.disabled = !emailOk || !questionsLoaded;
-            }
+            const userOk = els.studentUsername.value.trim().length > 0;
+            const passOk = els.studentPassword.value.trim().length > 0;
+            els.btnContinue.disabled = !userOk || !passOk || !questionsLoaded;
         }
 
         /* ========================================================================
            ANTI-CHEAT: BLUR/FOCUS TRACKING
            ======================================================================== */
+        let lastBlurTime = 0;
         function triggerBlur() {
             if (!els.screenQuiz.classList.contains('active')) return;
+            const now = Date.now();
+            if (now - lastBlurTime < 1000) return; // Debounce duplicate events within 1s
+            lastBlurTime = now;
+
             state.blurCount++;
             els.blurCountDisplay.textContent = state.blurCount;
+            showToast(`⚠️ Ai părăsit pagina de test! (Abatere #${state.blurCount})`, 3000);
             saveStateToStorage();
 
             if (state.blurCount >= 5) {
@@ -1188,18 +1409,14 @@
         /* ========================================================================
            EVENT LISTENERS
            ======================================================================== */
-        // Name/email input
-        els.studentName.addEventListener('input', validateWelcomeForm);
-        els.studentEmail.addEventListener('input', validateWelcomeForm);
-
         // Continue button -> handles login logic
         els.btnContinue.addEventListener('click', handleLogin);
 
         // Enter key on inputs
-        els.studentName.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') els.studentEmail.focus();
+        els.studentUsername.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') els.studentPassword.focus();
         });
-        els.studentEmail.addEventListener('keydown', (e) => {
+        els.studentPassword.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !els.btnContinue.disabled) handleLogin();
         });
 
@@ -1265,18 +1482,20 @@
 
                 // Check localStorage for active session
                 const savedStartTime = localStorage.getItem('quiz_start_time');
-                const savedStudentName = localStorage.getItem('quiz_student_name');
+                const savedStudentUsername = localStorage.getItem('quiz_student_username');
                 const savedCurrentQuestion = localStorage.getItem('quiz_current_question');
                 const savedAnswers = localStorage.getItem('quiz_answers');
                 const savedTestType = localStorage.getItem('quiz_test_type');
+                const savedExamType = localStorage.getItem('quiz_exam_type');
                 const savedQuestionsIds = localStorage.getItem('quiz_questions_ids');
-                const savedStudentEmail = localStorage.getItem('quiz_student_email');
+                const savedStudentId = localStorage.getItem('quiz_student_id');
 
-                if (savedStartTime && savedStudentName && savedAnswers && savedQuestionsIds && savedStudentEmail) {
+                if (savedStartTime && savedStudentUsername && savedAnswers && savedQuestionsIds && savedStudentId) {
                     state.startTime = parseInt(savedStartTime);
-                    state.studentName = savedStudentName;
-                    state.studentEmail = savedStudentEmail;
+                    state.studentUsername = savedStudentUsername;
+                    state.studentId = savedStudentId;
                     state.testType = savedTestType || 'initial';
+                    state.examType = savedExamType || 'Initial';
                     state.blurCount = parseInt(localStorage.getItem('quiz_blur_count') || '0');
                     state.currentQuestion = savedCurrentQuestion ? parseInt(savedCurrentQuestion) : 0;
 
@@ -1295,7 +1514,18 @@
                         return showScreen('welcome');
                     }
 
-                    timerDurationMs = state.testType === 'intermediar' ? CONFIG.timerIntermediar : CONFIG.timerInitial;
+                    timerDurationMs = (state.examType === 'Admitere' || state.examType === 'BAC') ? 30 * 60 * 1000 : 20 * 60 * 1000;
+                    
+                    let maxAllowedTimeMs = timerDurationMs;
+                    if (state.testType === 'initial' || state.examType === 'Initial') {
+                        maxAllowedTimeMs += 10 * 60 * 1000; // Add 10 minutes overtime
+                    }
+
+                    if (Date.now() - state.startTime > maxAllowedTimeMs) {
+                        showToast('Sesiunea a expirat.');
+                        clearStateFromStorage();
+                        return showScreen('welcome');
+                    }
 
                     const parsedAnswers = JSON.parse(savedAnswers);
                     if (Array.isArray(parsedAnswers) && parsedAnswers.length === questions.length) {
@@ -1316,16 +1546,22 @@
                     if (state.blurCount >= 5) els.anticheatBadge.className = 'anticheat-badge danger';
                     else if (state.blurCount >= 2) els.anticheatBadge.className = 'anticheat-badge warned';
 
-                    // Pre-fill name and email
-                    els.studentName.value = state.studentName;
-                    els.studentEmail.value = state.studentEmail;
-                    validateWelcomeForm();
+                    // Pre-fill username
+                    els.studentUsername.value = state.studentUsername;
 
                     startTimer();
                     showScreen('quiz');
                     renderQuestion();
                 } else {
-                    validateWelcomeForm();
+                    const activeUser = localStorage.getItem('active_student_username');
+                    const activeId = localStorage.getItem('active_student_id');
+                    if (activeUser && activeId) {
+                        state.studentUsername = activeUser;
+                        state.studentId = activeId;
+                        loadDashboard(activeUser, activeId);
+                    } else {
+                        // Not logged in
+                    }
                 }
             } catch (err) {
                 console.error('Initialization error:', err);
@@ -1333,9 +1569,47 @@
             }
         }
 
+        // Lightbox Functions
+        function openLightbox(url) {
+            const modal = document.getElementById('lightbox-modal');
+            const img = document.getElementById('lightbox-img');
+            if (modal && img && url) {
+                img.src = url;
+                modal.style.display = 'flex';
+            }
+        }
+        function closeLightbox() {
+            const modal = document.getElementById('lightbox-modal');
+            if (modal) modal.style.display = 'none';
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        // Copy Protection & DevTools Blocking for Active Quiz
+        document.addEventListener('contextmenu', (e) => {
+            const quizScreen = document.getElementById('screen-quiz');
+            if (quizScreen && quizScreen.classList.contains('active')) {
+                e.preventDefault();
+                showToast('Click-dreapta este dezactivat în timpul testului!');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            const quizScreen = document.getElementById('screen-quiz');
+            if (quizScreen && quizScreen.classList.contains('active')) {
+                if (e.key === 'F12' || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+                    (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 'c' || e.key === 'C' || e.key === 'v' || e.key === 'V'))) {
+                    e.preventDefault();
+                    showToast('Comenzile de copiere / DevTools sunt dezactivate în timpul testului!');
+                }
+            }
+        });
+
         // Initialize App
         initApp();
-        setTimeout(() => els.studentEmail.focus(), 500);
+        setTimeout(() => els.studentUsername.focus(), 500);
     </script>
 </body>
 
