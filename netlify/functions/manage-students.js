@@ -1,6 +1,3 @@
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'admin';
-const validTokens = [ADMIN_SECRET].filter(Boolean);
-
 exports.handler = async function(event, context) {
     const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -12,6 +9,9 @@ exports.handler = async function(event, context) {
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
     }
+
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+    const validTokens = [ADMIN_SECRET].filter(Boolean);
 
     const token = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
     if (!token || !validTokens.includes(token)) {
