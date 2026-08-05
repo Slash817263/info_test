@@ -35,6 +35,17 @@ exports.handler = async function(event, context) {
         const method = event.httpMethod;
         const params = event.queryStringParameters || {};
 
+        function normalizeExamType(et) {
+            if (!et) return 'Diverse';
+            let types = et.split(',').map(s => s.trim()).filter(Boolean);
+            if (types.includes('Initial')) {
+                if (types.includes('BAC')) return 'Initial,BAC';
+                if (types.includes('Admitere')) return 'Initial,Admitere';
+                return 'Initial,Diverse';
+            }
+            return types.join(',');
+        }
+
         if (method === 'POST') {
             const body = JSON.parse(event.body);
             const { exam_type, difficulty, type, category, subcategory, text, image_url, code, options_json, correct_index, explanation } = body;
@@ -56,7 +67,7 @@ exports.handler = async function(event, context) {
                     'Prefer': 'return=representation'
                 },
                 body: JSON.stringify({
-                    exam_type,
+                    exam_type: normalizeExamType(exam_type),
                     difficulty,
                     type,
                     category: category || null,
@@ -89,6 +100,9 @@ exports.handler = async function(event, context) {
             // If options_json is a string, parse it
             if (body.options_json && typeof body.options_json === 'string') {
                 body.options_json = JSON.parse(body.options_json);
+            }
+            if (body.exam_type) {
+                body.exam_type = normalizeExamType(body.exam_type);
             }
             if (body.correct_index !== undefined) {
                 body.correct_index = parseInt(body.correct_index);
