@@ -776,9 +776,18 @@
         }
 
         /* ==================== MODAL RAPORT ==================== */
-        function openReportModal(resultId) {
+        async function openReportModal(resultId) {
             const r = resultsData.find(x => x.id == resultId);
             if (!r) return;
+
+            // Ensure questions are loaded so we can get categories
+            if (questionsData.length === 0) {
+                try {
+                    await loadQuestions();
+                } catch(e) {
+                    console.error("Failed to load questions", e);
+                }
+            }
 
             const pct = Math.round((r.score / r.total_points) * 100) || 0;
             document.getElementById('report-student-name').textContent = `Raport: ${r.student_name || 'Anonim'}`;
