@@ -794,7 +794,13 @@
             const stats = {};
             details.forEach(item => {
                 // Find original question in questionsData to get category and subcategory
-                const orig = questionsData.find(q => q.id === item.id);
+                // Using loose equality (==) for id, and fallback to text match for older results that lacked item.id
+                let orig = questionsData.find(q => item.id && q.id == item.id);
+                if (!orig && item.text) {
+                    orig = questionsData.find(q => q.text === item.text);
+                }
+                
+                // For old tests, we fallback to 'Altele' / 'Nespecificat' if question was completely deleted
                 const cat = orig?.category || 'Altele';
                 const subcat = orig?.subcategory || 'Nespecificat';
 
