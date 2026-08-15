@@ -112,6 +112,7 @@ exports.handler = async function(event, context) {
                 difficulty: q.difficulty,
                 text: q.text,
                 code: q.code || null,
+                image_url: q.image_url || null,
                 isCorrect: isCorrect,
                 studentAnswer: studentAns,
                 correctAnswer: q.correct_index,
@@ -151,7 +152,8 @@ exports.handler = async function(event, context) {
         const data = await response.json();
 
         // If this result is from an assigned test, mark it as completed
-        if (assigned_test_id) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (assigned_test_id && typeof assigned_test_id === 'string' && uuidRegex.test(assigned_test_id)) {
             const updateRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${assigned_test_id}`, {
                 method: 'PATCH',
                 headers: {

@@ -35,7 +35,7 @@
     <!-- ==================== WELCOME SCREEN ==================== -->
     <main id="screen-welcome" class="screen active">
         <div class="welcome-container">
-            <img src="SIGLA-AcaDe_Informatica.png" alt="AcaDe-QUIZ Logo" style="max-width: 250px; margin-bottom: 20px; border-radius: 10px; box-shadow: var(--shadow-glow);">
+            <img src="SIGLA-AcaDe_Informatica.png" alt="AcaDe-QUIZ Logo" class="app-logo app-logo-large">
             <h1><span class="gradient-text">AcaDe-QUIZ</span></h1>
             <p class="welcome-subtitle">
                 Platformă privată de evaluare a cunoștințelor în programare C++.<br>
@@ -69,7 +69,7 @@
     <!-- ==================== DASHBOARD SCREEN ==================== -->
     <main id="screen-dashboard" class="screen">
         <div class="welcome-container" style="max-width: 500px;">
-            <img src="SIGLA-AcaDe_Informatica.png" alt="AcaDe-QUIZ Logo" style="max-width: 150px; margin-bottom: 20px; border-radius: 10px; box-shadow: var(--shadow-glow);">
+            <img src="SIGLA-AcaDe_Informatica.png" alt="AcaDe-QUIZ Logo" class="app-logo app-logo-small">
             <h2>Salut, <span id="dash-username" class="gradient-text">Elev</span>!</h2>
             <p class="welcome-subtitle" style="margin-bottom: 30px;">
                 Ai finalizat deja testul introductiv.<br>Alege tipul de test intermediar pe care vrei să-l susții:
@@ -77,31 +77,47 @@
             
             <div id="dash-assigned-tests" style="width: 100%; margin-bottom: 20px; display: none;"></div>
             
-            <div style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
-                <button id="btn-intermediar-admitere" onclick="startTest('intermediar', 'Academie')" class="btn btn-primary btn-full" style="padding: 16px; font-size: 16px;">
-                    📝 Test Intermediar - Academie
+            <div class="dash-categories-grid">
+                <button id="btn-intermediar-admitere" onclick="startTest('intermediar', 'Academie')" class="btn dash-cat-btn btn-academie">
+                    <div class="dash-cat-icon">📝</div>
+                    <div class="dash-cat-info">
+                        <span class="dash-cat-title">Academie</span>
+                        <span class="dash-cat-subtitle" id="count-academie">Încărcare...</span>
+                    </div>
                 </button>
-                <button id="btn-intermediar-poli" onclick="startTest('intermediar', 'Poli')" class="btn btn-primary btn-full" style="padding: 16px; font-size: 16px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
-                    🏛️ Test Intermediar - Poli
+                <button id="btn-intermediar-poli" onclick="startTest('intermediar', 'Poli')" class="btn dash-cat-btn btn-poli">
+                    <div class="dash-cat-icon">🏛️</div>
+                    <div class="dash-cat-info">
+                        <span class="dash-cat-title">Politehnică</span>
+                        <span class="dash-cat-subtitle" id="count-poli">Încărcare...</span>
+                    </div>
                 </button>
-                <button id="btn-intermediar-bac" onclick="startTest('intermediar', 'BAC')" class="btn btn-primary btn-full" style="padding: 16px; font-size: 16px; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
-                    🎓 Test Intermediar - BAC
+                <button id="btn-intermediar-bac" onclick="startTest('intermediar', 'BAC')" class="btn dash-cat-btn btn-bac">
+                    <div class="dash-cat-icon">🎓</div>
+                    <div class="dash-cat-info">
+                        <span class="dash-cat-title">BAC</span>
+                        <span class="dash-cat-subtitle" id="count-bac">Încărcare...</span>
+                    </div>
                 </button>
-                <button id="btn-intermediar-diverse" onclick="startTest('intermediar', 'Diverse')" class="btn btn-primary btn-full" style="padding: 16px; font-size: 16px; background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
-                    🧠 Test Intermediar - Diverse
+                <button id="btn-intermediar-diverse" onclick="startTest('intermediar', 'Diverse')" class="btn dash-cat-btn btn-diverse">
+                    <div class="dash-cat-icon">🧠</div>
+                    <div class="dash-cat-info">
+                        <span class="dash-cat-title">Diverse</span>
+                        <span class="dash-cat-subtitle" id="count-diverse">Încărcare...</span>
+                    </div>
                 </button>
             </div>
             
-            <div style="margin-top: 30px; font-size: 13px; color: var(--text-muted);">
-                Timpul alocat pentru Testele Intermediare este de 60 minute.
-            </div>
-
-            <div style="margin-top: 20px; width: 100%;">
-                <button onclick="showSituatiaMea()" class="btn btn-secondary btn-full" style="padding: 14px; font-size: 15px; border-color: var(--accent-purple); color: var(--text-primary);">
-                    📊 Situația Mea (Istoric Detaliat)
+            <div class="dash-stats-bar">
+                <div class="dash-time-info">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>60 minute / test</span>
+                </div>
+                <button onclick="showSituatiaMea()" class="btn btn-secondary dash-situatie-btn">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Situația Mea
                 </button>
             </div>
-
             <div id="dash-history" style="margin-top: 25px; width: 100%; text-align: left;">
                 <!-- Populated dynamically with student's past attempts -->
             </div>
@@ -218,18 +234,19 @@
 
         <!-- Custom Phone Modal -->
     <div id="modal-phone" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-warning-icon">📞</div>
-            <h2>Număr de telefon obligatoriu</h2>
-            <p>Pentru a continua, trebuie să introduci un număr de telefon valid (ex: 0711222333). Acesta va fi folosit pentru notificări pe WhatsApp legate de teme.</p>
+        <div class="modal-content modal-playful">
+            <div class="modal-playful-icon">👋</div>
+            <h2 class="playful-title">Salutare! Un mic detaliu...</h2>
+            <p>Pentru a te ține la curent cu temele noi, te rugăm să ne lași un număr de WhatsApp (ex: 0711222333). Promitem să nu facem spam! 🤫</p>
             <div style="margin-bottom: 20px;">
-                <input type="text" id="phone-input" class="form-control" placeholder="07XXXXXXXX" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; font-size: 16px; text-align: center;">
+                <input type="text" id="phone-input" class="form-control" placeholder="07XXXXXXXX" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white; font-size: 16px; text-align: center; letter-spacing: 2px;">
             </div>
             <div class="modal-buttons">
-                <button id="btn-submit-phone" class="btn btn-primary" style="width: 100%;">Salvează Numărul</button>
+                <button id="btn-submit-phone" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, #10b981, #3b82f6); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); border: none;">E gata, Salvează!</button>
             </div>
         </div>
     </div>
+
 
     <!-- ==================== LIGHTBOX MODAL ==================== -->
     <div id="lightbox-modal" class="lightbox-modal" onclick="closeLightbox()">

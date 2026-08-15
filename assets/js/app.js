@@ -584,7 +584,7 @@
             const results = window.lastResults;
             const elapsed = state.endTime - state.startTime;
             const timeStr = formatTime(elapsed);
-            const percent = Math.round((results.totalPoints / results.maxPoints) * 100);
+            const percent = Math.round((results.totalCorrect / questions.length) * 100);
             const date = new Date().toLocaleDateString('ro-RO');
             const testLabel = `Test ${state.examType} (${questions.length} întrebări)`;
 

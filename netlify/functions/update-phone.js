@@ -1,7 +1,11 @@
 exports.handler = async function(event, context) {
+    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+
     const headers = {
-        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Origin': corsOrigin,
+        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
     };
@@ -14,11 +18,7 @@ exports.handler = async function(event, context) {
         return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
     }
 
-    const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-    const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
-    if (!clientToken || !validTokens.includes(clientToken)) {
-        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
-    }
+    // S-a scos verificarea de admin pentru a permite studenților să își actualizeze numărul la prima autentificare
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_KEY;
@@ -29,10 +29,10 @@ exports.handler = async function(event, context) {
 
     try {
         const body = JSON.parse(event.body);
-        const { student_id, phone_number } = body;
+        const { student_id, username, phone_number } = body;
 
-        if (!student_id || !phone_number) {
-            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Student ID ?i Numarul de telefon sunt obligatorii' }) };
+        if (!student_id || !username || !phone_number) {
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Student ID, Username și Numarul de telefon sunt obligatorii' }) };
         }
 
         // Validate Romanian phone number (starts with 07, exactly 10 digits)
@@ -41,7 +41,7 @@ exports.handler = async function(event, context) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Format numar invalid. Trebuie sa fie de tipul 07XXXXXXXX (10 cifre).' }) };
         }
 
-        const res = await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student_id}`, {
+        const res = await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student_id}&username=eq.${encodeURIComponent(username)}`, {
             method: 'PATCH',
             headers: {
                 'apikey': supabaseKey,

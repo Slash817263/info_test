@@ -1,8 +1,12 @@
 // Local fs functions removed because Netlify Lambda is read-only and ephemeral
 
 exports.handler = async function(event, context) {
+    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+
     const headers = {
-        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
+        'Access-Control-Allow-Origin': corsOrigin,
         'Access-Control-Allow-Headers': 'Content-Type, x-admin-token',
         'Access-Control-Allow-Methods': 'POST, PUT, DELETE, OPTIONS',
         'Content-Type': 'application/json'
@@ -188,6 +192,18 @@ exports.handler = async function(event, context) {
             }
             const body = JSON.parse(event.body || '{}');
 
+            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index', 'explanation'];
+            const safeBody = {};
+            for (const key of allowedFields) {
+                if (body[key] !== undefined) {
+                    safeBody[key] = body[key];
+                }
+            }
+
+            if (Object.keys(safeBody).length === 0) {
+                return { statusCode: 400, headers, body: JSON.stringify({ error: 'No valid fields provided for update.' }) };
+            }
+
             const updRes = await fetch(`${supabaseUrl}/rest/v1/waiting_questions?id=eq.${qId}`, {
                 method: 'PATCH',
                 headers: { 
@@ -195,7 +211,7 @@ exports.handler = async function(event, context) {
                     'Authorization': `Bearer ${supabaseKey}`,
                     'Content-Type': 'application/json' 
                 },
-                body: JSON.stringify(body)
+                body: JSON.stringify(safeBody)
             });
 
             if (!updRes.ok) {

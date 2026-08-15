@@ -1,7 +1,11 @@
 exports.handler = async function(event, context) {
+    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+
     const headers = {
-        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Origin': corsOrigin,
+        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
     };
@@ -46,6 +50,17 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
 
+        // Check if phone number exists
+        const stdUrl = `${supabaseUrl}/rest/v1/students?username=eq.${encodedUsername}&select=phone_number`;
+        const stdRes = await fetch(stdUrl, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } });
+        let phoneNumber = null;
+        if (stdRes.ok) {
+            const stdData = await stdRes.json();
+            if (stdData.length > 0) {
+                phoneNumber = stdData[0].phone_number;
+            }
+        }
+
         if (data && data.length > 0) {
             return {
                 statusCode: 200,
@@ -53,6 +68,7 @@ exports.handler = async function(event, context) {
                 body: JSON.stringify({
                     exists: true,
                     name: data[0].student_name,
+                    phone_number: phoneNumber,
                     history: data.map(d => ({
                         test_type: d.test_type,
                         score: d.score,
@@ -65,7 +81,7 @@ exports.handler = async function(event, context) {
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({ exists: false, history: [] })
+                body: JSON.stringify({ exists: false, history: [], phone_number: phoneNumber })
             };
         }
     } catch (error) {

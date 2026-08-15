@@ -1,6 +1,10 @@
 exports.handler = async function(event, context) {
+    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+
     const headers = {
-        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
+        'Access-Control-Allow-Origin': corsOrigin,
         'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Content-Type': 'application/json'
@@ -10,11 +14,10 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const ADMIN_SECRET = process.env.ADMIN_SECRET;
-    const validTokens = [ADMIN_SECRET].filter(Boolean);
-
-    const token = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
-    if (!token || !validTokens.includes(token)) {
+    const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
+    const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
+    
+    if (!clientToken || !validTokens.includes(clientToken)) {
         return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
     }
 

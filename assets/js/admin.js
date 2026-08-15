@@ -1402,7 +1402,10 @@ const API_RESULTS = '/.netlify/functions/fetch-results';
                         <td>${r.blur_count}</td>
                         <td>${timeStr}</td>
                         <td style="color:var(--text-secondary); font-size:12px;">${dateStr}</td>
-                        <td><button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="viewResultDetails(${r.id})">Detalii</button></td>
+                        <td style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="viewResultDetails(${r.id})">Detalii</button>
+                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;" onclick="deleteResultHistory(${r.id}, '${r.student_username}')">Șterge</button>
+                        </td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -1413,9 +1416,11 @@ const API_RESULTS = '/.netlify/functions/fetch-results';
             document.getElementById('assign-student-name').value = username;
         }
 
-        function openAssignModal(username) {
-            document.getElementById('assign-username').value = username;
-            document.getElementById('assign-student-name').value = username;
+        function openAssignTestModal(username) {
+            if (username) {
+                document.getElementById('assign-username').value = username;
+                document.getElementById('assign-student-name').value = username;
+            }
             
             // set default deadline tomorrow
             const tomorrow = new Date();
@@ -1574,15 +1579,28 @@ const API_RESULTS = '/.netlify/functions/fetch-results';
             testQs.forEach((q, idx) => {
                 const card = document.createElement('div');
                 card.className = 'detail-card';
+                let optsHtml = '';
+                try {
+                    const opts = typeof q.options_json === 'string' ? JSON.parse(q.options_json) : q.options_json;
+                    if (opts && Array.isArray(opts)) {
+                        optsHtml = opts.map((opt, i) => {
+                            const isCorrect = i === q.correct_index;
+                            return `<div style="font-size:13px; color:var(--text-secondary); margin-bottom:4px; ${isCorrect ? 'color:var(--accent-green); font-weight:bold;' : ''}">${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}${isCorrect ? ' (Corect)' : ''}</div>`;
+                        }).join('');
+                        optsHtml = `<div style="margin-top:8px;">${optsHtml}</div>`;
+                    }
+                } catch(e) {}
+
                 card.innerHTML = `
                     <div class="detail-header">
                         <div>
                             <span class="badge badge-${q.difficulty}">${q.difficulty}</span>
                             <span class="badge" style="background:rgba(255,255,255,0.1); margin-left:8px;">${q.exam_type}</span>
                             <span class="badge" style="background:rgba(255,255,255,0.1); margin-left:8px;">${q.category}</span>
-                            <div class="q-text" style="margin-top:8px;"><strong>${idx + 1}.</strong> ${q.text}</div>
-                            ${q.code ? `<div class="detail-code">${escapeHTML(q.code)}</div>` : ''}
+                            <div class="q-text" style="margin-top:8px;"><strong>${idx + 1}.</strong> ${escapeHtml(q.text)}</div>
+                            ${q.code ? `<div class="detail-code" style="background:#0c0d1e; padding:10px; border-radius:4px; font-size:12px; color:#a6accd; margin:8px 0; overflow-x:auto;"><pre style="margin:0;">${escapeHtml(q.code)}</pre></div>` : ''}
                             ${q.image_url ? `<img src="${q.image_url}" style="margin: 10px 0; max-height: 150px; border-radius:8px;">` : ''}
+                            ${optsHtml}
                         </div>
                         ${isPreviewingDraft ? `<button class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px; border-color:var(--accent-purple);" onclick="regenerateQuestion('${currentlyPreviewedTestId}', ${q.id})">🔄 Regenerare (Schimbă)</button>` : ''}
                     </div>
@@ -1590,6 +1608,42 @@ const API_RESULTS = '/.netlify/functions/fetch-results';
                 list.appendChild(card);
             });
         }
+
+        window.deleteAssignedTest = async function(id) {
+            if(!confirm("Sigur ștergi acest test asignat?")) return;
+            try {
+                const res = await fetchWithToken(API_ASSIGNED_TESTS + '?id=' + id, { method: 'DELETE' });
+                if(res.ok) {
+                    showToast('Test șters cu succes!');
+                    const testToDelete = assignedTestsData.find(t => t.id === id);
+                    assignedTestsData = assignedTestsData.filter(t => t.id !== id);
+                    if (testToDelete) {
+                        openSituatieDetail(testToDelete.student_username);
+                    }
+                } else {
+                    showToast('Eroare la ștergere', true);
+                }
+            } catch(e) { 
+                showToast('Eroare de rețea', true); 
+            }
+        };
+
+        window.deleteResultHistory = async function(id, username) {
+            if(!confirm("Sigur ștergi acest rezultat din istoric? Această acțiune este ireversibilă.")) return;
+            try {
+                const res = await fetchWithToken(API_DEL_RESULT + '?id=' + id, { method: 'DELETE' });
+                if(res.ok) {
+                    showToast('Rezultat șters cu succes!');
+                    // Reload data
+                    await loadResults();
+                    openSituatieDetail(username);
+                } else {
+                    showToast('Eroare la ștergerea rezultatului', true);
+                }
+            } catch(e) {
+                showToast('Eroare de rețea', true);
+            }
+        };
 
         async function regenerateQuestion(testId, oldQuestionId) {
             try {
