@@ -2,7 +2,7 @@
 
 exports.handler = async function(event, context) {
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
         'Access-Control-Allow-Headers': 'Content-Type, x-admin-token',
         'Access-Control-Allow-Methods': 'POST, PUT, DELETE, OPTIONS',
         'Content-Type': 'application/json'
@@ -70,7 +70,7 @@ exports.handler = async function(event, context) {
                     text: q.text,
                     image_url: q.image_url || null,
                     code: q.code || null,
-                    options_json: q.options_json,
+                    options_json: q.options_json || q.options,
                     correct_index: q.correct_index,
                     explanation: q.explanation
                 }));
@@ -129,7 +129,7 @@ exports.handler = async function(event, context) {
                         text: questionData.text,
                         image_url: questionData.image_url || null,
                         code: questionData.code || null,
-                        options_json: questionData.options_json,
+                        options_json: questionData.options_json || questionData.options,
                         correct_index: questionData.correct_index,
                         explanation: questionData.explanation
                     })

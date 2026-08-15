@@ -14,167 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
-    <style>
-        /* ========== RESET & BASE ========== */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #07071a; color: #e0e0f0; min-height: 100vh; overflow-x: hidden; line-height: 1.6; -webkit-font-smoothing: antialiased; }
-
-        /* ========== CSS CUSTOM PROPERTIES ========== */
-        :root {
-            --bg-primary: #07071a;
-            --bg-card: rgba(15, 15, 40, 0.75);
-            --bg-card-hover: rgba(25, 25, 55, 0.85);
-            --border-subtle: rgba(255, 255, 255, 0.06);
-            --border-active: rgba(120, 100, 255, 0.5);
-            --text-primary: #f0f0ff;
-            --text-secondary: #8888aa;
-            --text-muted: #5c5c7a;
-            --accent-purple: #7c6aff;
-            --accent-blue: #5b8def;
-            --accent-cyan: #00d4aa;
-            --accent-green: #34d399;
-            --accent-amber: #fbbf24;
-            --accent-red: #f87171;
-            --gradient-main: linear-gradient(135deg, #667eea 0%, #9b59e8 50%, #00d4aa 100%);
-            --gradient-btn: linear-gradient(135deg, #667eea, #764ba2);
-            --font-code: 'JetBrains Mono', 'Fira Code', monospace;
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
-            --shadow-glow: 0 0 40px rgba(102, 126, 234, 0.15);
-        }
-
-        /* ========== BACKGROUND DECORATIONS ========== */
-        .bg-orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.25; pointer-events: none; z-index: 0; }
-        .bg-orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, #667eea, transparent 70%); top: -200px; right: -100px; animation: orbFloat1 25s ease-in-out infinite; }
-        .bg-orb-2 { width: 500px; height: 500px; background: radial-gradient(circle, #9b59e8, transparent 70%); bottom: -150px; left: -150px; animation: orbFloat2 30s ease-in-out infinite; }
-        @keyframes orbFloat1 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-50px, 40px); } }
-        @keyframes orbFloat2 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(60px, -50px); } }
-
-        /* ========== LAYOUT ========== */
-        .container { max-width: 1200px; width: 100%; margin: 0 auto; padding: 40px 24px 65px; position: relative; z-index: 1; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 20px; flex-wrap: wrap; }
-        .title-area h1 { font-size: clamp(24px, 4vw, 32px); font-weight: 800; letter-spacing: -0.5px; }
-        .gradient-text { background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .title-area p { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
-        
-        /* ========== TABS ========== */
-        .tabs { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1px; }
-        .tab-btn { background: transparent; border: none; color: var(--text-secondary); font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 24px; cursor: pointer; position: relative; transition: color 0.2s; }
-        .tab-btn:hover { color: var(--text-primary); }
-        .tab-btn.active { color: var(--accent-purple); }
-        .tab-btn.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 3px; background: var(--accent-purple); border-radius: 3px 3px 0 0; }
-        .tab-content { display: none; animation: fadeIn 0.4s ease; }
-        .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* ========== BUTTONS ========== */
-        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s ease; text-decoration: none; color: #fff; font-family: inherit; }
-        .btn-primary { background: var(--gradient-btn); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); }
-        .btn-primary:hover { box-shadow: 0 6px 22px rgba(102, 126, 234, 0.45); transform: translateY(-2px); }
-        .btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle); color: var(--text-primary); }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.15); transform: translateY(-2px); }
-        .btn-danger { background: rgba(248, 113, 113, 0.1); color: var(--accent-red); border: 1px solid rgba(248, 113, 113, 0.3); padding: 6px 12px; font-size: 12px; }
-        .btn-danger:hover { background: rgba(248, 113, 113, 0.2); }
-        .btn-edit { background: rgba(91, 141, 239, 0.1); color: var(--accent-blue); border: 1px solid rgba(91, 141, 239, 0.3); padding: 6px 12px; font-size: 12px; }
-        .btn-edit:hover { background: rgba(91, 141, 239, 0.2); }
-        .actions { display: flex; gap: 12px; }
-
-        /* ========== STATS GRID ========== */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 20px; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(12px); box-shadow: var(--shadow-card); }
-        .stat-icon { font-size: 28px; width: 50px; height: 50px; border-radius: var(--radius-md); background: rgba(124, 106, 255, 0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .stat-info { display: flex; flex-direction: column; }
-        .stat-value { font-size: 24px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
-        .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-top: 4px; }
-
-        /* ========== TABLE AREA ========== */
-        .table-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); backdrop-filter: blur(12px); box-shadow: var(--shadow-card); overflow: hidden; margin-bottom: 24px; }
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { background: rgba(15, 15, 40, 0.4); padding: 14px 20px; font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
-        td { padding: 14px 20px; font-size: 14px; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); transition: background 0.2s ease; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: rgba(255, 255, 255, 0.02); }
-        .student-name { font-weight: 600; color: #fff; }
-        .score-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-        .score-excellent { background: rgba(52, 211, 153, 0.12); color: var(--accent-green); }
-        .score-good { background: rgba(91, 141, 239, 0.12); color: var(--accent-blue); }
-        .score-medium { background: rgba(251, 191, 36, 0.12); color: var(--accent-amber); }
-        .score-low { background: rgba(248, 113, 113, 0.12); color: var(--accent-red); }
-        .blur-badge { display: inline-flex; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; background: rgba(248, 113, 113, 0.15); color: var(--accent-red); }
-        .blur-badge.safe { background: rgba(52, 211, 153, 0.1); color: var(--accent-green); }
-
-        /* ========== LOADING & EMPTY ========== */
-        .loading-state, .empty-state { padding: 60px 24px; text-align: center; color: var(--text-secondary); }
-        .spinner { width: 40px; height: 40px; border: 4px solid rgba(124, 106, 255, 0.1); border-top-color: var(--accent-purple); border-radius: 50%; margin: 0 auto 16px; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ========== MODAL ========== */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(4, 4, 15, 0.85); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; animation: fadeIn 0.2s ease; overflow-y: auto; }
-        .modal-content { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 32px 28px; width: 100%; max-width: 680px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); position: relative; margin: auto; }
-        .modal-header { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h2 { font-size: 20px; font-weight: 700; }
-        .btn-close { background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; transition: color 0.2s; }
-        .btn-close:hover { color: var(--text-primary); }
-        
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
-        .form-group { margin-bottom: 16px; }
-        .form-group.full-width { grid-column: 1 / -1; }
-        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
-        .form-control { width: 100%; background: rgba(15, 15, 40, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; color: var(--text-primary); font-family: inherit; transition: border-color 0.2s; outline: none; }
-        .form-control:focus { border-color: var(--accent-purple); }
-        textarea.form-control { resize: vertical; min-height: 80px; }
-        .form-control.code-font { font-family: var(--font-code); }
-        select.form-control { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238888aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 40px; }
-        .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; border-top: 1px solid var(--border-subtle); padding-top: 20px; }
-
-        /* Toast */
-        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(52, 211, 153, 0.95); color: #07071a; padding: 12px 28px; border-radius: 40px; font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.4s ease; z-index: 2000; pointer-events: none; }
-        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        .toast.error { background: rgba(248, 113, 113, 0.95); color: #fff; }
-
-        /* ========== CMS FILTERS & GROUPING ========== */
-        .filters-panel { background: rgba(15,15,40,0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px; margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
-        .filter-group { flex: 1; min-width: 150px; }
-        .filter-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-        .category-group { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden; box-shadow: var(--shadow-card); }
-        .category-header { background: rgba(102, 126, 234, 0.1); padding: 16px 24px; font-size: 16px; font-weight: 700; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; }
-        .subcategory-group { border-bottom: 1px solid var(--border-subtle); }
-        .subcategory-group:last-child { border-bottom: none; }
-        .subcategory-header { padding: 12px 24px; font-size: 14px; font-weight: 600; color: var(--accent-blue); background: rgba(255, 255, 255, 0.02); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; }
-        .subcategory-header:hover { background: rgba(255, 255, 255, 0.05); }
-        .questions-list { display: flex; flex-direction: column; display: none; }
-        .questions-list.open { display: flex; animation: fadeIn 0.3s ease; }
-        .question-item { padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; justify-content: space-between; align-items: center; gap: 20px; transition: background 0.2s; }
-        .question-item:hover { background: rgba(255,255,255,0.02); }
-        .question-item:last-child { border-bottom: none; }
-        .q-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-        .q-text { font-size: 14px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-        .badge-easy { background: rgba(52, 211, 153, 0.15); color: var(--accent-green); }
-        .badge-medium { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); }
-        .badge-hard { background: rgba(248, 113, 113, 0.15); color: var(--accent-red); }
-        .CodeMirror { border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); font-family: var(--font-code); height: auto; min-height: 100px; max-height: 300px; font-size: 14px; }
-
-        /* ========== DETAILS MODAL ========== */
-        .detail-card { background: rgba(15, 15, 40, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; margin-bottom: 14px; }
-        .detail-card.correct { border-left: 4px solid var(--accent-green); }
-        .detail-card.wrong { border-left: 4px solid var(--accent-red); }
-        .detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
-        .detail-opt { padding: 10px 14px; border-radius: var(--radius-sm); margin-top: 6px; font-size: 13px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; }
-        .detail-opt.opt-correct { background: rgba(52, 211, 153, 0.15); border-color: rgba(52, 211, 153, 0.4); color: #e0fdf4; font-weight: 600; }
-        .detail-opt.opt-wrong { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.4); color: #fef2f2; font-weight: 600; }
-        .detail-opt-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
-        .detail-opt-tag.tag-correct { background: var(--accent-green); color: #07071a; }
-        .detail-opt-tag.tag-wrong { background: var(--accent-red); color: #fff; }
-        .detail-code { background: #0c0d1e; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; font-family: var(--font-code); font-size: 13px; color: #a6accd; white-space: pre-wrap; margin: 10px 0; overflow-x: auto; }
-        .detail-explanation { background: rgba(124, 106, 255, 0.08); border-left: 3px solid var(--accent-purple); padding: 10px 14px; font-size: 13px; margin-top: 12px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: #d0c8ff; }
-        .details-filter-btn.active { background: var(--accent-purple) !important; color: #fff !important; }
-        .details-filter-btn.active { background: var(--accent-purple) !important; color: #fff !important; }
-    </style>
+    <link rel="stylesheet" href="assets/css/admin.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
     <div class="bg-orb bg-orb-1"></div>
@@ -194,66 +34,95 @@
         </header>
 
         <div class="tabs">
-            <button class="tab-btn active" data-target="tab-rezultate">Rezultate</button>
-            <button class="tab-btn" data-target="tab-elevi">Elevi (Conturi)</button>
+            <button class="tab-btn active" data-target="tab-rezultate">Situație</button>
+            <button class="tab-btn" data-target="tab-elevi">Conturi</button>
             <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Initial')">Test Inițial <span id="tab-count-Initial" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
-            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Admitere')">Admitere <span id="tab-count-Admitere" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
+            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Academie')">Academie <span id="tab-count-Academie" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
+            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Poli')">Poli <span id="tab-count-Poli" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
             <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('BAC')">BAC <span id="tab-count-BAC" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
             <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Diverse')">Diverse <span id="tab-count-Diverse" style="font-size:12px; font-weight:normal; opacity:0.8; margin-left: 4px;"></span></button>
             <button class="tab-btn" data-target="tab-waiting">În Așteptare (<span id="badge-waiting-count" style="background:rgba(251,191,36,0.2); color:var(--accent-amber); padding:2px 8px; border-radius:10px; font-size:12px;">0</span>)</button>
         </div>
 
-        <!-- TAB REZULTATE -->
+        <!-- TAB SITUATIE (REZULTATE) -->
         <div id="tab-rezultate" class="tab-content active">
-            <section class="stats-grid" id="stats-area" style="display: none;">
-                <div class="stat-card">
-                    <div class="stat-icon">📝</div>
-                    <div class="stat-info">
-                        <span class="stat-value" id="stat-total">0</span>
-                        <span class="stat-label">Teste Susținute</span>
-                    </div>
+            <div id="situatie-list-view">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; font-weight: 700;">Situație Elevi</h2>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📈</div>
-                    <div class="stat-info">
-                        <span class="stat-value" id="stat-avg">0</span>
-                        <span class="stat-label">Scor Mediu (%)</span>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⏱️</div>
-                    <div class="stat-info">
-                        <span class="stat-value" id="stat-time">0m</span>
-                        <span class="stat-label">Timp Mediu</span>
-                    </div>
-                </div>
-            </section>
-
-            <main class="table-card">
-                <div class="loading-state" id="loading-results">
+                <div class="loading-state" id="loading-situatie-students">
                     <div class="spinner"></div>
-                    <p>Se încarcă rezultatele...</p>
+                    <p>Se încarcă elevii...</p>
                 </div>
-                <div class="empty-state" id="empty-results" style="display: none;">
-                    <p>Nu există niciun rezultat înregistrat.</p>
+                <div id="situatie-students-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                    <!-- Carduri elevi -->
                 </div>
-                <div class="table-wrapper" id="wrapper-results" style="display: none;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Student</th>
-                                <th>Tip Test</th>
-                                <th>Scor</th>
-                                <th>Blur/Focus</th>
-                                <th>Timp</th>
-                                <th>Data</th>
-                                <th>Acțiuni</th>
-                            </tr>
-                        </thead>
-                        <tbody id="results-body"></tbody>
-                    </table>
+            </div>
+
+            <div id="situatie-detail-view" style="display: none;">
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                    <button class="btn btn-secondary" onclick="closeSituatieDetail()">← Înapoi</button>
+                    <h2 style="font-size: 20px; font-weight: 700;">Situație: <span id="situatie-detail-name" class="gradient-text">Nume</span></h2>
                 </div>
-            </main>
+
+                <div class="stats-grid" id="stats-area" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon">📝</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-total">0</span>
+                            <span class="stat-label">Teste Susținute</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-avg">0</span>
+                            <span class="stat-label">Scor Mediu (%)</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-time">0m</span>
+                            <span class="stat-label">Timp Mediu</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 24px; flex-direction: column;">
+                    <!-- Assigned Tests -->
+                    <main class="table-card" style="padding: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 style="font-size: 16px; font-weight: 600;">Teste Asignate</h3>
+                            <button class="btn btn-primary" onclick="openAssignTestModal()">+ Asignează Test</button>
+                        </div>
+                        <div id="situatie-assigned-list"></div>
+                    </main>
+
+                    <!-- History -->
+                    <main class="table-card">
+                        <h3 style="font-size: 16px; font-weight: 600; padding: 20px 20px 0;">Istoric Teste Susținute</h3>
+                        <div class="empty-state" id="empty-results" style="display: none;">
+                            <p>Nu există niciun rezultat înregistrat.</p>
+                        </div>
+                        <div class="table-wrapper" id="wrapper-results" style="display: none;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Tip Test</th>
+                                        <th>Scor</th>
+                                        <th>Blur/Focus</th>
+                                        <th>Timp</th>
+                                        <th>Data</th>
+                                        <th>Acțiuni</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-body"></tbody>
+                            </table>
+                        </div>
+                    </main>
+                </div>
+            </div>
         </div>
 
         <!-- TAB INTREBARI -->
@@ -355,12 +224,13 @@
             </div>
         </div>
 
-        <!-- TAB ELEVI -->
+        <!-- TAB CONTURI -->
         <div id="tab-elevi" class="tab-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="font-size: 20px; font-weight: 700;">Gestionare Elevi (Conturi AcaDe-QUIZ)</h2>
-                <button class="btn btn-primary" onclick="openStudentModal()">+ Adaugă Elev</button>
-            </div>
+            <div id="sub-conturi">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; font-weight: 700;">Gestionare Elevi (Conturi AcaDe-QUIZ)</h2>
+                    <button class="btn btn-primary" onclick="openStudentModal()">+ Adaugă Elev</button>
+                </div>
             
             <main class="table-card">
                 <div class="loading-state" id="loading-students">
@@ -376,7 +246,8 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Nume Utilizator</th>
-                                <th>Parolă (WhatsApp)</th>
+                                <th>Telefon (WhatsApp)</th>
+                                <th>Parolă (AcaDe-QUIZ)</th>
                                 <th>Data Creării</th>
                                 <th>Acțiuni</th>
                             </tr>
@@ -385,6 +256,7 @@
                     </table>
                 </div>
             </main>
+            </div>
         </div>
     </div>
 
@@ -403,7 +275,8 @@
                         <label>Tip Examen (se pot bifa mai multe)</label>
                         <div id="q-exam-type-group" style="display:flex; flex-wrap:wrap; gap:12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
                             <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="Initial" class="q-exam-cb"> Test Inițial</label>
-                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="Admitere" class="q-exam-cb"> Admitere</label>
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="Academie" class="q-exam-cb"> Academie</label>
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="Poli" class="q-exam-cb"> Poli</label>
                             <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="BAC" class="q-exam-cb"> BAC</label>
                             <label style="display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;"><input type="checkbox" value="Diverse" class="q-exam-cb"> Diverse</label>
                         </div>
@@ -452,6 +325,10 @@
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         <input type="url" id="q-image-url" class="form-control" placeholder="https://... (completat automat la upload)" style="flex: 1; min-width: 200px;">
                         <input type="file" id="q-image-file" accept="image/*" class="form-control" style="flex: 1; min-width: 200px; padding: 6px;">
+                        <button type="button" class="btn btn-secondary" onclick="previewImage()" style="padding: 10px;">👁️ Previzualizează</button>
+                    </div>
+                    <div id="q-image-preview-container" style="display:none; margin-top: 10px; text-align: center;">
+                        <img id="q-image-preview" src="" style="max-height: 200px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
                     </div>
                     <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Selectează un fișier pentru a-l încărca automat la salvare, sau pune manual un link.</small>
                 </div>
@@ -576,1210 +453,57 @@
         </div>
     </div>
 
-    <script>
-        const API_RESULTS = '/.netlify/functions/fetch-results';
-        const API_QUESTIONS = '/.netlify/functions/fetch-questions';
-        const API_MANAGE_Q = '/.netlify/functions/manage-questions';
-        const API_DEL_RESULT = '/.netlify/functions/delete-result';
-        const API_FETCH_WAITING = '/.netlify/functions/fetch-waiting-questions';
-        const API_MANAGE_WAITING = '/.netlify/functions/manage-waiting-questions';
-        const API_MANAGE_STUDENTS = '/.netlify/functions/manage-students';
-
-        const urlParams = new URLSearchParams(window.location.search);
-        let adminToken = urlParams.get('token') || sessionStorage.getItem('adminToken');
-        if (!adminToken || adminToken === 'null' || adminToken === 'undefined' || adminToken === 'admin') {
-            adminToken = prompt('Introduceți parola de admin (ADMIN_SECRET):');
-        }
-        sessionStorage.setItem('adminToken', adminToken);
-
-        const fetchWithToken = (url, options = {}) => {
-            const headers = { ...options.headers, 'x-admin-token': adminToken || '' };
-            return fetch(url, { ...options, headers });
-        };
-
-        let resultsData = [];
-        let questionsData = [];
-        let waitingQuestionsData = [];
-        let currentWaitingEditId = null;
-        let studentsData = [];
-
-        const subcategoriesMap = {
-            "Fundamente": ["Citire si afisare date", "Operatori si expresii", "Structuri de control", "Complexitati"],
-            "Organizarea Datelor": ["Vectori", "Matrice", "Siruri de caractere", "Structuri de date (struct)"],
-            "Subprograme": ["Transmitere prin valoare", "Transmitere prin referinta", "Recursivitate"],
-            "Backtracking": ["Teorie si aplicare practica"],
-            "Grafuri si Arbori": ["Terminologie grafuri", "Grafuri orientate", "Grafuri neorientate", "Arbori"]
-        };
-
-        let currentExamTab = 'Initial'; // Default
-        window.setExamTab = function(type) {
-            currentExamTab = type;
-            document.getElementById('tab-intrebari-title').textContent = 'Bază de Întrebări - ' + type;
-            renderQuestions();
-        };
-
-        /* ==================== UTILS ==================== */
-        const escapeHtml = (text) => { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; };
-        const formatTime = (ms) => { const sec = Math.floor(ms / 1000); return `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, '0')}`; };
-        const formatDate = (iso) => new Date(iso).toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        
-        function showToast(msg, isError = false) {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.className = `toast show ${isError ? 'error' : ''}`;
-            setTimeout(() => t.className = 'toast', 2500);
-        }
-
-        /* ==================== TABS ==================== */
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById(btn.dataset.target).classList.add('active');
-                
-                if(btn.dataset.target === 'tab-intrebari' && questionsData.length === 0) loadQuestions();
-                if(btn.dataset.target === 'tab-waiting') loadWaitingQuestions();
-                if(btn.dataset.target === 'tab-elevi' && studentsData.length === 0) loadStudents();
-            });
-        });
-
-        /* ==================== REZULTATE ==================== */
-        async function loadResults() {
-            try {
-                const res = await fetchWithToken(API_RESULTS);
-                if (res.status === 401) {
-                    sessionStorage.removeItem('adminToken');
-                    adminToken = prompt('Parola de administrare incorecta! Re-introduceti parola (ex: admin):');
-                    if (adminToken) {
-                        sessionStorage.setItem('adminToken', adminToken);
-                        return loadResults();
-                    }
-                }
-                if(!res.ok) throw new Error();
-                resultsData = await res.json();
-                document.getElementById('loading-results').style.display = 'none';
-
-                if(resultsData.length === 0) {
-                    document.getElementById('empty-results').style.display = 'block';
-                } else {
-                    document.getElementById('wrapper-results').style.display = 'block';
-                    document.getElementById('btn-download').style.display = 'inline-flex';
-                    renderResults();
-                    calcResultStats();
-                }
-            } catch(e) {
-                document.getElementById('loading-results').innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcare rezultate. (Verificați dacă parola a fost introdusă corect)</p>`;
-            }
-        }
-
-        function calcResultStats() {
-            const len = resultsData.length;
-            const sumPct = resultsData.reduce((acc, r) => acc + (r.score / r.total_points * 100), 0);
-            const sumTime = resultsData.reduce((acc, r) => acc + r.time_taken_ms, 0);
-            
-            document.getElementById('stat-total').textContent = len;
-            document.getElementById('stat-avg').textContent = (sumPct / len).toFixed(1) + '%';
-            document.getElementById('stat-time').textContent = formatTime(sumTime / len);
-            document.getElementById('stats-area').style.display = '';
-        }
-
-        function renderResults() {
-            const tbody = document.getElementById('results-body');
-            const htmlArr = [];
-            resultsData.forEach(r => {
-                const pct = Math.round((r.score / r.total_points) * 100);
-                let sc = 'score-low'; if(pct >= 85) sc = 'score-excellent'; else if(pct >= 60) sc = 'score-good'; else if(pct >= 35) sc = 'score-medium';
-                const bl = r.blur_count || 0;
-                htmlArr.push(`
-                    <tr>
-                        <td>
-                            <div class="student-name">${escapeHtml(r.student_name)}</div>
-                            <div style="font-size:11px; color:var(--text-muted)">${escapeHtml(r.student_email || '-')}</div>
-                        </td>
-                        <td>${r.test_type === 'intermediar' ? '🎯 Intermediar' : '📋 Inițial'}</td>
-                        <td><span class="score-badge ${sc}">${r.score}/${r.total_points} (${pct}%)</span></td>
-                        <td><span class="blur-badge ${bl === 0 ? 'safe' : ''}">${bl} pierderi focus</span></td>
-                        <td style="font-family:var(--font-code); color:var(--text-secondary)">${formatTime(r.time_taken_ms)}</td>
-                        <td style="color:var(--text-secondary)">${formatDate(r.created_at)}</td>
-                        <td>
-                            <button class="btn btn-edit" style="margin-right:6px;" onclick="openDetailsModal(${r.id})">👁️ Detalii</button>
-                            <button class="btn btn-edit" style="margin-right:6px; background: rgba(248, 113, 113, 0.1); color: var(--accent-red); border-color: rgba(248, 113, 113, 0.3);" onclick="openDetailsModal(${r.id}, 'wrong')">❌ Greșeli</button>
-                            <button class="btn btn-primary" style="margin-right:6px;" onclick="openReportModal(${r.id})">📊 Raport</button>
-                            <button class="btn btn-danger" onclick="deleteResult(${r.id})">Șterge</button>
-                        </td>
-                    </tr>
-                `);
-            });
-            tbody.innerHTML = htmlArr.join('');
-        }
-
-        async function deleteResult(id) {
-            if(!confirm("Sigur ștergi acest rezultat?")) return;
-            try {
-                const res = await fetchWithToken(`${API_DEL_RESULT}?id=${id}`, { method: 'DELETE' });
-                if(res.ok) {
-                    showToast('Rezultat șters!');
-                    resultsData = resultsData.filter(r => r.id !== id);
-                    renderResults();
-                    calcResultStats();
-                    if(resultsData.length === 0) {
-                        document.getElementById('wrapper-results').style.display = 'none';
-                        document.getElementById('empty-results').style.display = 'block';
-                    }
-                } else showToast('Eroare la ștergere', true);
-            } catch(e) { showToast('Eroare de rețea', true); }
-        }
-
-        /* ==================== MODAL DETALII RĂSPUNSURI ==================== */
-        let currentSelectedResult = null;
-        let currentDetailsFilter = 'all';
-
-        function openDetailsModal(resultId, defaultFilter = 'all') {
-            const r = resultsData.find(x => x.id == resultId);
-            if (!r) {
-                showToast('Eroare: Rezultatul nu a fost găsit în datele încărcate.', true);
-                return;
-            }
-            currentSelectedResult = r;
-            currentDetailsFilter = defaultFilter;
-
-            const pct = Math.round((r.score / r.total_points) * 100) || 0;
-            document.getElementById('details-student-name').textContent = `Rezultat: ${r.student_name || 'Anonim'}`;
-            document.getElementById('details-student-meta').textContent = `${r.student_email || 'Fără email'} • ${r.test_type === 'intermediar' ? 'Test Intermediar' : 'Test Inițial'} • Scor: ${r.score || 0}/${r.total_points || 0} (${pct}%) • Timp: ${formatTime(r.time_taken_ms || 0)} • ${r.blur_count || 0} pierderi focus`;
-
-            let details = r.details_json;
-            if (typeof details === 'string') {
-                try { details = JSON.parse(details); } catch(e) { details = []; }
-            }
-            if (!Array.isArray(details)) details = [];
-
-            const totalQs = details.length;
-            const correctQs = details.filter(d => d.isCorrect).length;
-            const wrongQs = totalQs - correctQs;
-
-            document.getElementById('count-all').textContent = totalQs;
-            document.getElementById('count-wrong').textContent = wrongQs;
-            document.getElementById('count-correct').textContent = correctQs;
-
-            // Reset filter buttons UI
-            document.querySelectorAll('.details-filter-btn').forEach(btn => btn.classList.remove('active'));
-            const defaultFilterBtn = document.getElementById('filter-btn-' + defaultFilter);
-            if (defaultFilterBtn) defaultFilterBtn.classList.add('active');
-
-            renderDetailsList(details, defaultFilter);
-            document.getElementById('modal-details').style.display = 'flex';
-        }
-
-        function closeDetailsModal() {
-            document.getElementById('modal-details').style.display = 'none';
-        }
-
-        /* ==================== MODAL RAPORT ==================== */
-        async function openReportModal(resultId) {
-            const r = resultsData.find(x => x.id == resultId);
-            if (!r) return;
-
-            // Ensure questions are loaded so we can get categories
-            if (questionsData.length === 0) {
-                try {
-                    await loadQuestions();
-                } catch(e) {
-                    console.error("Failed to load questions", e);
-                }
-            }
-
-            const pct = Math.round((r.score / r.total_points) * 100) || 0;
-            document.getElementById('report-student-name').textContent = `Raport: ${r.student_name || 'Anonim'}`;
-            document.getElementById('report-student-meta').textContent = `${r.student_email || 'Fără email'} • Scor: ${r.score || 0}/${r.total_points || 0} (${pct}%)`;
-
-            let details = r.details_json;
-            if (typeof details === 'string') {
-                try { details = JSON.parse(details); } catch(e) { details = []; }
-            }
-            if (!Array.isArray(details)) details = [];
-
-            // Aggregate data
-            const stats = {};
-            details.forEach(item => {
-                // Find original question in questionsData to get category and subcategory
-                // Using loose equality (==) for id, and fallback to text match for older results that lacked item.id
-                let orig = questionsData.find(q => item.id && q.id == item.id);
-                if (!orig && item.text) {
-                    orig = questionsData.find(q => q.text === item.text);
-                }
-                
-                // For old tests, we fallback to 'Altele' / 'Nespecificat' if question was completely deleted
-                const cat = orig?.category || 'Altele';
-                const subcat = orig?.subcategory || 'Nespecificat';
-
-                if (!stats[cat]) stats[cat] = {};
-                if (!stats[cat][subcat]) stats[cat][subcat] = { total: 0, correct: 0 };
-
-                stats[cat][subcat].total++;
-                if (item.isCorrect) {
-                    stats[cat][subcat].correct++;
-                }
-            });
-
-            // Build HTML
-            let html = '';
-            for (const cat in stats) {
-                html += `<div style="margin-bottom: 20px;">
-                            <h3 style="color: var(--accent-purple); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">${cat}</h3>
-                            <ul style="list-style: none; padding: 0; margin: 0;">`;
-                
-                for (const subcat in stats[cat]) {
-                    const { total, correct } = stats[cat][subcat];
-                    const p = correct / total;
-                    let icon = '✔️';
-                    let color = 'var(--accent-green)';
-                    
-                    if (p === 0) {
-                        icon = '❌';
-                        color = 'var(--accent-red)';
-                    } else if (p < 0.7) {
-                        icon = '⚠️';
-                        color = '#fbbf24'; // yellow
-                    }
-
-                    html += `<li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--bg-card); border-radius: 6px; margin-bottom: 6px; border: 1px solid var(--border-color);">
-                                <span>${subcat}</span>
-                                <span style="font-weight: 600; color: ${color};">${correct}/${total} corecte ${icon}</span>
-                             </li>`;
-                }
-                html += `</ul></div>`;
-            }
-
-            if (!html) {
-                html = '<div style="text-align:center; padding: 20px; color: var(--text-secondary);">Nu există date de afișat.</div>';
-            }
-
-            document.getElementById('report-content').innerHTML = html;
-            document.getElementById('modal-report').style.display = 'flex';
-        }
-
-        function closeReportModal() {
-            document.getElementById('modal-report').style.display = 'none';
-        }
-
-        function setDetailsFilter(filterType, btn) {
-            currentDetailsFilter = filterType;
-            document.querySelectorAll('.details-filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            if (!currentSelectedResult) return;
-            let details = currentSelectedResult.details_json;
-            if (typeof details === 'string') {
-                try { details = JSON.parse(details); } catch(e) {}
-            }
-            if (!Array.isArray(details)) details = [];
-            renderDetailsList(details, filterType);
-        }
-
-        function renderDetailsList(details, filter) {
-            const container = document.getElementById('details-list');
-            if (!details || details.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-secondary);">Nu există detalii stocate pentru acest test (răspunsurile individuale nu au fost salvate).</div>`;
-                return;
-            }
-
-            const filtered = details.filter(d => {
-                if (!d) return false;
-                if (filter === 'wrong') return !d.isCorrect;
-                if (filter === 'correct') return !!d.isCorrect;
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-secondary);">Nicio întrebare găsită pentru filtrul selectat.</div>`;
-                return;
-            }
-
-            const html = filtered.map((item, idx) => {
-                if (!item) return '';
-                const isOk = !!item.isCorrect;
-                const statusBadge = isOk 
-                    ? `<span class="score-badge score-excellent">✔️ Corect</span>`
-                    : `<span class="score-badge score-low">❌ Greșit</span>`;
-                
-                const diffMap = { easy: 'Ușoară', medium: 'Medie', hard: 'Grea' };
-                const diffLabel = diffMap[item.difficulty] || item.difficulty || 'Normal';
-
-                const optsHtml = (item.options || []).map((optText, optIdx) => {
-                    const isStudentChoice = item.studentAnswer === optIdx;
-                    const isCorrectChoice = item.correctAnswer === optIdx;
-
-                    let optClass = '';
-                    let tagHtml = '';
-
-                    if (isCorrectChoice) {
-                        optClass = 'opt-correct';
-                        tagHtml = `<span class="detail-opt-tag tag-correct">Răspuns Corect</span>`;
-                    } else if (isStudentChoice && !isOk) {
-                        optClass = 'opt-wrong';
-                        tagHtml = `<span class="detail-opt-tag tag-wrong">Ales de student (Incorect)</span>`;
-                    }
-
-                    const optLetter = String.fromCharCode(65 + optIdx); // A, B, C, D
-                    return `
-                        <div class="detail-opt ${optClass}">
-                            <span><strong>${optLetter}.</strong> ${escapeHtml(optText)}</span>
-                            ${tagHtml}
-                        </div>
-                    `;
-                }).join('');
-
-                const codeHtml = item.code ? `<div class="detail-code">${escapeHtml(item.code)}</div>` : '';
-                const explanationHtml = item.explanation ? `<div class="detail-explanation"><strong>💡 Explicație:</strong> ${escapeHtml(item.explanation)}</div>` : '';
-
-                return `
-                    <div class="detail-card ${isOk ? 'correct' : 'wrong'}">
-                        <div class="detail-header">
-                            <div>
-                                <span style="font-weight:700; color:var(--accent-purple); font-size:13px;">#${item.number || (idx + 1)}</span>
-                                <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-secondary); margin-left:6px;">Dificultate: ${diffLabel}</span>
-                            </div>
-                            <div>${statusBadge}</div>
-                        </div>
-                        <div style="font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:8px; white-space:pre-wrap;">${escapeHtml(item.text || '')}</div>
-                        ${codeHtml}
-                        <div style="margin-top:12px;">${optsHtml}</div>
-                        ${explanationHtml}
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = html;
-        }
-
-        /* ==================== INTREBARI CMS ==================== */
-        
-        function updateFilterCounts() {
-            const catSelect = document.getElementById('filter-cat');
-            const currentCat = catSelect.value;
-            catSelect.innerHTML = '<option value="">Toate categoriile (' + questionsData.length + ')</option>';
-            Object.keys(subcategoriesMap).forEach(cat => {
-                const count = questionsData.filter(q => q.category === cat).length;
-                const opt = document.createElement('option');
-                opt.value = cat; 
-                opt.textContent = `${cat} (${count})`;
-                if(cat === currentCat) opt.selected = true;
-                catSelect.appendChild(opt);
-            });
-        }
-
-        function initFilters() {
-            const catSelect = document.getElementById('filter-cat');
-            catSelect.innerHTML = '<option value="">Toate categoriile</option>';
-            Object.keys(subcategoriesMap).forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat; opt.textContent = cat;
-                catSelect.appendChild(opt);
-            });
-        }
-
-        function updateFilterSub() {
-            const cat = document.getElementById('filter-cat').value;
-            const subSelect = document.getElementById('filter-sub');
-            subSelect.innerHTML = '<option value="">Toate subcategoriile</option>';
-            if (cat && subcategoriesMap[cat]) {
-                subcategoriesMap[cat].forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s; opt.textContent = s;
-                    subSelect.appendChild(opt);
-                });
-            }
-        }
-
-        async function loadQuestions() {
-            try {
-                initFilters();
-                const res = await fetch(API_QUESTIONS + '?admin=true');
-                if(!res.ok) throw new Error();
-                questionsData = await res.json();
-                
-                // ADDED DYNAMIC COUNTS
-                if(typeof updateFilterCounts === 'function') updateFilterCounts();
-                document.getElementById('loading-questions').style.display = 'none';
-
-                if(questionsData.length === 0) {
-                    document.getElementById('empty-questions').style.display = 'block';
-                } else {
-                    document.getElementById('wrapper-questions').style.display = 'block';
-                    renderQuestions();
-                }
-            } catch(e) {
-                document.getElementById('loading-questions').innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcare întrebări.</p>`;
-            }
-        }
-
-        function toggleSubcategory(id) {
-            const el = document.getElementById('sub-list-' + id);
-            if (el.classList.contains('open')) el.classList.remove('open');
-            else el.classList.add('open');
-        }
-
-        function renderQuestions() {
-            const wrapper = document.getElementById('wrapper-questions');
-            const fCat = document.getElementById('filter-cat').value;
-            const fSub = document.getElementById('filter-sub').value;
-            const fDiff = document.getElementById('filter-diff').value;
-            const fSearch = document.getElementById('filter-search').value.toLowerCase();
-
-            // Calculate counts for tabs
-            const counts = { 'Initial': 0, 'Admitere': 0, 'BAC': 0, 'Diverse': 0 };
-            questionsData.forEach(q => {
-                const qType = q.exam_type || 'Diverse';
-                ['Initial', 'Admitere', 'BAC', 'Diverse'].forEach(tab => {
-                    if (qType.includes(tab)) counts[tab]++;
-                });
-            });
-
-            // Update tab texts
-            ['Initial', 'Admitere', 'BAC', 'Diverse'].forEach(tab => {
-                const el = document.getElementById(`tab-count-${tab}`);
-                if (el) el.textContent = `(${counts[tab]})`;
-            });
-
-            // Filter data for the current view
-            const filtered = questionsData.filter(q => {
-                const qType = q.exam_type || 'Diverse';
-                if (!qType.includes(currentExamTab) && currentExamTab !== 'Toate') return false;
-                if (fCat && q.category !== fCat) return false;
-                if (fSub && q.subcategory !== fSub) return false;
-                if (fDiff && q.difficulty !== fDiff) return false;
-                if (fSearch && !q.text.toLowerCase().includes(fSearch)) return false;
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                wrapper.style.display = 'none';
-                document.getElementById('empty-questions').style.display = 'block';
-                return;
-            }
-            
-            document.getElementById('empty-questions').style.display = 'none';
-            wrapper.style.display = 'block';
-
-            // Group by category -> subcategory
-            const grouped = {};
-            filtered.forEach(q => {
-                const c = q.category || 'Altele';
-                const s = q.subcategory || 'Fără subcategorie';
-                if (!grouped[c]) grouped[c] = {};
-                if (!grouped[c][s]) grouped[c][s] = [];
-                grouped[c][s].push(q);
-            });
-
-            const htmlArr = [];
-            let subIdCounter = 0;
-
-            // Define the canonical order from subcategoriesMap + any 'Altele'
-            const orderedCategories = Object.keys(subcategoriesMap);
-            Object.keys(grouped).forEach(cat => {
-                if (!orderedCategories.includes(cat)) orderedCategories.push(cat);
-            });
-
-            orderedCategories.forEach(cat => {
-                if (!grouped[cat]) return; // no questions for this category
-                
-                htmlArr.push(`<div class="category-group">`);
-                
-                // Calc total in category
-                let catTotal = 0;
-                Object.values(grouped[cat]).forEach(arr => catTotal += arr.length);
-                
-                htmlArr.push(`<div class="category-header">
-                    <span>${escapeHtml(cat)}</span>
-                    <span style="font-size:12px; font-weight:600; color:var(--text-secondary)">${catTotal} întrebări</span>
-                </div>`);
-
-                const orderedSubcategories = subcategoriesMap[cat] ? [...subcategoriesMap[cat]] : [];
-                Object.keys(grouped[cat]).forEach(sub => {
-                    if (!orderedSubcategories.includes(sub)) orderedSubcategories.push(sub);
-                });
-
-                orderedSubcategories.forEach(sub => {
-                    if (!grouped[cat][sub]) return;
-                    const qs = grouped[cat][sub];
-
-                    subIdCounter++;
-                    // If filters are active, auto-expand
-                    const autoOpen = (fSub !== '' || fSearch !== '') ? 'open' : '';
-                    
-                    htmlArr.push(`<div class="subcategory-group">
-                        <div class="subcategory-header" onclick="toggleSubcategory(${subIdCounter})">
-                            <span>${escapeHtml(sub)}</span>
-                            <span>${qs.length} <span style="font-size:10px">▼</span></span>
-                        </div>
-                        <div class="questions-list ${autoOpen}" id="sub-list-${subIdCounter}">`);
-
-                    qs.forEach(q => {
-                        const diffMap = { easy: { l: 'Ușor', c: 'badge-easy' }, medium: { l: 'Mediu', c: 'badge-medium' }, hard: { l: 'Greu', c: 'badge-hard' } };
-                        const df = diffMap[q.difficulty] || { l: q.difficulty, c: 'badge-easy' };
-                        const typeLabel = q.type === 'code' ? 'Cod' : 'Grilă';
-                        
-                        htmlArr.push(`
-                            <div class="question-item">
-                                <div style="flex:1">
-                                    <div class="q-meta">
-                                        <span style="font-family:var(--font-code); color:var(--text-muted); font-size:12px;">#${q.id}</span>
-                                        <span class="badge ${df.c}">${df.l}</span>
-                                        <span class="badge" style="background:rgba(102,126,234,0.15); color:var(--accent-blue)">${typeLabel}</span>
-                                    </div>
-                                    <div class="q-text">${escapeHtml(q.text.replace(/\\n/g, '\n'))}</div>
-                                </div>
-                                <div class="actions">
-                                    <button class="btn btn-edit" onclick="editQuestion(${q.id})">Editează</button>
-                                    <button class="btn btn-danger" onclick="deleteQuestion(${q.id})">Șterge</button>
-                                </div>
-                            </div>
-                        `);
-                    });
-
-                    htmlArr.push(`</div></div>`);
-                });
-                htmlArr.push(`</div>`);
-            });
-
-            wrapper.innerHTML = htmlArr.join('');
-        }
-
-        async function deleteQuestion(id) {
-            if(!confirm("Sigur ștergi întrebarea din baza de date?")) return;
-            try {
-                const res = await fetchWithToken(`${API_MANAGE_Q}?id=${id}`, { method: 'DELETE' });
-                if(res.ok) {
-                    showToast('Întrebare ștearsă!');
-                    questionsData = questionsData.filter(q => q.id !== id);
-                    renderQuestions();
-                } else {
-                    let errMsg = 'Eroare la ștergere';
-                    try {
-                        const err = await res.json();
-                        if (err.error) errMsg = err.error;
-                    } catch(e) {}
-                    if (res.status === 401) {
-                        sessionStorage.removeItem('adminToken');
-                        const newToken = prompt('Parolă admin invalidă. Re-introduceți parola (ex: admin):');
-                        if (newToken) {
-                            sessionStorage.setItem('adminToken', newToken);
-                            adminToken = newToken;
-                            return deleteQuestion(id);
-                        }
-                    }
-                    showToast(errMsg, true);
-                }
-            } catch(e) { showToast('Eroare de rețea', true); }
-        }
-
-        /* ==================== CMS MODAL LOGIC ==================== */
-        function updateSubcategories(selectedSub = '') {
-            const cat = document.getElementById('q-category').value;
-            const subSel = document.getElementById('q-subcategory');
-            subSel.innerHTML = '<option value="">-- Alege Subcategorie --</option>';
-            if(cat && subcategoriesMap[cat]) {
-                subcategoriesMap[cat].forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s; opt.textContent = s;
-                    subSel.appendChild(opt);
-                });
-            }
-            if(selectedSub) subSel.value = selectedSub;
-        }
-
-        let cmEditor = null;
-
-        function initCodeMirror() {
-            if (!cmEditor) {
-                cmEditor = CodeMirror.fromTextArea(document.getElementById('q-code'), {
-                    mode: "text/x-c++src",
-                    theme: "dracula",
-                    lineNumbers: true,
-                    viewportMargin: Infinity
-                });
-            }
-        }
-
-        function openQuestionModal(q = null) {
-            const m = document.getElementById('modal-question');
-            m.style.display = 'flex';
-            document.getElementById('modal-title').textContent = q ? 'Editează Întrebare' : 'Adaugă Întrebare Nouă';
-            
-            if(q) {
-                document.getElementById('q-id').value = q.id;
-                const examTypes = (q.exam_type || 'Diverse').split(',').map(s => s.trim());
-                document.querySelectorAll('.q-exam-cb').forEach(cb => {
-                    cb.checked = examTypes.includes(cb.value);
-                });
-                document.getElementById('q-category').value = q.category || '';
-                updateSubcategories(q.subcategory);
-                document.getElementById('q-difficulty').value = q.difficulty;
-                document.getElementById('q-type').value = q.type;
-                document.getElementById('q-text').value = q.text;
-                document.getElementById('q-image-url').value = q.image_url || '';
-                document.getElementById('q-opt-0').value = q.options[0] || '';
-                document.getElementById('q-opt-1').value = q.options[1] || '';
-                document.getElementById('q-opt-2').value = q.options[2] || '';
-                document.getElementById('q-opt-3').value = q.options[3] || '';
-                document.getElementById('q-correct').value = q.correct_index;
-                document.getElementById('q-explanation').value = q.explanation || '';
-                
-                setTimeout(() => {
-                    initCodeMirror();
-                    cmEditor.setValue(q.code || '');
-                    cmEditor.refresh();
-                }, 50);
-            } else {
-                document.getElementById('question-form').reset();
-                document.getElementById('q-id').value = '';
-                document.getElementById('q-image-url').value = '';
-                document.getElementById('q-image-file').value = '';
-                const examTypes = currentExamTab === 'Toate' ? ['Diverse'] : [currentExamTab];
-                document.querySelectorAll('.q-exam-cb').forEach(cb => {
-                    cb.checked = examTypes.includes(cb.value);
-                });
-                updateSubcategories();
-                
-                setTimeout(() => {
-                    initCodeMirror();
-                    cmEditor.setValue('');
-                    cmEditor.refresh();
-                }, 50);
-            }
-        }
-
-        function closeQuestionModal() {
-            document.getElementById('modal-question').style.display = 'none';
-            currentWaitingEditId = null; // cleared on close
-        }
-
-        function editQuestion(id) {
-            const q = questionsData.find(x => x.id === id);
-            if(q) openQuestionModal(q);
-        }
-
-        document.getElementById('question-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('q-id').value;
-            const codeVal = cmEditor ? cmEditor.getValue().trim() : '';
-            
-            const payload = {
-                exam_type: Array.from(document.querySelectorAll('.q-exam-cb')).filter(cb => cb.checked).map(cb => cb.value).join(', '),
-                category: document.getElementById('q-category').value,
-                subcategory: document.getElementById('q-subcategory').value,
-                difficulty: document.getElementById('q-difficulty').value,
-                type: document.getElementById('q-type').value,
-                text: document.getElementById('q-text').value,
-                image_url: document.getElementById('q-image-url').value || null,
-                code: codeVal ? codeVal : null,
-                options_json: [
-                    document.getElementById('q-opt-0').value,
-                    document.getElementById('q-opt-1').value,
-                    document.getElementById('q-opt-2').value,
-                    document.getElementById('q-opt-3').value
-                ],
-                correct_index: parseInt(document.getElementById('q-correct').value),
-                explanation: document.getElementById('q-explanation').value
-            };
-
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `${API_MANAGE_Q}?id=${id}` : API_MANAGE_Q;
-            const btnSave = document.getElementById('btn-save-q');
-            btnSave.disabled = true;
-            btnSave.textContent = 'Se procesează...';
-
-            try {
-                // Handle image upload if a file is selected
-                const fileInput = document.getElementById('q-image-file');
-                if (fileInput.files && fileInput.files[0]) {
-                    const file = fileInput.files[0];
-                    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                        showToast('Imaginea e prea mare (max 5MB)', true);
-                        btnSave.disabled = false;
-                        btnSave.textContent = 'Salvează Întrebarea';
-                        return;
-                    }
-
-                    btnSave.textContent = 'Se încarcă imaginea...';
-                    const base64data = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result.split(',')[1]);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
-
-                    const uploadRes = await fetchWithToken('/.netlify/functions/upload-image', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            filename: file.name,
-                            contentType: file.type,
-                            base64data
-                        })
-                    });
-
-                    if (uploadRes.ok) {
-                        const { publicUrl } = await uploadRes.json();
-                        payload.image_url = publicUrl;
-                        document.getElementById('q-image-url').value = publicUrl; // sync input
-                    } else {
-                        const err = await uploadRes.json();
-                        showToast('Eroare upload imagine: ' + (err.error || ''), true);
-                        btnSave.disabled = false;
-                        btnSave.textContent = 'Salvează Întrebarea';
-                        return;
-                    }
-                }
-
-                btnSave.textContent = 'Se salvează...';
-                const res = await fetchWithToken(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if(!res.ok) {
-                    let errMsg = 'Eroare la salvare!';
-                    try {
-                        const errData = await res.json();
-                        if (errData.error) errMsg = errData.error;
-                        if (errData.details) errMsg += `: ${errData.details}`;
-                    } catch(err) {}
-                    if (res.status === 401) {
-                        sessionStorage.removeItem('adminToken');
-                        adminToken = prompt('Parola de administrare incorecta! Re-introduceti parola (ex: admin123):');
-                        if (adminToken) sessionStorage.setItem('adminToken', adminToken);
-                    }
-                    throw new Error(errMsg);
-                }
-                showToast(id ? 'Întrebare actualizată!' : 'Întrebare adăugată!');
-                if (currentWaitingEditId) {
-                    rejectWaitingQuestion(currentWaitingEditId);
-                    currentWaitingEditId = null;
-                }
-                closeQuestionModal();
-                loadQuestions(); // refresh list
-            } catch(e) {
-                console.error('Error saving question:', e);
-                showToast(e.message || 'Eroare la salvare!', true);
-            } finally {
-                document.getElementById('btn-save-q').disabled = false;
-                document.getElementById('btn-save-q').textContent = 'Salvează Întrebarea';
-            }
-        });
-
-        // Close modal on outside click
-        // Removed to prevent accidental close
-        // document.getElementById('modal-question').addEventListener('click', (e) => {
-        //     if (e.target.id === 'modal-question') closeQuestionModal();
-        // });
-        document.getElementById('modal-details').addEventListener('click', (e) => {
-            if (e.target.id === 'modal-details') closeDetailsModal();
-        });
-
-        /* ==================== DOWNLOAD CSV ==================== */
-        document.getElementById('btn-download').addEventListener('click', () => {
-            if (resultsData.length === 0) return;
-            const headers = ['Nume', 'Email', 'Tip Test', 'Scor', 'Puncte Totale', 'Procentaj', 'Pierderi Focus', 'Timp', 'Data'];
-            const rows = resultsData.map(r => {
-                const pct = Math.round((r.score / r.total_points) * 100);
-                return [
-                    `"${r.student_name.replace(/"/g, '""')}"`,
-                    `"${r.student_email || ''}"`,
-                    r.test_type, r.score, r.total_points, `"${pct}%"`, r.blur_count || 0,
-                    `"${formatTime(r.time_taken_ms)}"`, `"${new Date(r.created_at).toLocaleString('ro-RO')}"`
-                ];
-            });
-            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `rezultate_test_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
-            showToast('CSV descărcat!');
-        });
-
-        /* ==================== INTREBARI IN ASTEPTATE (STAGING) ==================== */
-        function initWFilters() {
-            const catSelect = document.getElementById('w-filter-cat');
-            if (!catSelect || catSelect.children.length > 1) return;
-            catSelect.innerHTML = '<option value="">Toate categoriile</option>';
-            Object.keys(subcategoriesMap).forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat; opt.textContent = cat;
-                catSelect.appendChild(opt);
-            });
-        }
-
-        function updateWFilterSub() {
-            const cat = document.getElementById('w-filter-cat').value;
-            const subSelect = document.getElementById('w-filter-sub');
-            subSelect.innerHTML = '<option value="">Toate subcategoriile</option>';
-            if (cat && subcategoriesMap[cat]) {
-                subcategoriesMap[cat].forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s; opt.textContent = s;
-                    subSelect.appendChild(opt);
-                });
-            }
-        }
-
-        async function loadWaitingQuestions() {
-            try {
-                initWFilters();
-                const res = await fetchWithToken(API_FETCH_WAITING);
-                if (!res.ok) throw new Error();
-                waitingQuestionsData = await res.json();
-                
-                document.getElementById('loading-waiting').style.display = 'none';
-                document.getElementById('badge-waiting-count').textContent = waitingQuestionsData.length;
-
-                if (waitingQuestionsData.length === 0) {
-                    document.getElementById('empty-waiting').style.display = 'block';
-                    document.getElementById('wrapper-waiting').style.display = 'none';
-                } else {
-                    document.getElementById('empty-waiting').style.display = 'none';
-                    document.getElementById('wrapper-waiting').style.display = 'flex';
-                    renderWaitingQuestions();
-                }
-            } catch (e) {
-                console.error('Error loading waiting questions:', e);
-                document.getElementById('loading-waiting').innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcare întrebări în așteptare.</p>`;
-            }
-        }
-
-        function renderWaitingQuestions() {
-            const container = document.getElementById('wrapper-waiting');
-            const fCat = document.getElementById('w-filter-cat').value;
-            const fSub = document.getElementById('w-filter-sub').value;
-            const fDiff = document.getElementById('w-filter-diff').value;
-            const fSearch = document.getElementById('w-filter-search').value.toLowerCase();
-
-            const filtered = waitingQuestionsData.filter(q => {
-                if (fCat && q.category !== fCat) return false;
-                if (fSub && q.subcategory !== fSub) return false;
-                if (fDiff && q.difficulty !== fDiff) return false;
-                if (fSearch && !(q.text || '').toLowerCase().includes(fSearch) && !(q.explanation || '').toLowerCase().includes(fSearch)) return false;
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-secondary);">Nicio întrebare în așteptare nu corespunde filtrelor.</div>`;
-                return;
-            }
-
-            const html = filtered.map((q, idx) => {
-                const diffClass = q.difficulty === 'hard' ? 'badge-hard' : (q.difficulty === 'medium' ? 'badge-medium' : 'badge-easy');
-                const diffLabel = q.difficulty === 'hard' ? 'Grea' : (q.difficulty === 'medium' ? 'Medie' : 'Ușoară');
-                
-                let opts = q.options_json;
-                if (typeof opts === 'string') {
-                    try { opts = JSON.parse(opts); } catch(e) { opts = []; }
-                }
-                if (!Array.isArray(opts)) opts = [];
-
-                const optsHtml = opts.map((optText, optIdx) => {
-                    const isCorrect = q.correct_index === optIdx;
-                    const optLetter = String.fromCharCode(65 + optIdx);
-                    return `
-                        <div class="detail-opt ${isCorrect ? 'opt-correct' : ''}" style="margin-top:6px;">
-                            <span><strong>${optLetter}.</strong> ${escapeHtml(optText)}</span>
-                            ${isCorrect ? '<span class="detail-opt-tag tag-correct">Răspuns Corect</span>' : ''}
-                        </div>
-                    `;
-                }).join('');
-
-                const codeText = q.code ? q.code.replace(/\\n/g, '\n') : '';
-                const codeHtml = codeText ? `<div class="detail-code">${escapeHtml(codeText)}</div>` : '';
-                const explanationHtml = q.explanation ? `<div class="detail-explanation"><strong>💡 Explicație:</strong> ${escapeHtml(q.explanation)}</div>` : '';
-
-                const currentExam = q.exam_type || 'Initial';
-                return `
-                    <div class="detail-card" style="border-left: 4px solid var(--accent-amber); background: rgba(15, 15, 40, 0.75);">
-                        <div class="detail-header" style="flex-wrap: wrap; gap: 8px;">
-                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                <span style="font-weight:700; color:var(--accent-amber); font-size:13px;">#${q.id || (idx + 1)}</span>
-                                <span class="badge ${diffClass}">${diffLabel}</span>
-                                <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-secondary);">${escapeHtml(q.category || 'General')} • ${escapeHtml(q.subcategory || '')}</span>
-                                <select class="form-control" style="width: auto; padding: 3px 8px; font-size: 12px; height: 26px; border-color: var(--accent-purple);" onchange="updateWaitingExamType(${q.id}, this.value)">
-                                    <option value="Initial" ${currentExam === 'Initial' ? 'selected' : ''}>Test Inițial</option>
-                                    <option value="Admitere" ${currentExam === 'Admitere' ? 'selected' : ''}>Admitere</option>
-                                    <option value="BAC" ${currentExam === 'BAC' ? 'selected' : ''}>BAC</option>
-                                    <option value="Diverse" ${currentExam === 'Diverse' ? 'selected' : ''}>Diverse</option>
-                                </select>
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <button class="btn btn-primary" style="padding:6px 14px; font-size:12px; background:linear-gradient(135deg, #34d399, #10b981);" onclick="approveWaitingQuestion(${q.id})">✔️ Aprobă</button>
-                                <button class="btn btn-edit" style="padding:6px 12px; font-size:12px;" onclick="editAndApproveWaitingQuestion(${q.id})">✏️ Editează & Aprobă</button>
-                                <button class="btn btn-danger" style="padding:6px 12px; font-size:12px;" onclick="rejectWaitingQuestion(${q.id})">🗑️ Respinge</button>
-                            </div>
-                        </div>
-                        <div style="font-size:15px; font-weight:600; color:var(--text-primary); margin: 10px 0 6px; white-space:pre-wrap;">${escapeHtml(q.text || '')}</div>
-                        ${codeHtml}
-                        <div style="margin-top:10px;">${optsHtml}</div>
-                        ${explanationHtml}
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = html;
-        }
-
-        function updateWaitingExamType(id, val) {
-            const q = waitingQuestionsData.find(x => x.id === id);
-            if (q) q.exam_type = val;
-        }
-
-        async function approveWaitingQuestion(id) {
-            const q = waitingQuestionsData.find(x => x.id === id);
-            if (!q) return;
-
-            try {
-                const res = await fetchWithToken(`${API_MANAGE_WAITING}?id=${id}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'approve', question: q })
-                });
-
-                if (res.ok) {
-                    showToast('Întrebare aprobată și adăugată în Supabase & seed.sql!');
-                    waitingQuestionsData = waitingQuestionsData.filter(x => x.id !== id);
-                    document.getElementById('badge-waiting-count').textContent = waitingQuestionsData.length;
-                    renderWaitingQuestions();
-                    questionsData = []; // force reload on questions tab
-                } else {
-                    const err = await res.json();
-                    showToast(err.error || 'Eroare la aprobare', true);
-                }
-            } catch (e) {
-                showToast('Eroare de rețea la aprobare', true);
-            }
-        }
-
-        async function approveAllWaitingQuestions() {
-            if (waitingQuestionsData.length === 0) {
-                showToast('Nu există întrebări în așteptare!', true);
-                return;
-            }
-            if (!confirm(`Sigur doriți să aprobați TOATE cele ${waitingQuestionsData.length} întrebări? Ele vor fi adăugate în Supabase și seed.sql.`)) return;
-
-            try {
-                const res = await fetchWithToken(API_MANAGE_WAITING, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'approve_all' })
-                });
-
-                if (res.ok) {
-                    showToast('Toate întrebările au fost aprobate cu succes!');
-                    waitingQuestionsData = [];
-                    document.getElementById('badge-waiting-count').textContent = 0;
-                    document.getElementById('wrapper-waiting').style.display = 'none';
-                    document.getElementById('empty-waiting').style.display = 'block';
-                    questionsData = [];
-                } else {
-                    showToast('Eroare la aprobarea în masă', true);
-                }
-            } catch (e) {
-                showToast('Eroare de rețea la aprobarea în masă', true);
-            }
-        }
-
-        async function rejectWaitingQuestion(id) {
-            if (!confirm('Sigur dorești să respingi (ștergi) această întrebare din lista de așteptare?')) return;
-            try {
-                const res = await fetchWithToken(`${API_MANAGE_WAITING}?id=${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    showToast('Întrebare respinsă!');
-                    waitingQuestionsData = waitingQuestionsData.filter(x => x.id !== id);
-                    document.getElementById('badge-waiting-count').textContent = waitingQuestionsData.length;
-                    renderWaitingQuestions();
-                } else {
-                    showToast('Eroare la respingere', true);
-                }
-            } catch (e) {
-                showToast('Eroare de rețea', true);
-            }
-        }
-
-        
-        function decodeHtml(html) {
-            const txt = document.createElement("textarea");
-            txt.innerHTML = html;
-            return txt.value;
-        }
-
-        function editAndApproveWaitingQuestion(id) {
-            const q = waitingQuestionsData.find(x => x.id === id);
-            if (!q) return;
-
-            let opts = q.options_json;
-            if (typeof opts === 'string') {
-                try { opts = JSON.parse(opts); } catch(e) { opts = []; }
-            }
-            if (!Array.isArray(opts)) opts = [];
-
-            currentWaitingEditId = id;
-            openQuestionModal({
-                id: null,
-                exam_type: q.exam_type,
-                category: q.category ? q.category.trim() : '',
-                subcategory: q.subcategory ? q.subcategory.trim() : '',
-                difficulty: q.difficulty,
-                type: q.type,
-                text: q.text || '',
-                code: q.code || '',
-                options: opts,
-                correct_index: q.correct_index,
-                explanation: q.explanation || ''
-            });
-        }
-
-
-        // Init
-        loadResults();
-        loadWaitingQuestions();
-
-        /* ==================== ELEVI ==================== */
-        async function loadStudents() {
-            try {
-                const res = await fetchWithToken(`${API_MANAGE_STUDENTS}?action=list`);
-                if (!res.ok) throw new Error();
-                studentsData = await res.json();
-                
-                document.getElementById('loading-students').style.display = 'none';
-                if (studentsData.length === 0) {
-                    document.getElementById('empty-students').style.display = 'block';
-                    document.getElementById('wrapper-students').style.display = 'none';
-                } else {
-                    document.getElementById('empty-students').style.display = 'none';
-                    document.getElementById('wrapper-students').style.display = 'block';
-                    renderStudents();
-                }
-            } catch (e) {
-                document.getElementById('loading-students').innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcarea elevilor.</p>`;
-            }
-        }
-
-        function renderStudents() {
-            const tbody = document.getElementById('students-body');
-            const htmlArr = studentsData.map(s => {
-                const dateStr = formatDate(s.created_at);
-                return `
-                    <tr>
-                        <td>${s.id}</td>
-                        <td style="font-weight:600;">${escapeHtml(s.username)}</td>
-                        <td style="font-family: monospace; letter-spacing: 1px;">${escapeHtml(s.password)}</td>
-                        <td style="color:var(--text-secondary); font-size:12px;">${dateStr}</td>
-                        <td>
-                            <button class="btn btn-secondary" style="padding: 6px; font-size:12px; border-color: rgba(248,113,113,0.3); color: var(--accent-red);" onclick="deleteStudent(${s.id}, '${escapeHtml(s.username)}')">Șterge</button>
-                        </td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = htmlArr.join('');
-        }
-
-        function openStudentModal() {
-            document.getElementById('new-student-username').value = '';
-            document.getElementById('new-student-password').value = Math.random().toString(36).slice(-8);
-            document.getElementById('modal-student').style.display = 'flex';
-        }
-
-        function closeStudentModal() {
-            document.getElementById('modal-student').style.display = 'none';
-        }
-
-        async function handleCreateStudent(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btn-save-student');
-            btn.disabled = true;
-            btn.textContent = 'Se creează...';
-
-            const username = document.getElementById('new-student-username').value.trim();
-            const password = document.getElementById('new-student-password').value.trim();
-
-            try {
-                const res = await fetchWithToken(API_MANAGE_STUDENTS, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'create', username, password })
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Eroare la creare');
-
-                showToast('Cont creat cu succes!');
-                closeStudentModal();
-                loadStudents();
-            } catch (err) {
-                showToast(err.message, true);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Creează Cont';
-            }
-        }
-
-        async function deleteStudent(id, username) {
-            if (!confirm(`Sigur dorești să ștergi contul elevului ${username}? Rezultatele acestuia vor fi păstrate în tabelul results, dar nu se va mai putea autentifica.`)) return;
-
-            try {
-                const res = await fetchWithToken(API_MANAGE_STUDENTS, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'delete', id })
-                });
-
-                if (!res.ok) throw new Error();
-                showToast('Cont șters cu succes!');
-                loadStudents();
-            } catch (err) {
-                showToast('Eroare la ștergerea contului', true);
-            }
-        }
-
-        /* ==================== PDF EXPORT ==================== */
-        function exportResultsPDF() {
-            const modalContent = document.querySelector('#modal-details .modal-content');
-            if (!modalContent) return;
-
-            const studentName = document.getElementById('details-student-name').innerText.replace('Detalii Test Student', '').trim() || 'Student';
-            
-            // Temporary styles for PDF
-            const originalMaxHeight = modalContent.style.maxHeight;
-            const originalOverflow = document.getElementById('details-list').style.overflowY;
-            
-            modalContent.style.maxHeight = 'none';
-            document.getElementById('details-list').style.overflowY = 'visible';
-
-            const opt = {
-                margin:       10,
-                filename:     `Rezultate_AcaDe_QUIZ_${studentName.replace(/\\s+/g, '_')}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            // Exclude buttons from PDF
-            const buttons = modalContent.querySelectorAll('button');
-            buttons.forEach(b => b.style.display = 'none');
-
-            html2pdf().set(opt).from(modalContent).save().then(() => {
-                // Restore styles
-                modalContent.style.maxHeight = originalMaxHeight;
-                document.getElementById('details-list').style.overflowY = originalOverflow;
-                buttons.forEach(b => b.style.display = '');
-                showToast('PDF generat cu succes!');
-            }).catch(e => {
-                modalContent.style.maxHeight = originalMaxHeight;
-                document.getElementById('details-list').style.overflowY = originalOverflow;
-                buttons.forEach(b => b.style.display = '');
-                showToast('Eroare la generare PDF.', true);
-                console.error(e);
-            });
-        }
-    </script>
+    <!-- MODAL ASSIGN TEST -->
+    <div id="modal-assign" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Asignează Test Nou</h2>
+                <button class="btn-close" onclick="closeAssignModal()">&times;</button>
+            </div>
+            <form id="assign-form">
+                <input type="hidden" id="assign-username">
+                <div class="form-group full-width" style="margin-bottom: 12px;">
+                    <label>Elev</label>
+                    <input type="text" id="assign-student-name" class="form-control" disabled>
+                </div>
+                <div class="form-group full-width" style="margin-bottom: 12px;">
+                    <label>Categorie Test</label>
+                    <select id="assign-category" class="form-control" required>
+                        <option value="Academie">Academie</option>
+                        <option value="Poli">Poli</option>
+                        <option value="BAC">BAC</option>
+                        <option value="Diverse">Diverse (Din Toate)</option>
+                    </select>
+                </div>
+                <div class="form-group full-width" style="margin-bottom: 12px;">
+                    <label>Număr de Întrebări (Generate Aleator, neîntâlnite de elev)</label>
+                    <input type="number" id="assign-count" class="form-control" value="10" min="1" max="100" required>
+                </div>
+                <div class="form-group full-width" style="margin-bottom: 12px;">
+                    <label>Deadline</label>
+                    <input type="datetime-local" id="assign-deadline" class="form-control" required>
+                </div>
+                <div class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAssignModal()">Anulează</button>
+                    <button type="submit" class="btn btn-primary" id="btn-assign-save">Generează și Asignează</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PREVIEW ASSIGNED TEST -->
+    <div id="modal-preview-test" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Vizualizare Întrebări Test Asignat</h2>
+                <button class="btn-close" onclick="closePreviewModal()">&times;</button>
+            </div>
+            <div id="preview-test-list" style="max-height: 60vh; overflow-y: auto; margin-top: 16px; padding-right: 8px;">
+                <!-- generated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/admin.js"></script>
 </body>
 </html>

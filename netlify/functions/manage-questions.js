@@ -1,6 +1,6 @@
 exports.handler = async function(event, context) {
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
         'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
         'Access-Control-Allow-Methods': 'POST, PUT, DELETE, OPTIONS',
         'Content-Type': 'application/json'
@@ -40,7 +40,8 @@ exports.handler = async function(event, context) {
             let types = et.split(',').map(s => s.trim()).filter(Boolean);
             if (types.includes('Initial')) {
                 if (types.includes('BAC')) return 'Initial,BAC';
-                if (types.includes('Admitere')) return 'Initial,Admitere';
+                if (types.includes('Academie')) return 'Initial,Academie';
+                if (types.includes('Poli')) return 'Initial,Poli';
                 return 'Initial,Diverse';
             }
             return types.join(',');
@@ -97,15 +98,27 @@ exports.handler = async function(event, context) {
 
             const body = JSON.parse(event.body);
 
-            // If options_json is a string, parse it
-            if (body.options_json && typeof body.options_json === 'string') {
-                body.options_json = JSON.parse(body.options_json);
+            // Whitelist allowed fields to prevent injection
+            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index', 'explanation'];
+            const safeBody = {};
+            for (const key of allowedFields) {
+                if (body[key] !== undefined) {
+                    safeBody[key] = body[key];
+                }
             }
-            if (body.exam_type) {
-                body.exam_type = normalizeExamType(body.exam_type);
+
+            if (safeBody.options_json && typeof safeBody.options_json === 'string') {
+                safeBody.options_json = JSON.parse(safeBody.options_json);
             }
-            if (body.correct_index !== undefined) {
-                body.correct_index = parseInt(body.correct_index);
+            if (safeBody.exam_type) {
+                safeBody.exam_type = normalizeExamType(safeBody.exam_type);
+            }
+            if (safeBody.correct_index !== undefined) {
+                safeBody.correct_index = parseInt(safeBody.correct_index);
+            }
+
+            if (Object.keys(safeBody).length === 0) {
+                return { statusCode: 400, headers, body: JSON.stringify({ error: 'No valid fields provided for update.' }) };
             }
 
             const response = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${id}`, {
@@ -116,7 +129,7 @@ exports.handler = async function(event, context) {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=representation'
                 },
-                body: JSON.stringify(body)
+                body: JSON.stringify(safeBody)
             });
 
             if (!response.ok) {

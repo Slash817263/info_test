@@ -1,6 +1,6 @@
 exports.handler = async function(event, context) {
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
         'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
         'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
         'Content-Type': 'application/json'

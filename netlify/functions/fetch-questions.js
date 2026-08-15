@@ -1,6 +1,6 @@
 exports.handler = async function(event, context) {
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Content-Type': 'application/json'
@@ -69,14 +69,14 @@ exports.handler = async function(event, context) {
         const queryParams = event.queryStringParameters || {};
         const testType = queryParams.type || 'initial';
         const examType = queryParams.examType || 'Initial'; // Default to Initial for new students
-        const email = queryParams.email || '';
+        const username = queryParams.username || '';
         const idsParam = queryParams.ids || '';
 
         if (testType === 'counts') {
-            const counts = { 'Initial': 0, 'Admitere': 0, 'BAC': 0, 'Diverse': 0 };
+            const counts = { 'Initial': 0, 'Academie': 0, 'BAC': 0, 'Diverse': 0 };
             mappedQuestions.forEach(q => {
                 const ex = q.exam_type || 'Diverse';
-                ['Initial', 'Admitere', 'BAC', 'Diverse'].forEach(tab => {
+                ['Initial', 'Academie', 'BAC', 'Diverse'].forEach(tab => {
                     if (ex.includes(tab)) counts[tab]++;
                 });
             });
@@ -127,10 +127,10 @@ exports.handler = async function(event, context) {
             // Restore session with exact questions and order
             const requestedIds = idsParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
             selectedQuestions = requestedIds.map(id => mappedQuestions.find(q => q.id === id)).filter(Boolean);
-        } else if (testType === 'intermediar' && email) {
-            // Fetch past results to dynamically pick questions (checking email, username, or name)
-            const encodedEmail = encodeURIComponent(email);
-            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_email.eq.${encodedEmail},student_username.eq.${encodedEmail},student_name.eq.${encodedEmail})&order=created_at.desc`;
+        } else if (testType === 'intermediar' && username) {
+            // Fetch past results to dynamically pick questions (checking username or name)
+            const encodedUsername = encodeURIComponent(username);
+            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.eq.${encodedUsername},student_name.eq.${encodedUsername})&order=created_at.desc`;
             const resultsResponse = await fetch(resUrl, {
                 headers: {
                     'apikey': supabaseKey,
@@ -170,9 +170,10 @@ exports.handler = async function(event, context) {
 
                 // Build test of questions
                 let targetLength = 30;
-                if (examType === 'Admitere') targetLength = 9;
+                if (examType === 'Academie') targetLength = 9;
+                else if (examType === 'Poli') targetLength = 10;
                 else if (examType === 'BAC') targetLength = 10;
-                else if (examType === 'Diverse') targetLength = 20;
+                else if (examType === 'Diverse') targetLength = 15;
 
                 const subcatCounts = {};
 
@@ -224,9 +225,10 @@ exports.handler = async function(event, context) {
             } else {
                 // fallback if results fetch fails
                 let targetLength = 30;
-                if (examType === 'Admitere') targetLength = 9;
+                if (examType === 'Academie') targetLength = 9;
+                else if (examType === 'Poli') targetLength = 10;
                 else if (examType === 'BAC') targetLength = 10;
-                else if (examType === 'Diverse') targetLength = 20;
+                else if (examType === 'Diverse') targetLength = 15;
                 
                 selectedQuestions = mappedQuestions;
                 shuffle(selectedQuestions);

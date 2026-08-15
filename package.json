@@ -1,0 +1,24 @@
+{
+  "name": "acade-quiz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "parse.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Slash817263/info_test.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Slash817263/info_test/issues"
+  },
+  "homepage": "https://github.com/Slash817263/info_test#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
+  }
+}

@@ -1,8 +1,8 @@
 exports.handler = async function(event, context) {
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
         'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
-        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Content-Type': 'application/json'
     };
 
@@ -29,7 +29,7 @@ exports.handler = async function(event, context) {
 
     try {
         if (event.httpMethod === 'GET') {
-            const res = await fetch(`${STUDENTS_ENDPOINT}?select=*&order=created_at.desc`, {
+            const res = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,password,created_at,phone_number&order=created_at.desc`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
             if (!res.ok) throw new Error('Eroare la preluare elevi');
@@ -42,6 +42,10 @@ exports.handler = async function(event, context) {
             if (!body.username || !body.password) {
                 return { statusCode: 400, headers, body: JSON.stringify({ error: 'Username și parola sunt obligatorii' }) };
             }
+
+            const bcrypt = require('bcryptjs');
+            const hashedPassword = bcrypt.hashSync(body.password, 10);
+
             const res = await fetch(STUDENTS_ENDPOINT, {
                 method: 'POST',
                 headers: {
@@ -50,7 +54,7 @@ exports.handler = async function(event, context) {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=representation'
                 },
-                body: JSON.stringify({ username: body.username, password: body.password })
+                body: JSON.stringify({ username: body.username, password: hashedPassword })
             });
             if (!res.ok) {
                 const err = await res.text();
@@ -73,6 +77,31 @@ exports.handler = async function(event, context) {
             });
             if (!res.ok) throw new Error('Eroare la ștergerea elevului');
             return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+        }
+
+        if (event.httpMethod === 'PUT') {
+            const body = JSON.parse(event.body);
+            if (body.action === 'reset_password') {
+                if (!body.id || !body.new_password) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'ID și noua parolă sunt obligatorii' }) };
+                }
+
+                const bcrypt = require('bcryptjs');
+                const hashedPassword = bcrypt.hashSync(body.new_password, 10);
+
+                const res = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${body.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({ password: hashedPassword })
+                });
+                if (!res.ok) throw new Error('Eroare la resetarea parolei');
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+            }
         }
 
         return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };

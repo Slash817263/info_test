@@ -1,6 +1,6 @@
 exports.handler = async function(event, context) {
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
@@ -31,7 +31,8 @@ exports.handler = async function(event, context) {
             time_taken_ms,
             blur_count,
             answers_json,
-            question_ids
+            question_ids,
+            assigned_test_id
         } = body;
 
         if (!student_username || time_taken_ms === undefined || !answers_json || !question_ids) {
@@ -71,8 +72,8 @@ exports.handler = async function(event, context) {
         let serverScore = 0;
         let serverMaxPoints = 0;
         
-        // Add 10 default points for Admitere and Initial
-        if (exam_type === 'Admitere' || exam_type === 'Initial' || test_type === 'initial') {
+        // Add 10 default points for Academie and Initial
+        if (exam_type === 'Academie' || exam_type === 'Diverse' || exam_type === 'Initial' || test_type === 'initial') {
             serverScore = 10;
             serverMaxPoints = 10;
         }
@@ -88,14 +89,8 @@ exports.handler = async function(event, context) {
             const isCorrect = studentAns === q.correct_index;
             
             let pts = 0;
-            if (exam_type === 'BAC') {
+            if (exam_type === 'BAC' || exam_type === 'Academie' || exam_type === 'Diverse' || exam_type === 'Initial' || test_type === 'initial' || exam_type === 'Poli') {
                 pts = 10;
-            } else if (exam_type === 'Admitere') {
-                pts = 10;
-            } else if (exam_type === 'Diverse') {
-                pts = 5;
-            } else if (exam_type === 'Initial' || test_type === 'initial') {
-                pts = 3;
             } else {
                 pts = pointsMap[q.difficulty] || 0; // fallback
             }
@@ -154,6 +149,23 @@ exports.handler = async function(event, context) {
         }
 
         const data = await response.json();
+
+        // If this result is from an assigned test, mark it as completed
+        if (assigned_test_id) {
+            const updateRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${assigned_test_id}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ status: 'completed' })
+            });
+            if (!updateRes.ok) {
+                console.error("Failed to update assigned test status", await updateRes.text());
+            }
+        }
 
         // Return the evaluated details back to the client so they can show the results page
         return {

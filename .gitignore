@@ -11,3 +11,9 @@ node_modules/
 dist/
 build/
 *.log
+
+# Database scripts and sensitive dumps
+db_dump_temp.json
+questions.json
+*.sql
+parse.js

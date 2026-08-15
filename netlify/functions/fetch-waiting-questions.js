@@ -1,9 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-
 exports.handler = async function(event, context) {
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
         'Access-Control-Allow-Headers': 'Content-Type, x-admin-token',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Content-Type': 'application/json'
@@ -13,7 +10,7 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const validTokens = [process.env.ADMIN_SECRET, 'admin', 'admin123'].filter(Boolean);
+    const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
     const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
 
     if (!clientToken || !validTokens.includes(clientToken)) {
@@ -28,7 +25,6 @@ exports.handler = async function(event, context) {
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
     try {
-        // Try fetching from Supabase waiting_questions table first
         if (supabaseUrl && supabaseKey) {
             const response = await fetch(`${supabaseUrl}/rest/v1/waiting_questions?select=*&order=id.asc`, {
                 headers: {
@@ -39,7 +35,7 @@ exports.handler = async function(event, context) {
 
             if (response.ok) {
                 const data = await response.json();
-                if (Array.isArray(data) && data.length > 0) {
+                if (Array.isArray(data)) {
                     const mapped = data.map(q => ({ ...q, exam_type: q.exam_type || 'Initial' }));
                     return {
                         statusCode: 200,
@@ -48,19 +44,6 @@ exports.handler = async function(event, context) {
                     };
                 }
             }
-        }
-
-        // Fallback: Read local waiting_questions.json file
-        const jsonPath = path.join(__dirname, '../../waiting_questions.json');
-        if (fs.existsSync(jsonPath)) {
-            const fileData = fs.readFileSync(jsonPath, 'utf8');
-            const data = JSON.parse(fileData);
-            const mapped = data.map(q => ({ ...q, exam_type: q.exam_type || 'Initial' }));
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify(mapped)
-            };
         }
 
         return {

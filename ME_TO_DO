@@ -1,7 +1,7 @@
+Idee : adaugarea campului numar de telefon pentru fiecare user
+Cand primeste o tema sa primeasca mesaj pe whatsapp cu "Ai o noua tema pe acadequiz!"
+Cand se apropie deadline sa primeasca alt mesaj la 10:00 "Timpul pentru tema X se apropie, mai ai la dispozitie x ore!" (doar daca nu a rezolvat tema)
 
-Șocul Realității (Dificultate): Pentru ca testul inițial să fie cu adevărat un șoc, 
-propun să modificăm logica de selecție a întrebărilor (în fetch-questions.js) 
-pentru testul inițial:
-Nu vor mai fi 20 ușoare / 20 medii / 10 grele.
-Va fi o proporție brutală: ex. 20 grele, 10 medii complexe și doar 10 ușoare, 
-plus un timp mai strâns - 20 minute.
+Nu merge sa 
+
+Commit pe git (doar cand sunt 100% sigur ca nu mai modific)

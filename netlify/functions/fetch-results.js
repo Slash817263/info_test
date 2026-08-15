@@ -1,6 +1,6 @@
 exports.handler = async function(event, context) {
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Content-Type': 'application/json'
@@ -19,12 +19,18 @@ exports.handler = async function(event, context) {
     const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
     const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
 
+    const params = event.queryStringParameters || {};
+    const requestedUsername = params.username;
+    
     if (!clientToken || !validTokens.includes(clientToken)) {
-        return {
-            statusCode: 401,
-            headers,
-            body: JSON.stringify({ error: 'Unauthorized: Invalid Admin Token' })
-        };
+        // Dacă nu e admin, permitem accesul doar dacă cere rezultatele STRICT pentru un elev
+        if (!requestedUsername) {
+            return {
+                statusCode: 401,
+                headers,
+                body: JSON.stringify({ error: 'Unauthorized: Invalid Admin Token or missing username' })
+            };
+        }
     }
 
     if (!supabaseUrl || !supabaseKey) {
@@ -36,7 +42,12 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        const response = await fetch(`${supabaseUrl}/rest/v1/results?select=*&order=created_at.desc`, {
+        let url = `${supabaseUrl}/rest/v1/results?select=*&order=created_at.desc`;
+        if (requestedUsername) {
+            url += `&student_username=eq.${encodeURIComponent(requestedUsername)}`;
+        }
+
+        const response = await fetch(url, {
             headers: {
                 'apikey': supabaseKey,
                 'Authorization': `Bearer ${supabaseKey}`
