@@ -1127,7 +1127,10 @@ const API_RESULTS = '/.netlify/functions/fetch-results';
                     <tr>
                         <td>${s.id}</td>
                         <td style="font-weight:600;">${escapeHtml(s.username)}</td>
-                        <td>${phoneStr}</td>
+                        <td>
+                            ${phoneStr}
+                            <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px; margin-left: 6px;" onclick="promptEditPhone(${s.id}, '${escapeHtml(s.username)}', '${s.phone_number || ''}')">✏️</button>
+                        </td>
                         <td style="font-family: monospace; letter-spacing: 1px;">
                             <span id="pw-mask-${s.id}">••••••••</span>
                             <span id="pw-val-${s.id}" style="display:none;">${escapeHtml(s.password)}</span>
@@ -1153,6 +1156,43 @@ const API_RESULTS = '/.netlify/functions/fetch-results';
             } else {
                 mask.style.display = 'none';
                 val.style.display = 'inline';
+            }
+        }
+
+        function promptEditPhone(id, username, currentPhone) {
+            document.getElementById('edit-phone-id').value = id;
+            document.getElementById('edit-phone-username').value = username;
+            document.getElementById('edit-phone-input').value = currentPhone;
+            document.getElementById('modal-phone').style.display = 'flex';
+        }
+
+        function closePhoneModal() {
+            document.getElementById('modal-phone').style.display = 'none';
+        }
+
+        async function handleEditPhoneSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-phone-id').value;
+            const username = document.getElementById('edit-phone-username').value;
+            const newPhone = document.getElementById('edit-phone-input').value;
+
+            try {
+                const res = await fetchWithToken('/.netlify/functions/update-phone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: id, username: username, phone_number: newPhone.trim() })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Eroare la actualizarea numărului.');
+                }
+
+                // Close modal and refresh
+                closePhoneModal();
+                loadStudents();
+            } catch (error) {
+                alert('Eroare: ' + error.message);
             }
         }
 
@@ -1515,7 +1555,11 @@ const API_RESULTS = '/.netlify/functions/fetch-results';
                 if (!res.ok) throw new Error('Eroare la salvare');
                 showToast('Testul a fost trimis elevului cu succes!');
                 closePreviewModal();
-                loadSituatie();
+                await loadSituatie();
+                if (document.getElementById('situatie-detail-view').style.display === 'block') {
+                    const username = document.getElementById('assign-username').value;
+                    if (username) openSituatieDetail(username);
+                }
             } catch(e) {
                 showToast(e.message, true);
             } finally {

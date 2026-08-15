@@ -101,17 +101,18 @@ exports.handler = async function(event, context) {
         }
 
         // For students, filter questions from the requested examType
-        // For students, filter questions from the requested examType
-        let categoryFiltered = [];
-        if (examType === 'Diverse') {
-            categoryFiltered = [...mappedQuestions]; // Take from all categories
-        } else {
-            categoryFiltered = mappedQuestions.filter(q => (q.exam_type || 'Diverse').includes(examType));
-        }
+        if (!idsParam) {
+            let categoryFiltered = [];
+            if (examType === 'Diverse') {
+                categoryFiltered = [...mappedQuestions]; // Take from all categories
+            } else {
+                categoryFiltered = mappedQuestions.filter(q => (q.exam_type || 'Diverse').includes(examType));
+            }
 
-        // Fallback if requested category has no questions
-        if (categoryFiltered.length > 0) {
-            mappedQuestions = categoryFiltered;
+            // Fallback if requested category has no questions
+            if (categoryFiltered.length > 0) {
+                mappedQuestions = categoryFiltered;
+            }
         }
 
         let selectedQuestions = [];
@@ -128,9 +129,9 @@ exports.handler = async function(event, context) {
         };
 
         if (idsParam) {
-            // Restore session with exact questions and order
-            const requestedIds = idsParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
-            selectedQuestions = requestedIds.map(id => mappedQuestions.find(q => q.id === id)).filter(Boolean);
+            // Restore session with exact questions and order (handles string UUIDs)
+            const requestedIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
+            selectedQuestions = requestedIds.map(id => mappedQuestions.find(q => String(q.id) === String(id))).filter(Boolean);
         } else if (testType === 'intermediar' && username) {
             // Fetch past results to dynamically pick questions (checking username or name)
             const encodedUsername = encodeURIComponent(username);

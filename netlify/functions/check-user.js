@@ -5,7 +5,7 @@ exports.handler = async function(event, context) {
 
     const headers = {
         'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
+        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
     };
@@ -28,13 +28,49 @@ exports.handler = async function(event, context) {
     try {
         const body = JSON.parse(event.body);
         const { username } = body;
-
+        
         if (!username) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Username is required' }) };
         }
 
-        // Query recent results for this student across all identifier fields
+        const authHeader = event.headers.authorization || event.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token lipsa' }) };
+        }
+
+        const token = authHeader.substring(7);
+        const jwt = require('jsonwebtoken');
+        let decoded;
+        try {
+            decoded = jwt.verify(token, supabaseKey);
+        } catch(e) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat' }) };
+        }
+        
+        if (decoded.username !== username) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token mismatch cu username' }) };
+        }
+
         const encodedUsername = encodeURIComponent(username);
+        
+        // Verificam hash-ul parolei pentru a asigura delogarea daca parola s-a schimbat
+        const stdUrl = `${supabaseUrl}/rest/v1/students?username=eq.${encodedUsername}&select=password,phone_number`;
+        const stdRes = await fetch(stdUrl, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } });
+        let phoneNumber = null;
+        if (stdRes.ok) {
+            const stdData = await stdRes.json();
+            if (stdData.length > 0) {
+                const currentHashPrefix = stdData[0].password.substring(0, 15);
+                if (currentHashPrefix !== decoded.hashPrefix) {
+                    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Parola a fost modificata. Va rugam sa va relogati.' }) };
+                }
+                phoneNumber = stdData[0].phone_number;
+            } else {
+                return { statusCode: 401, headers, body: JSON.stringify({ error: 'Utilizatorul nu mai exista' }) };
+            }
+        }
+
+        // Query recent results for this student
         const url = `${supabaseUrl}/rest/v1/results?or=(student_username.eq.${encodedUsername},student_name.eq.${encodedUsername})&order=created_at.desc&limit=5`;
         const response = await fetch(url, {
             headers: {
@@ -43,33 +79,18 @@ exports.handler = async function(event, context) {
             }
         });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Supabase error: ${response.status} - ${errText}`);
-        }
+        const data = response.ok ? await response.json() : [];
+        const finalData = data.filter(d => !d.test_type.startsWith('progress_')); // excludem salvari partiale
 
-        const data = await response.json();
-
-        // Check if phone number exists
-        const stdUrl = `${supabaseUrl}/rest/v1/students?username=eq.${encodedUsername}&select=phone_number`;
-        const stdRes = await fetch(stdUrl, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } });
-        let phoneNumber = null;
-        if (stdRes.ok) {
-            const stdData = await stdRes.json();
-            if (stdData.length > 0) {
-                phoneNumber = stdData[0].phone_number;
-            }
-        }
-
-        if (data && data.length > 0) {
+        if (finalData && finalData.length > 0) {
             return {
                 statusCode: 200,
                 headers,
                 body: JSON.stringify({
                     exists: true,
-                    name: data[0].student_name,
+                    name: finalData[0].student_name || username,
                     phone_number: phoneNumber,
-                    history: data.map(d => ({
+                    history: finalData.map(d => ({
                         test_type: d.test_type,
                         score: d.score,
                         total_points: d.total_points,
@@ -81,7 +102,7 @@ exports.handler = async function(event, context) {
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({ exists: false, history: [], phone_number: phoneNumber })
+                body: JSON.stringify({ exists: true, history: [], phone_number: phoneNumber }) // marked exists:true since we validated token
             };
         }
     } catch (error) {

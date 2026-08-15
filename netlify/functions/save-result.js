@@ -21,6 +21,20 @@ exports.handler = async function(event, context) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Supabase environment variables are missing.' }) };
     }
 
+    // Verify JWT
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token lipsa' }) };
+    }
+    const token = authHeader.substring(7);
+    const jwt = require('jsonwebtoken');
+    let decoded;
+    try {
+        decoded = jwt.verify(token, process.env.SUPABASE_KEY);
+    } catch(e) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat' }) };
+    }
+
     try {
         const body = JSON.parse(event.body);
         const {

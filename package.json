@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/Slash817263/info_test#readme",
   "dependencies": {
-    "bcryptjs": "^3.0.3"
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3"
   }
 }

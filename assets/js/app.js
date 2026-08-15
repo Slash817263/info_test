@@ -346,7 +346,10 @@
 
                 const response = await fetch('/.netlify/functions/save-result', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + (localStorage.getItem('active_student_token') || '')
+                    },
                     body: JSON.stringify({
                         student_username: state.studentUsername,
                         student_id: state.studentId,
@@ -394,8 +397,18 @@
                     window.confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
                 }
                 
-                window.lastResults = results;
-                renderResults(results);
+                if (state.assignedTestId) {
+                    els.resultsContainer.innerHTML = `
+                        <div class="empty-state">
+                            <h2 style="color:var(--accent-green); margin-bottom: 20px;">Ai finalizat tema!</h2>
+                            <p style="color:var(--text-secondary); margin-bottom: 30px;">Rezultatele au fost trimise către profesor.</p>
+                            <button class="btn btn-primary" onclick="window.location.reload()">Înapoi la Panou</button>
+                        </div>
+                    `;
+                } else {
+                    window.lastResults = results;
+                    renderResults(results);
+                }
                 
             } catch (err) {
                 console.error('Network error saving results', err);
@@ -403,13 +416,25 @@
             }
         }
 
-
         /* ========================================================================
            ANSWER HANDLING
            ======================================================================== */
         function selectAnswer(index) {
             state.answers[state.currentQuestion] = index;
             saveStateToStorage();
+            if (state.assignedTestId) {
+                fetch('/.netlify/functions/save-progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        assigned_test_id: state.assignedTestId,
+                        student_username: state.studentUsername,
+                        answers_json: state.answers,
+                        time_taken_ms: Date.now() - state.startTime,
+                        current_index: state.currentQuestion
+                    })
+                }).catch(e => console.error(e));
+            }
             renderQuestion();
         }
 
@@ -439,7 +464,6 @@
         /* ========================================================================
            RESULTS CALCULATION (Moved to server)
            ======================================================================== */
-
 
         /* ========================================================================
            RESULTS RENDERING
@@ -532,22 +556,6 @@
                 </div>
             </div>
 
-            <div class="share-section">
-                <h3>Trimite rezultatele</h3>
-                <div class="share-buttons">
-                    <button class="btn btn-whatsapp" onclick="shareWhatsApp()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                        WhatsApp
-                    </button>
-                    <button class="btn btn-copy" onclick="copyResults()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                        Copiază
-                    </button>
-                    <button class="btn btn-email" onclick="shareEmail()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>
-                        Email
-                    </button>
-                </div>
             </div>
 
             <button class="btn btn-ghost btn-restart" onclick="restartQuiz()">
@@ -580,52 +588,6 @@
         /* ========================================================================
            SHARE FUNCTIONALITY
            ======================================================================== */
-        function getResultsText() {
-            const results = window.lastResults;
-            const elapsed = state.endTime - state.startTime;
-            const timeStr = formatTime(elapsed);
-            const percent = Math.round((results.totalCorrect / questions.length) * 100);
-            const date = new Date().toLocaleDateString('ro-RO');
-            const testLabel = `Test ${state.examType} (${questions.length} întrebări)`;
-
-            return `📋 Test Introductiv Informatică C++
-━━━━━━━━━━━━━━━━━━━━━━━
-👤 Elev: ${state.studentUsername}
-📄 Tip: ${testLabel}
-📊 Scor: ${results.totalPoints}/${results.maxPoints} puncte (${percent}%)
-🏆 Nivel: ${results.level.name}
-━━━━━━━━━━━━━━━━━━━━━━━
-✅ Ușoare: ${results.easyCorrect}/${results.easyTotal} corecte
-✅ Medii: ${results.mediumCorrect}/${results.mediumTotal} corecte
-✅ Grele: ${results.hardCorrect}/${results.hardTotal} corecte
-━━━━━━━━━━━━━━━━━━━━━━━
-⏱️ Timp: ${timeStr}
-📅 Data: ${date}`;
-        }
-
-        function shareWhatsApp() {
-            const text = encodeURIComponent(getResultsText());
-            const phone = CONFIG.tutorPhone;
-            const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
-            window.open(url, '_blank');
-        }
-
-        function copyResults() {
-            const text = getResultsText();
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('✓ Rezultatele au fost copiate!');
-            }).catch(() => {
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                document.body.appendChild(textarea);
-                textarea.select();
-                try { document.execCommand('copy'); showToast('✓ Rezultatele au fost copiate!'); }
-                catch (e) { showToast('Nu s-a putut copia. Încearcă din nou.'); }
-                document.body.removeChild(textarea);
-            });
-        }
 
         function shareEmail() {
             const subject = encodeURIComponent(`Rezultate Test C++ — ${state.studentUsername}`);
@@ -638,7 +600,6 @@
         /* ========================================================================
            QUESTION SELECTION & TEST TYPE
            ======================================================================== */
-
 
         window.startTest = function(type, examType) {
             selectTestType(type, state.studentUsername, examType);
@@ -653,6 +614,21 @@
             btns.forEach(b => { b.disabled = true; b.style.opacity = '0.7'; });
 
             try {
+                // --- Fetch Progress ---
+                try {
+                    const progRes = await fetch(`/.netlify/functions/fetch-progress?student_username=${encodeURIComponent(state.studentUsername)}&assigned_test_id=${assignedTestId}`);
+                    if (progRes.ok) {
+                        const progData = await progRes.json();
+                        if (progData.has_progress) {
+                            state.answers = progData.answers_json || [];
+                            state.currentQuestion = progData.current_index || 0;
+                            // Adjust start time so elapsed calculation works
+                            state.startTime = Date.now() - (progData.time_taken_ms || 0);
+                        }
+                    }
+                } catch(e) { console.error('Eroare fetch progress', e); }
+                // ----------------------
+
                 const res = await fetch(`/.netlify/functions/fetch-questions?ids=${questionsIds.join(',')}`);
                 if (!res.ok) throw new Error();
                 const fetchedQs = await res.json();
@@ -908,7 +884,6 @@
             state.endTime = Date.now();
             
             // Nu stergem state-ul inca pentru a preveni pierderea datelor daca pica netul/inchide tab-ul prematur
-
 
             if (autoSubmitted) {
                 els.btnNext.disabled = true;

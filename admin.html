@@ -382,6 +382,28 @@
         </div>
     </div>
 
+    <!-- MODAL EDIT PHONE -->
+    <div id="modal-phone" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Setare Telefon WhatsApp</h2>
+                <button class="btn-close" onclick="closePhoneModal()">&times;</button>
+            </div>
+            <form id="phone-form" onsubmit="handleEditPhoneSubmit(event)">
+                <input type="hidden" id="edit-phone-id">
+                <input type="hidden" id="edit-phone-username">
+                <div class="form-group full-width">
+                    <label>Număr de telefon (07XXXXXXXX)</label>
+                    <input type="text" id="edit-phone-input" class="form-control" required placeholder="ex: 0712345678">
+                </div>
+                <div class="form-actions" style="margin-top:20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closePhoneModal()">Anulează</button>
+                    <button type="submit" class="btn btn-primary">Salvează</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL ADD STUDENT -->
     <div id="modal-student" class="modal-overlay" style="display: none;">
         <div class="modal-content" style="max-width: 400px;">

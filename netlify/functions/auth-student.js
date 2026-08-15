@@ -71,7 +71,7 @@ exports.handler = async function(event, context) {
             return { statusCode: 401, headers, body: JSON.stringify({ error: 'Parolă incorectă' }) };
         }
 
-        // Automatic migration in the background
+                // Automatic migration in the background
         if (needsMigration) {
             const hashedPassword = bcrypt.hashSync(password, 10);
             fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student.id}`, {
@@ -85,11 +85,20 @@ exports.handler = async function(event, context) {
             }).catch(err => console.error('Eroare la migrarea parolei:', err));
         }
 
+        const jwt = require('jsonwebtoken');
+        const hashPrefix = student.password.substring(0, 15);
+        const token = jwt.sign(
+            { username: student.username, id: student.id, hashPrefix: hashPrefix },
+            process.env.SUPABASE_KEY,
+            { expiresIn: '30d' }
+        );
+
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
                 message: 'Autentificare cu succes',
+                token: token,
                 student: {
                     id: student.id,
                     username: student.username,
