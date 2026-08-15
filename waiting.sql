@@ -1,1 +1,0 @@
--- SQL Script for waiting_questions\nTRUNCATE TABLE waiting_questions;\n
