@@ -29,7 +29,7 @@ exports.handler = async function(event, context) {
 
     try {
         if (event.httpMethod === 'GET') {
-            const res = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,password,created_at,phone_number&order=created_at.desc`, {
+            const res = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,created_at,phone_number&order=created_at.desc`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
             if (!res.ok) throw new Error('Eroare la preluare elevi');

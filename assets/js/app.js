@@ -11,8 +11,8 @@
         /* ========================================================================
            QUESTIONS DATA — Loaded Dynamically from Supabase
            ======================================================================== */
-  // All 50 questions from DB
-        let questions = [];     // Active quiz questions (50 or 30 subset)
+        // Full list of questions fetched for current session
+        let questions = [];     // Active quiz questions
 
         /* ========================================================================
            STATE MANAGEMENT
