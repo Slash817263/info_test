@@ -1,7 +1,10 @@
-Idee : adaugarea campului numar de telefon pentru fiecare user
-Cand primeste o tema sa primeasca mesaj pe whatsapp cu "Ai o noua tema pe acadequiz!"
-Cand se apropie deadline sa primeasca alt mesaj la 10:00 "Timpul pentru tema X se apropie, mai ai la dispozitie x ore!" (doar daca nu a rezolvat tema)
-
-Nu merge sa 
-
-Commit pe git (doar cand sunt 100% sigur ca nu mai modific)
+1.Cand intru prima data pe aplicatie nu imi cere credentialele
+2. Nu pot acces /admin.html pe varianta pe netlify
+3. Adaugare meniu dupa introducerea datelor pentru prima data : userul
+sa poata sa intre pe test atunci cand apasa pe butonul test initial (singurul)
+Userului i se permite sa iasa din testul initial si sa fie intors la meniu
+(progresul se pierde)
+4. Alte potentiale probleme
+5. Eliminarea campului explicatii din baza de date a intrebarilor.
+6. Verificare logica asignare teste (in functie de raspunsurile din trecut)
+7.

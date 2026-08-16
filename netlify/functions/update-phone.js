@@ -5,7 +5,7 @@ exports.handler = async function(event, context) {
 
     const headers = {
         'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
+        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
     };
@@ -18,8 +18,6 @@ exports.handler = async function(event, context) {
         return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
     }
 
-    // S-a scos verificarea de admin pentru a permite studenților să își actualizeze numărul la prima autentificare
-
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_KEY;
 
@@ -27,12 +25,38 @@ exports.handler = async function(event, context) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Missing Supabase vars' }) };
     }
 
+    // Verify token (either Admin token or Student JWT)
+    const adminToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
+    const validAdminTokens = [process.env.ADMIN_SECRET].filter(Boolean);
+    const isAdmin = adminToken && validAdminTokens.includes(adminToken);
+
+    let authenticatedUsername = null;
+    if (!isAdmin) {
+        const authHeader = event.headers.authorization || event.headers.Authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.substring(7);
+            const jwt = require('jsonwebtoken');
+            try {
+                const decoded = jwt.verify(token, supabaseKey);
+                authenticatedUsername = decoded.username;
+            } catch (e) {
+                return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat.' }) };
+            }
+        } else {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autentificare necesară.' }) };
+        }
+    }
+
     try {
-        const body = JSON.parse(event.body);
+        const body = JSON.parse(event.body || '{}');
         const { student_id, username, phone_number } = body;
 
         if (!student_id || !username || !phone_number) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Student ID, Username și Numarul de telefon sunt obligatorii' }) };
+        }
+
+        if (!isAdmin && authenticatedUsername && authenticatedUsername !== username) {
+            return { statusCode: 403, headers, body: JSON.stringify({ error: 'Nu ai permisiunea de a modifica acest profil.' }) };
         }
 
         // Validate Romanian phone number (starts with 07, exactly 10 digits)

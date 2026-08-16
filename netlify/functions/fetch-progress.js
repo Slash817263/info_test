@@ -31,6 +31,22 @@ exports.handler = async function(event, context) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing parameters' }) };
     }
 
+    // Verify JWT
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token lipsa' }) };
+    }
+    const token = authHeader.substring(7);
+    const jwt = require('jsonwebtoken');
+    try {
+        const decoded = jwt.verify(token, process.env.SUPABASE_KEY);
+        if (decoded.username !== student_username) {
+            return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden: Username mismatch' }) };
+        }
+    } catch(e) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat' }) };
+    }
+
     try {
         const queryUrl = `${supabaseUrl}/rest/v1/results?student_username=eq.${encodeURIComponent(student_username)}&test_type=eq.progress_${assigned_test_id}&select=*&limit=1`;
         

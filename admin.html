@@ -15,7 +15,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
     <link rel="stylesheet" href="assets/css/admin.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
     <div class="bg-orb bg-orb-1"></div>
@@ -27,10 +26,6 @@
             <div class="title-area">
                 <h1>AcaDe-QUIZ <span class="gradient-text">Admin</span></h1>
                 <p>Monitorizare rezultate & Gestionare elevi</p>
-            </div>
-            <div class="actions">
-                <button id="btn-download" class="btn btn-primary" style="display: none;">Descarcă CSV</button>
-                <a href="index.html" class="btn btn-secondary">Înapoi la Test</a>
             </div>
         </header>
 
@@ -48,8 +43,11 @@
         <!-- TAB SITUATIE (REZULTATE) -->
         <div id="tab-rezultate" class="tab-content active">
             <div id="situatie-list-view">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                     <h2 style="font-size: 20px; font-weight: 700;">Situație Elevi</h2>
+                    <div style="width: 280px;">
+                        <input type="text" id="search-situatie-student" class="form-control" placeholder="🔍 Caută elev..." onkeyup="renderSituatieGrid()">
+                    </div>
                 </div>
                 <div class="loading-state" id="loading-situatie-students">
                     <div class="spinner"></div>
@@ -228,9 +226,12 @@
         <!-- TAB CONTURI -->
         <div id="tab-elevi" class="tab-content">
             <div id="sub-conturi">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                     <h2 style="font-size: 20px; font-weight: 700;">Gestionare Elevi (Conturi AcaDe-QUIZ)</h2>
-                    <button class="btn btn-primary" onclick="openStudentModal()">+ Adaugă Elev</button>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <input type="text" id="search-students-list" class="form-control" placeholder="🔍 Caută elev..." onkeyup="renderStudents()" style="width: 220px;">
+                        <button class="btn btn-primary" onclick="openStudentModal()">+ Adaugă Elev</button>
+                    </div>
                 </div>
             
             <main class="table-card">
@@ -368,10 +369,6 @@
                             <option value="3">Opțiunea D</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Explicație (Afișată la final)</label>
-                        <input type="text" id="q-explanation" class="form-control" required>
-                    </div>
                 </div>
 
                 <div class="form-actions">
@@ -452,14 +449,13 @@
 
     <!-- MODAL DETAILS RESULT -->
     <div id="modal-details" class="modal-overlay" style="display: none;">
-        <div class="modal-content modal-admin-large" style="max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal-content modal-admin-large" style="display: flex; flex-direction: column;">
             <div class="modal-header" style="flex-shrink: 0;">
                 <div>
                     <h2 id="details-student-name">Detalii Test Student</h2>
                     <p id="details-student-meta" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;"></p>
                 </div>
                 <div style="display: flex; gap: 12px; align-items: center;">
-                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;" onclick="exportResultsPDF()">📄 Exportă PDF</button>
                     <button class="btn-close" onclick="closeDetailsModal()">&times;</button>
                 </div>
             </div>
@@ -470,7 +466,7 @@
                 <button id="filter-btn-correct" class="btn btn-secondary details-filter-btn" style="border-color: rgba(52, 211, 153, 0.4);" onclick="setDetailsFilter('correct', this)">✔️ Corecte (<span id="count-correct">0</span>)</button>
             </div>
 
-            <div id="details-list" style="overflow-y: auto; padding-right: 4px; flex: 1;">
+            <div id="details-list" style="overflow-y: auto; padding-right: 8px; flex: 1;">
                 <!-- Question breakdown cards loaded dynamically -->
             </div>
         </div>
@@ -516,13 +512,32 @@
 
     <!-- MODAL PREVIEW ASSIGNED TEST -->
     <div id="modal-preview-test" class="modal-overlay" style="display: none;">
-        <div class="modal-content modal-admin-large">
-            <div class="modal-header">
+        <div class="modal-content modal-admin-large" style="display: flex; flex-direction: column;">
+            <div class="modal-header" style="flex-shrink: 0;">
                 <h2>Vizualizare Întrebări Test Asignat</h2>
                 <button class="btn-close" onclick="closePreviewModal()">&times;</button>
             </div>
-            <div id="preview-test-list" style="max-height: 60vh; overflow-y: auto; margin-top: 16px; padding-right: 8px;">
+            <div id="preview-test-list" style="overflow-y: auto; margin-top: 16px; padding-right: 8px; flex: 1;">
                 <!-- generated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ADMIN LOGIN -->
+    <div id="modal-admin-login" class="modal-overlay" style="display: none; z-index: 9999;">
+        <div class="modal-content" style="max-width: 420px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-active); border-radius: var(--radius-lg); padding: 32px 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px rgba(124,106,255,0.2);">
+            <div style="font-size: 48px; margin-bottom: 12px;">🔐</div>
+            <h2 style="font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 8px;">Autentificare Admin</h2>
+            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
+                Introdu cheia secretă de administrare pentru a accesa panoul de control.
+            </p>
+            <div style="text-align: left; margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500;">Cheie Secretă Admin</label>
+                <input type="password" id="input-admin-pass" placeholder="Introdu cheia admin..." style="width: 100%; padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: rgba(15,15,40,0.8); color: #fff; font-size: 15px; outline: none; transition: border-color 0.2s;">
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <a href="index.html" class="btn btn-secondary" style="flex: 1; text-align: center; text-decoration: none; padding: 12px;">Înapoi</a>
+                <button id="btn-submit-admin-login" class="btn btn-primary" style="flex: 1; padding: 12px;">Conectare</button>
             </div>
         </div>
     </div>

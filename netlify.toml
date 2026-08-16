@@ -2,6 +2,11 @@
   publish = "."
   functions = "netlify/functions"
 
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

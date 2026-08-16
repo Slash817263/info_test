@@ -32,7 +32,7 @@ exports.handler = async function(event, context) {
 
     try {
         if (event.httpMethod === 'GET') {
-            const res = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,created_at,phone_number&order=created_at.desc`, {
+            const res = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,password,created_at,phone_number&order=created_at.desc`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
             if (!res.ok) throw new Error('Eroare la preluare elevi');
@@ -41,13 +41,20 @@ exports.handler = async function(event, context) {
         } 
         
         if (event.httpMethod === 'POST') {
-            const body = JSON.parse(event.body);
+            const body = JSON.parse(event.body || '{}');
+
+            if (body.action === 'delete' && body.id) {
+                const res = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${body.id}`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                if (!res.ok) throw new Error('Eroare la ștergerea elevului');
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+            }
+
             if (!body.username || !body.password) {
                 return { statusCode: 400, headers, body: JSON.stringify({ error: 'Username și parola sunt obligatorii' }) };
             }
-
-            const bcrypt = require('bcryptjs');
-            const hashedPassword = bcrypt.hashSync(body.password, 10);
 
             const res = await fetch(STUDENTS_ENDPOINT, {
                 method: 'POST',
@@ -57,7 +64,7 @@ exports.handler = async function(event, context) {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=representation'
                 },
-                body: JSON.stringify({ username: body.username, password: hashedPassword })
+                body: JSON.stringify({ username: body.username, password: body.password })
             });
             if (!res.ok) {
                 const err = await res.text();
@@ -71,7 +78,8 @@ exports.handler = async function(event, context) {
         }
 
         if (event.httpMethod === 'DELETE') {
-            const id = event.queryStringParameters.id;
+            const params = event.queryStringParameters || {};
+            const id = params.id;
             if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'ID obligatoriu' }) };
 
             const res = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${id}`, {
@@ -89,9 +97,6 @@ exports.handler = async function(event, context) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'ID și noua parolă sunt obligatorii' }) };
                 }
 
-                const bcrypt = require('bcryptjs');
-                const hashedPassword = bcrypt.hashSync(body.new_password, 10);
-
                 const res = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${body.id}`, {
                     method: 'PATCH',
                     headers: {
@@ -100,7 +105,7 @@ exports.handler = async function(event, context) {
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation'
                     },
-                    body: JSON.stringify({ password: hashedPassword })
+                    body: JSON.stringify({ password: body.new_password })
                 });
                 if (!res.ok) throw new Error('Eroare la resetarea parolei');
                 return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };

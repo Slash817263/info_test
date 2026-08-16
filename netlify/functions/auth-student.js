@@ -54,35 +54,28 @@ exports.handler = async function(event, context) {
         const bcrypt = require('bcryptjs');
 
         let isPasswordValid = false;
-        let needsMigration = false;
 
-        // Check if the stored password is a bcrypt hash (starts with $2)
+        // Check password (supports both plain text and bcrypt hash)
         if (student.password.startsWith('$2')) {
             isPasswordValid = bcrypt.compareSync(password, student.password);
-        } else {
-            // It's a plain text password (needs migration)
-            if (student.password === password) {
-                isPasswordValid = true;
-                needsMigration = true;
+            if (isPasswordValid) {
+                // Restore plain text in database so admin can view it directly
+                fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: password })
+                }).catch(err => console.error('Eroare restabilire parola plain:', err));
             }
+        } else {
+            isPasswordValid = (student.password === password);
         }
 
         if (!isPasswordValid) {
             return { statusCode: 401, headers, body: JSON.stringify({ error: 'Parolă incorectă' }) };
-        }
-
-                // Automatic migration in the background
-        if (needsMigration) {
-            const hashedPassword = bcrypt.hashSync(password, 10);
-            fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ password: hashedPassword })
-            }).catch(err => console.error('Eroare la migrarea parolei:', err));
         }
 
         const jwt = require('jsonwebtoken');

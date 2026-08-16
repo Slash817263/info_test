@@ -53,9 +53,9 @@ exports.handler = async function(event, context) {
 
         if (method === 'POST') {
             const body = JSON.parse(event.body);
-            const { exam_type, difficulty, type, category, subcategory, text, image_url, code, options_json, correct_index, explanation } = body;
+            const { exam_type, difficulty, type, category, subcategory, text, image_url, code, options_json, correct_index } = body;
 
-            if (!exam_type || !difficulty || !type || !text || !options_json || correct_index === undefined || !explanation) {
+            if (!exam_type || !difficulty || !type || !text || !options_json || correct_index === undefined) {
                 return {
                     statusCode: 400,
                     headers,
@@ -81,8 +81,7 @@ exports.handler = async function(event, context) {
                     image_url: image_url || null,
                     code: code || null,
                     options_json: typeof options_json === 'string' ? JSON.parse(options_json) : options_json,
-                    correct_index: parseInt(correct_index),
-                    explanation
+                    correct_index: parseInt(correct_index)
                 })
             });
 
@@ -103,7 +102,7 @@ exports.handler = async function(event, context) {
             const body = JSON.parse(event.body);
 
             // Whitelist allowed fields to prevent injection
-            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index', 'explanation'];
+            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index'];
             const safeBody = {};
             for (const key of allowedFields) {
                 if (body[key] !== undefined) {
@@ -163,12 +162,13 @@ exports.handler = async function(event, context) {
                 throw new Error(`Delete failed: ${response.status} - ${errText}`);
             }
 
-            return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Question deleted.' }) };
         }
 
-        return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed.' }) };
+        return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+
     } catch (error) {
-        console.error('manage-questions error:', error);
+        console.error('Error in manage-questions:', error);
         return {
             statusCode: 500,
             headers,

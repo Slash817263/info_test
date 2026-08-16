@@ -80,7 +80,7 @@ exports.handler = async function(event, context) {
         });
 
         const data = response.ok ? await response.json() : [];
-        const finalData = data.filter(d => !d.test_type.startsWith('progress_')); // excludem salvari partiale
+        const finalData = data.filter(d => !d.test_type || !d.test_type.startsWith('progress_')); // excludem salvari partiale
 
         if (finalData && finalData.length > 0) {
             return {

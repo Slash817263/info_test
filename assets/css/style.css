@@ -383,41 +383,47 @@
 }
 .dash-stats-bar {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
     width: 100%;
-    margin-top: 10px;
-    padding: 12px 16px;
+    margin-top: 16px;
+    padding: 16px 20px;
     background: rgba(255,255,255,0.03);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    gap: 10px;
-}
-@media (max-width: 480px) {
-    .dash-stats-bar { flex-direction: column; align-items: stretch; }
+    gap: 12px;
+    text-align: center;
 }
 .dash-time-info {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     color: var(--text-secondary);
     font-size: 14px;
+    font-weight: 500;
 }
 .dash-situatie-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 16px;
-    background: rgba(139, 92, 246, 0.1);
-    color: #a78bfa;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 10px 24px;
+    background: rgba(139, 92, 246, 0.15);
+    color: #c4b5fd;
+    border: 1px solid rgba(139, 92, 246, 0.4);
     border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
     transition: all 0.2s;
 }
 .dash-situatie-btn:hover {
-    background: rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.25);
+    color: #ffffff;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 /* ========== PLAYFUL MODAL (PHONE) ========== */
@@ -448,4 +454,32 @@
 .modal-admin-large .modal-body, .modal-admin-large > form, .modal-admin-large #preview-test-list, .modal-admin-large #details-list { flex: 1; overflow-y: auto; padding-right: 8px; }
 .modal-admin-large .detail-card img { max-height: 400px !important; }
 .modal-admin-large .detail-code { max-height: none !important; font-size: 14px; }
+
+/* ========== LIGHTBOX MODAL (ZOOM IMAGE) ========== */
+.lightbox-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(5, 5, 20, 0.9);
+    backdrop-filter: blur(10px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: zoom-out;
+    animation: fadeIn 0.25s ease;
+}
+.lightbox-modal img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(124, 106, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    object-fit: contain;
+}
+
 

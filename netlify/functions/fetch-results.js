@@ -5,35 +5,45 @@ exports.handler = async function(event, context) {
 
     const headers = {
         'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
+        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token, Authorization',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Content-Type': 'application/json'
     };
 
     if (event.httpMethod === 'OPTIONS') {
-        return {
-            statusCode: 200,
-            headers,
-            body: ''
-        };
+        return { statusCode: 200, headers, body: '' };
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
     const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
     const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
+    const isAdmin = clientToken && validTokens.includes(clientToken);
 
     const params = event.queryStringParameters || {};
     const requestedUsername = params.username;
     
-    if (!clientToken || !validTokens.includes(clientToken)) {
-        // Dacă nu e admin, permitem accesul doar dacă cere rezultatele STRICT pentru un elev
+    if (!isAdmin) {
         if (!requestedUsername) {
             return {
                 statusCode: 401,
                 headers,
-                body: JSON.stringify({ error: 'Unauthorized: Invalid Admin Token or missing username' })
+                body: JSON.stringify({ error: 'Unauthorized: Trebuie să fii admin.' })
             };
+        }
+        const authHeader = event.headers.authorization || event.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autentificare necesară.' }) };
+        }
+        const token = authHeader.substring(7);
+        const jwt = require('jsonwebtoken');
+        try {
+            const decoded = jwt.verify(token, process.env.SUPABASE_KEY);
+            if (decoded.username !== requestedUsername) {
+                return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
+            }
+        } catch(e) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid' }) };
         }
     }
 
@@ -48,7 +58,7 @@ exports.handler = async function(event, context) {
     try {
         let url = `${supabaseUrl}/rest/v1/results?select=*&order=created_at.desc`;
         if (requestedUsername) {
-            url += `&student_username=eq.${encodeURIComponent(requestedUsername)}`;
+            url += `&or=(student_username.eq.${encodeURIComponent(requestedUsername)},student_name.eq.${encodeURIComponent(requestedUsername)})`;
         }
 
         const response = await fetch(url, {
@@ -64,11 +74,12 @@ exports.handler = async function(event, context) {
         }
 
         const data = await response.json();
+        const filteredData = data.filter(d => !d.test_type || !d.test_type.startsWith('progress_'));
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(data)
+            body: JSON.stringify(filteredData)
         };
     } catch (error) {
         console.error('Error fetching results:', error);

@@ -1,7 +1,11 @@
 exports.handler = async function(event, context) {
+    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+
     const headers = {
-        'Access-Control-Allow-Origin': 'https://acadeinformatica.netlify.app',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Origin': corsOrigin,
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token, X-Admin-Token',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
     };
@@ -84,13 +88,23 @@ exports.handler = async function(event, context) {
 
         const pointsMap = { easy: 1, medium: 2, hard: 3 };
         let serverScore = 0;
-        let serverMaxPoints = 0;
-        
-        // Add 10 default points for Academie and Initial
-        if (exam_type === 'Academie' || exam_type === 'Diverse' || exam_type === 'Initial' || test_type === 'initial') {
-            serverScore = 10;
-            serverMaxPoints = 10;
+        let serverMaxPoints = 100;
+        const totalQuestions = question_ids.length;
+
+        // Determine calculation mode
+        let dinOficiu = 0;
+        let ptsPerQuestion = 0;
+
+        if ((exam_type === 'Academie' || test_type === 'Academie') && totalQuestions === 9) {
+            dinOficiu = 10;
+            ptsPerQuestion = 10;
+        } else {
+            dinOficiu = 0;
+            ptsPerQuestion = totalQuestions > 0 ? (100 / totalQuestions) : 0;
         }
+
+        serverScore = dinOficiu;
+        serverMaxPoints = 100;
         const serverDetails = [];
         const difficultyStats = { easy: {c:0, t:0}, medium: {c:0, t:0}, hard: {c:0, t:0} };
 
@@ -102,23 +116,17 @@ exports.handler = async function(event, context) {
             const studentAns = answers_json[i];
             const isCorrect = studentAns === q.correct_index;
             
-            let pts = 0;
-            if (exam_type === 'BAC' || exam_type === 'Academie' || exam_type === 'Diverse' || exam_type === 'Initial' || test_type === 'initial' || exam_type === 'Poli') {
-                pts = 10;
-            } else {
-                pts = pointsMap[q.difficulty] || 0; // fallback
-            }
-            
-            serverMaxPoints += pts;
             difficultyStats[q.difficulty].t += 1;
             
             if (isCorrect) {
-                serverScore += pts;
+                serverScore += ptsPerQuestion;
                 difficultyStats[q.difficulty].c += 1;
             }
 
             let opts = q.options_json;
-            if (typeof opts === 'string') opts = JSON.parse(opts);
+            if (typeof opts === 'string') {
+                try { opts = JSON.parse(opts); } catch(e) {}
+            }
 
             serverDetails.push({
                 number: i + 1,
@@ -130,19 +138,23 @@ exports.handler = async function(event, context) {
                 isCorrect: isCorrect,
                 studentAnswer: studentAns,
                 correctAnswer: q.correct_index,
-                options: opts,
-                explanation: q.explanation
+                options: opts
             });
         }
+
+        serverScore = Math.round(serverScore);
+
+        const isAssigned = !!(assigned_test_id && typeof assigned_test_id === 'string' && assigned_test_id.trim() !== '');
+        const finalTestType = isAssigned || test_type === 'tema' ? 'tema' : (test_type || 'initial');
 
         const insertData = {
             student_name: student_username, // Fallback for old schema compatibility
             student_username: student_username,
             score: serverScore,
             total_points: serverMaxPoints,
-            time_taken_ms,
-            test_type: test_type || 'initial',
-            blur_count: blur_count !== undefined ? blur_count : 0,
+            time_taken_ms: (isAssigned || finalTestType === 'tema') ? 0 : time_taken_ms,
+            test_type: finalTestType,
+            blur_count: (isAssigned || finalTestType === 'tema') ? 0 : (blur_count !== undefined ? blur_count : 0),
             answers_json: answers_json,
             details_json: serverDetails
         };
@@ -165,7 +177,7 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
 
-        // If this result is from an assigned test, mark it as completed
+        // If this result is from an assigned test, mark it as completed and clean up progress
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (assigned_test_id && typeof assigned_test_id === 'string' && uuidRegex.test(assigned_test_id)) {
             const updateRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${assigned_test_id}`, {
@@ -181,6 +193,15 @@ exports.handler = async function(event, context) {
             if (!updateRes.ok) {
                 console.error("Failed to update assigned test status", await updateRes.text());
             }
+
+            // Clean up temporary intermediate progress row for this assigned test
+            await fetch(`${supabaseUrl}/rest/v1/results?test_type=eq.progress_${assigned_test_id}`, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`
+                }
+            }).catch(e => console.error("Error cleaning progress row:", e));
         }
 
         // Return the evaluated details back to the client so they can show the results page

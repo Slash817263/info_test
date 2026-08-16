@@ -71,39 +71,49 @@
         <div class="welcome-container" style="max-width: 500px;">
             <img src="SIGLA-AcaDe_Informatica.png" alt="AcaDe-QUIZ Logo" class="app-logo app-logo-small">
             <h2>Salut, <span id="dash-username" class="gradient-text">Elev</span>!</h2>
-            <p class="welcome-subtitle" style="margin-bottom: 30px;">
-                Ai finalizat deja testul introductiv.<br>Alege tipul de test intermediar pe care vrei să-l susții:
-            </p>
-            
+            <p id="dash-subtitle" class="welcome-subtitle" style="margin-bottom: 24px;">Platformă de evaluare și pregătire C++</p>
+            <div id="dash-initial-section" style="width: 100%; margin-bottom: 25px; display: none;">
+                <div style="background: linear-gradient(145deg, rgba(124, 106, 255, 0.2), rgba(0, 0, 0, 0.5)); border: 1px solid var(--accent-purple); border-radius: var(--radius-md); padding: 20px; text-align: center; box-shadow: 0 8px 30px rgba(124, 106, 255, 0.25);">
+                    <div style="font-size: 32px; margin-bottom: 8px;">🎯</div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px;">Testul de Evaluare Inițială</h3>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 18px; line-height: 1.5;">
+                        Susține testul introductiv pentru a-ți stabili nivelul de pornire și a debloca testele de pregătire.
+                    </p>
+                    <button id="btn-start-initial" onclick="startTest('initial', 'Initial')" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 15px; font-weight: 700;">
+                        🚀 Începe Testul Inițial
+                    </button>
+                </div>
+            </div>
+
             <div id="dash-assigned-tests" style="width: 100%; margin-bottom: 20px; display: none;"></div>
             
-            <div class="dash-categories-grid">
+            <div id="dash-categories-container" class="dash-categories-grid">
                 <button id="btn-intermediar-admitere" onclick="startTest('intermediar', 'Academie')" class="btn dash-cat-btn btn-academie">
                     <div class="dash-cat-icon">📝</div>
                     <div class="dash-cat-info">
                         <span class="dash-cat-title">Academie</span>
-                        <span class="dash-cat-subtitle" id="count-academie">Încărcare...</span>
+                        <span class="dash-cat-subtitle" id="count-academie">9 întrebări</span>
                     </div>
                 </button>
                 <button id="btn-intermediar-poli" onclick="startTest('intermediar', 'Poli')" class="btn dash-cat-btn btn-poli">
                     <div class="dash-cat-icon">🏛️</div>
                     <div class="dash-cat-info">
                         <span class="dash-cat-title">Politehnică</span>
-                        <span class="dash-cat-subtitle" id="count-poli">Încărcare...</span>
+                        <span class="dash-cat-subtitle" id="count-poli">10 întrebări</span>
                     </div>
                 </button>
                 <button id="btn-intermediar-bac" onclick="startTest('intermediar', 'BAC')" class="btn dash-cat-btn btn-bac">
                     <div class="dash-cat-icon">🎓</div>
                     <div class="dash-cat-info">
                         <span class="dash-cat-title">BAC</span>
-                        <span class="dash-cat-subtitle" id="count-bac">Încărcare...</span>
+                        <span class="dash-cat-subtitle" id="count-bac">10 întrebări</span>
                     </div>
                 </button>
                 <button id="btn-intermediar-diverse" onclick="startTest('intermediar', 'Diverse')" class="btn dash-cat-btn btn-diverse">
                     <div class="dash-cat-icon">🧠</div>
                     <div class="dash-cat-info">
                         <span class="dash-cat-title">Diverse</span>
-                        <span class="dash-cat-subtitle" id="count-diverse">Încărcare...</span>
+                        <span class="dash-cat-subtitle" id="count-diverse">10 întrebări</span>
                     </div>
                 </button>
             </div>
@@ -118,9 +128,6 @@
                     Situația Mea
                 </button>
             </div>
-            <div id="dash-history" style="margin-top: 25px; width: 100%; text-align: left;">
-                <!-- Populated dynamically with student's past attempts -->
-            </div>
         </div>
     </main>
 
@@ -129,12 +136,7 @@
         <div class="welcome-container" style="max-width: 800px; width: 100%; padding: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; width: 100%;">
                 <h2 style="margin:0;"><span class="gradient-text">Situația Mea</span></h2>
-                <button class="btn btn-secondary" onclick="showDashboard()" style="padding: 8px 16px; font-size: 13px;">Înapoi</button>
-            </div>
-
-            <div id="situatia-assigned" style="width: 100%; text-align: left; margin-bottom: 30px;">
-                <h3 style="font-size: 18px; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">Teste Asignate (În Așteptare)</h3>
-                <div id="list-situatia-assigned"></div>
+                <button class="btn btn-secondary" onclick="showDashboard()" style="padding: 8px 16px; font-size: 13px;">← Înapoi</button>
             </div>
 
             <div id="situatia-history" style="width: 100%; text-align: left;">

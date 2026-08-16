@@ -154,6 +154,23 @@
         .detail-opt-tag.tag-correct { background: var(--accent-green); color: #07071a; }
         .detail-opt-tag.tag-wrong { background: var(--accent-red); color: #fff; }
         .detail-code { background: #0c0d1e; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; font-family: var(--font-code); font-size: 13px; color: #a6accd; white-space: pre-wrap; margin: 10px 0; overflow-x: auto; }
-        .detail-explanation { background: rgba(124, 106, 255, 0.08); border-left: 3px solid var(--accent-purple); padding: 10px 14px; font-size: 13px; margin-top: 12px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: #d0c8ff; }
         .details-filter-btn.active { background: var(--accent-purple) !important; color: #fff !important; }
         img { display: block; margin: 0 auto; max-width: 100%; }
+
+        /* ========== LARGE DESKTOP MODALS ========== */
+        .modal-admin-large {
+            width: 95vw !important;
+            max-width: 1450px !important;
+            height: 92vh !important;
+            max-height: 92vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        .modal-admin-large #preview-test-list,
+        .modal-admin-large #details-list,
+        .modal-admin-large .modal-body {
+            flex: 1 !important;
+            max-height: none !important;
+            overflow-y: auto !important;
+            padding-right: 12px !important;
+        }

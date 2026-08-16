@@ -1,5 +1,3 @@
-// Local fs functions removed because Netlify Lambda is read-only and ephemeral
-
 exports.handler = async function(event, context) {
     const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
     const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
@@ -41,7 +39,7 @@ exports.handler = async function(event, context) {
     try {
         const method = event.httpMethod;
         const params = event.queryStringParameters || {};
-        const qId = params.id ? parseInt(params.id) : null;
+        const qId = params.id ? String(params.id).trim() : null;
 
         // APPROVE SINGLE OR ALL
         if (method === 'POST') {
@@ -65,19 +63,24 @@ exports.handler = async function(event, context) {
                 }
 
                 // Batch insert into questions table
-                const insertPayload = questionsToApprove.map(q => ({
-                    difficulty: q.difficulty,
-                    type: q.type,
-                    category: q.category,
-                    subcategory: q.subcategory,
-                    exam_type: q.exam_type || 'Initial',
-                    text: q.text,
-                    image_url: q.image_url || null,
-                    code: q.code || null,
-                    options_json: q.options_json || q.options,
-                    correct_index: q.correct_index,
-                    explanation: q.explanation
-                }));
+                const insertPayload = questionsToApprove.map(q => {
+                    let opts = q.options_json || q.options;
+                    if (typeof opts === 'string') {
+                        try { opts = JSON.parse(opts); } catch(e) {}
+                    }
+                    return {
+                        difficulty: q.difficulty,
+                        type: q.type,
+                        category: q.category,
+                        subcategory: q.subcategory,
+                        exam_type: q.exam_type || 'Initial',
+                        text: q.text,
+                        image_url: q.image_url || null,
+                        code: q.code || null,
+                        options_json: opts,
+                        correct_index: parseInt(q.correct_index)
+                    };
+                });
 
                 const insRes = await fetch(`${supabaseUrl}/rest/v1/questions`, {
                     method: 'POST',
@@ -99,7 +102,7 @@ exports.handler = async function(event, context) {
                 await fetch(`${supabaseUrl}/rest/v1/waiting_questions?id=gt.0`, {
                     method: 'DELETE',
                     headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                }).catch(() => {});
+                }).catch(e => console.error('Warning: Failed to clear waiting_questions table:', e));
 
                 return {
                     statusCode: 200,
@@ -113,6 +116,11 @@ exports.handler = async function(event, context) {
                 const questionData = body.question;
                 if (!questionData) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing question data.' }) };
+                }
+
+                let opts = questionData.options_json || questionData.options;
+                if (typeof opts === 'string') {
+                    try { opts = JSON.parse(opts); } catch(e) {}
                 }
 
                 // Insert into Supabase questions table
@@ -133,9 +141,8 @@ exports.handler = async function(event, context) {
                         text: questionData.text,
                         image_url: questionData.image_url || null,
                         code: questionData.code || null,
-                        options_json: questionData.options_json || questionData.options,
-                        correct_index: questionData.correct_index,
-                        explanation: questionData.explanation
+                        options_json: opts,
+                        correct_index: parseInt(questionData.correct_index)
                     })
                 });
 
@@ -147,12 +154,12 @@ exports.handler = async function(event, context) {
                 const approvedData = await insRes.json();
 
                 // Remove from waiting table
-                if (qId || questionData.id) {
-                    const targetId = qId || questionData.id;
+                const targetId = qId || questionData.id;
+                if (targetId) {
                     await fetch(`${supabaseUrl}/rest/v1/waiting_questions?id=eq.${targetId}`, {
                         method: 'DELETE',
                         headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                    }).catch(() => {});
+                    }).catch(e => console.error('Warning: Failed to remove question from waiting table:', e));
                 }
 
                 return {
@@ -192,12 +199,19 @@ exports.handler = async function(event, context) {
             }
             const body = JSON.parse(event.body || '{}');
 
-            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index', 'explanation'];
+            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index'];
             const safeBody = {};
             for (const key of allowedFields) {
                 if (body[key] !== undefined) {
                     safeBody[key] = body[key];
                 }
+            }
+
+            if (safeBody.options_json && typeof safeBody.options_json === 'string') {
+                try { safeBody.options_json = JSON.parse(safeBody.options_json); } catch(e) {}
+            }
+            if (safeBody.correct_index !== undefined) {
+                safeBody.correct_index = parseInt(safeBody.correct_index);
             }
 
             if (Object.keys(safeBody).length === 0) {
@@ -208,7 +222,7 @@ exports.handler = async function(event, context) {
                 method: 'PATCH',
                 headers: { 
                     'apikey': supabaseKey, 
-                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Authorization': `Bearer ${supabaseKey}`, 
                     'Content-Type': 'application/json' 
                 },
                 body: JSON.stringify(safeBody)
