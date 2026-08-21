@@ -1,5 +1,4 @@
-
-exports.handler = async function(event, context) {
+exports.handler = async function (event, context) {
     const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
     const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
     const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
@@ -36,7 +35,7 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        const body = JSON.parse(event.body);
+        const body = JSON.parse(event.body || '{}');
         const { filename, base64data, contentType } = body;
 
         if (!filename || !base64data || !contentType) {
@@ -53,7 +52,7 @@ exports.handler = async function(event, context) {
 
         const buffer = Buffer.from(base64data, 'base64');
         const uploadUrl = `${supabaseUrl}/storage/v1/object/images/${uniqueFileName}`;
-        
+
         const response = await fetch(uploadUrl, {
             method: 'POST',
             headers: {

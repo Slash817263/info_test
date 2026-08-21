@@ -19,7 +19,7 @@ exports.handler = async function(event, context) {
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
         return {
@@ -67,13 +67,9 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // Optimization 2: Construct targeted Supabase query
-        let queryUrl = `${supabaseUrl}/rest/v1/questions?order=id.asc`;
-        if (isAdmin) {
-            queryUrl += `&select=id,difficulty,type,category,subcategory,text,image_url,code,options_json,exam_type,correct_index`;
-        } else {
-            // Select public fields only (omit correct_index)
-            queryUrl += `&select=id,difficulty,type,category,subcategory,text,image_url,code,options_json,exam_type`;
+        // Construct targeted Supabase query
+        let queryUrl = `${supabaseUrl}/rest/v1/questions?select=*&order=id.asc`;
+        if (!isAdmin) {
             if (idsParam) {
                 const requestedIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
                 if (requestedIds.length > 0) {
@@ -104,6 +100,7 @@ exports.handler = async function(event, context) {
             if (typeof options === 'string') {
                 try { options = JSON.parse(options); } catch (e) { options = []; }
             }
+            const isInitialTest = (testType === 'initial' || examType === 'Initial') && !idsParam;
             const base = {
                 id: q.id,
                 difficulty: q.difficulty,
@@ -113,6 +110,7 @@ exports.handler = async function(event, context) {
                 text: q.text,
                 image_url: q.image_url || null,
                 code: q.code,
+                hint: (!isAdmin && isInitialTest) ? null : (q.hint || q.explanation || null),
                 options: options
             };
             if (isAdmin) {
@@ -169,7 +167,7 @@ exports.handler = async function(event, context) {
         } else if (testType === 'intermediar' && username) {
             // Fetch past results to dynamically pick questions (checking username or name)
             const encodedUsername = encodeURIComponent(username);
-            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.eq.${encodedUsername},student_name.eq.${encodedUsername})&order=created_at.desc`;
+            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUsername},student_name.ilike.${encodedUsername})&order=created_at.desc`;
             const resultsResponse = await fetch(resUrl, {
                 headers: {
                     'apikey': supabaseKey,

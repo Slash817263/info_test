@@ -22,7 +22,7 @@ exports.handler = async function(event, context) {
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Missing Supabase vars' }) };
@@ -91,7 +91,7 @@ exports.handler = async function(event, context) {
         }
 
         if (event.httpMethod === 'PUT') {
-            const body = JSON.parse(event.body);
+            const body = JSON.parse(event.body || '{}');
             if (body.action === 'reset_password') {
                 if (!body.id || !body.new_password) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'ID și noua parolă sunt obligatorii' }) };

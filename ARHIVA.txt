@@ -1,0 +1,14 @@
+ACADEMIE :
+2026
+2025
+2024
+2023
+Simulare ATM 2026 
+- (subiect AFT - de identificat)
+
+BAC:
+2026
+2025
+
+Poli :
+V1 - Inserat în waiting_questions (Staging)

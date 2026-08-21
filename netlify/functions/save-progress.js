@@ -32,22 +32,23 @@ exports.handler = async function(event, context) {
     }
     const token = authHeader.substring(7);
     const jwt = require('jsonwebtoken');
+    const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
     let decoded;
     try {
-        decoded = jwt.verify(token, process.env.SUPABASE_KEY);
+        decoded = jwt.verify(token, jwtSecret);
     } catch(e) {
         return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat' }) };
     }
 
     try {
-        const body = JSON.parse(event.body);
+        const body = JSON.parse(event.body || '{}');
         const { assigned_test_id, student_username, answers_json, time_taken_ms, current_index } = body;
 
         if (!assigned_test_id || !student_username) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing required fields.' }) };
         }
 
-        if (decoded.username !== student_username) {
+        if ((decoded.username || '').toLowerCase() !== (student_username || '').toLowerCase()) {
             return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden: Username mismatch' }) };
         }
 

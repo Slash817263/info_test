@@ -37,9 +37,10 @@ exports.handler = async function(event, context) {
         }
         const token = authHeader.substring(7);
         const jwt = require('jsonwebtoken');
+        const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
         try {
-            const decoded = jwt.verify(token, process.env.SUPABASE_KEY);
-            if (decoded.username !== requestedUsername) {
+            const decoded = jwt.verify(token, jwtSecret);
+            if ((decoded.username || '').toLowerCase() !== (requestedUsername || '').toLowerCase()) {
                 return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
             }
         } catch(e) {

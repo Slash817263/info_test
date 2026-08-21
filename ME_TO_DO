@@ -1,10 +1,63 @@
-1.Cand intru prima data pe aplicatie nu imi cere credentialele
-2. Nu pot acces /admin.html pe varianta pe netlify
-3. Adaugare meniu dupa introducerea datelor pentru prima data : userul
-sa poata sa intre pe test atunci cand apasa pe butonul test initial (singurul)
-Userului i se permite sa iasa din testul initial si sa fie intors la meniu
-(progresul se pierde)
-4. Alte potentiale probleme
-5. Eliminarea campului explicatii din baza de date a intrebarilor.
-6. Verificare logica asignare teste (in functie de raspunsurile din trecut)
-7.
+MINORE
+1. Testele intermediare facute independent de user sunt vazute ca tema.
+Verifica logica si asigura diferenta clara intre cele 2 tipuri de teste 
+2. Dezactivare functii de trimis pe whatsapp. 
+3. Vizualizare bara progres tema asignata elev din interfata admin.
+4. Modificare sugestie link pe netlify - "Platforma privata de învățare informatică C++ prin exerciții. Testul introductiv cuprinde 30 întrebări în 30 minute. Mult succes!"
+
+
+
+
+MEDII
+1. Verificare logica asignare test in cazul in care un rezultat a fost 
+sters de admin din baza de date. Daca se sterge acel test, se considera
+ca intrebarile revin la statusul neintalnite.
+2. Userul care nu are telefonul setat in baza de date va fi obligat sa 
+introduca numarul de telefon (caseta text in acelasi stil cu site-ul)
+imediat dupa prima logare pe site (cu numele si parola).
+3. Interfață user La logare : 
+La nume de utilizator sugestia să rămână "prenume.nume" (nu ex: tudor123)
+Stergere butoane "Deconectare" - nu are logica, la fel si "Panou Administrare".
+4. Intrebarile din supabase sa fie obligatoriu unde trebuie. Categoriile si subcategoriile sunt STRICT urmatoarele :
+
+1.Fundamente
+1.1 Citire si afisare date
+1.2 Operatori si expresii
+1.3 Structuri de control
+1.4 Complexitati
+
+2.Organizarea Datelor
+2.1 Vectori
+2.2 Matrice
+2.3 Siruri de caractere
+2.4 Structuri de date (struct)
+
+3.Subprograme
+3.1 Transmitere prin valoare
+3.2 Transmitere prin referinta
+3.3 Recursivitate
+
+4.Backtracking
+4.1 Teorie si aplicare practica
+
+5.Grafuri si Arbori
+5.1 Terminologie grafuri
+5.2 Grafuri orientate
+5.3 Grafuri neorientate
+5.4 Arbori 
+
+5. In testele terminate noi nu se impart raspunsurile in interfata admin pe cele 3 categorii (Toate, Gresite, Corecte). Contorul celor 3 categorii vede 0 0 0. Timpul total la un test initial este de STRICT 30 minute (dupa 30 minute fix se trimit rezultatele)
+
+6. Curatenie pe Supabase.
+
+7. RLS la intrebari pe Supabase.
+
+
+
+MAJORE
+1. [REZOLVAT] Interfața permite număr variabil de răspunsuri (2-6 variante) pentru orice întrebare.
+Toate cele 6 câmpuri sunt vizibile în formularul din Admin, iar opțiunile lăsate goale nu se salvează și nu apar la elev.
+Dropdown-ul de răspuns corect și tastele rapide (1..6, A..F) sunt sincronizate dinamic.
+
+
+

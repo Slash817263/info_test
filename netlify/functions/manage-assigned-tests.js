@@ -52,9 +52,10 @@ exports.handler = async function(event, context) {
                 }
                 const token = authHeader.substring(7);
                 const jwt = require('jsonwebtoken');
+                const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
                 try {
-                    const decoded = jwt.verify(token, process.env.SUPABASE_KEY);
-                    if (decoded.username !== username) {
+                    const decoded = jwt.verify(token, jwtSecret);
+                    if ((decoded.username || '').toLowerCase() !== (username || '').toLowerCase()) {
                         return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
                     }
                 } catch(e) {
@@ -80,18 +81,19 @@ exports.handler = async function(event, context) {
             const data = await response.json();
 
             let progData = [];
-            if (username) {
-                try {
-                    const progUrl = `${supabaseUrl}/rest/v1/results?student_username=eq.${encodeURIComponent(username)}&test_type=like.progress_*&select=test_type,answers_json`;
-                    const progRes = await fetch(progUrl, {
-                        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                    });
-                    if (progRes.ok) {
-                        progData = await progRes.json();
-                    }
-                } catch(e) {
-                    console.error('Error fetching progress in manage-assigned-tests:', e);
+            try {
+                let progUrl = `${supabaseUrl}/rest/v1/results?test_type=like.progress_*&select=test_type,answers_json`;
+                if (username) {
+                    progUrl = `${supabaseUrl}/rest/v1/results?student_username=eq.${encodeURIComponent(username)}&test_type=like.progress_*&select=test_type,answers_json`;
                 }
+                const progRes = await fetch(progUrl, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                if (progRes.ok) {
+                    progData = await progRes.json();
+                }
+            } catch(e) {
+                console.error('Error fetching progress in manage-assigned-tests:', e);
             }
 
             const enrichedData = data.map(at => {
@@ -112,36 +114,32 @@ exports.handler = async function(event, context) {
             if (!isAdmin) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
             
             const body = JSON.parse(event.body || '{}');
-            const { student_username, exam_type, target_length, deadline } = body;
+            const { action, student_username, exam_type, target_length, deadline } = body;
+
+            if (action === 'update_deadline' || body.action === 'update_deadline') {
+                const testId = body.id || body.test_id;
+                const deadlineIso = body.deadline;
+                if (!testId || !deadlineIso) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'ID-ul și noul termen (deadline) sunt obligatorii.' }) };
+                }
+                const updateRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${testId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({ deadline: deadlineIso })
+                });
+                if (!updateRes.ok) throw new Error(await updateRes.text());
+                const updated = await updateRes.json();
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true, test: updated[0] }) };
+            }
 
             const triggerWebhook = async (username, type, len, dline) => {
-                if (process.env.WHATSAPP_WEBHOOK_URL) {
-                    const stdRes = await fetch(`${supabaseUrl}/rest/v1/students?username=eq.${encodeURIComponent(username)}&select=phone_number`, {
-                        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                    });
-                    if (stdRes.ok) {
-                        const stdData = await stdRes.json();
-                        if (stdData.length > 0 && stdData[0].phone_number) {
-                            try {
-                                await fetch(process.env.WHATSAPP_WEBHOOK_URL, {
-                                    method: 'POST',
-                                    headers: { 
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${process.env.WHATSAPP_WEBHOOK_SECRET}`
-                                    },
-                                    body: JSON.stringify({
-                                        event: 'test_assigned',
-                                        phone_number: stdData[0].phone_number,
-                                        student_username: username,
-                                        exam_type: type,
-                                        target_length: len,
-                                        deadline: dline
-                                    })
-                                });
-                            } catch (err) { console.error('Webhook fetch error:', err); }
-                        }
-                    }
-                }
+                // Notificari WhatsApp dezactivate
+                return;
             };
 
             if (body.save_draft) {
@@ -186,7 +184,23 @@ exports.handler = async function(event, context) {
                 categoryQuestions = allQuestions.filter(q => (q.exam_type || 'Diverse').includes(exam_type));
             }
 
-            if (categoryQuestions.length === 0) {
+            let preselected_ids = body.preselected_ids || [];
+            let selected = [];
+            
+            if (preselected_ids.length > target_length) {
+                target_length = preselected_ids.length; // Override
+            }
+
+            if (preselected_ids.length > 0) {
+                const preSet = new Set(preselected_ids.map(String));
+                const preQuestions = allQuestions.filter(q => preSet.has(String(q.id)));
+                selected.push(...preQuestions);
+                
+                allQuestions = allQuestions.filter(q => !preSet.has(String(q.id)));
+                categoryQuestions = categoryQuestions.filter(q => !preSet.has(String(q.id)));
+            }
+
+            if (categoryQuestions.length + selected.length === 0) {
                 return { 
                     statusCode: 400, 
                     headers, 
@@ -194,17 +208,17 @@ exports.handler = async function(event, context) {
                 };
             }
 
-            if (categoryQuestions.length < target_length) {
+            if (categoryQuestions.length + selected.length < target_length) {
                 return { 
                     statusCode: 400, 
                     headers, 
-                    body: JSON.stringify({ error: `Categoria "${exam_type}" conține doar ${categoryQuestions.length} întrebări în total. Nu poți genera un test cu ${target_length} întrebări.` }) 
+                    body: JSON.stringify({ error: `Categoria "${exam_type}" conține doar ${categoryQuestions.length + selected.length} întrebări în total.` }) 
                 };
             }
 
             // 2. Fetch student's past completed results to evaluate priorities
             const encodedUser = encodeURIComponent(student_username);
-            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.eq.${encodedUser},student_name.eq.${encodedUser})&order=created_at.asc`;
+            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUser},student_name.ilike.${encodedUser})&order=created_at.asc`;
             const resultsResponse = await fetch(resUrl, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } });
             
             const lastQuestionStatus = {}; // question_id -> boolean (true if correct, false if wrong)
@@ -264,7 +278,7 @@ exports.handler = async function(event, context) {
                 return picked;
             }
 
-            const selected = [];
+            // selected array is already initialized with preselected ones
 
             if (exam_type === 'Diverse') {
                 // LOGICA SPECIALA DIVERSE:
@@ -403,7 +417,7 @@ exports.handler = async function(event, context) {
 
                 // Fetch history
                 const encodedUser = encodeURIComponent(targetUsername);
-                const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.eq.${encodedUser},student_name.eq.${encodedUser})&order=created_at.asc`;
+                const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUser},student_name.ilike.${encodedUser})&order=created_at.asc`;
                 const resultsResponse = await fetch(resUrl, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } });
                 const lastStatus = {};
                 if (resultsResponse.ok) {
@@ -416,8 +430,8 @@ exports.handler = async function(event, context) {
                     }
                 }
 
-                const currentSet = new Set(currentIds);
-                const candidates = categoryQuestions.filter(q => !currentSet.has(q.id));
+                const currentSet = new Set(currentIds.map(String));
+                const candidates = categoryQuestions.filter(q => !currentSet.has(String(q.id)));
 
                 if (candidates.length === 0) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Nu mai există alte întrebări disponibile în această categorie pentru înlocuire.' }) };
@@ -434,7 +448,7 @@ exports.handler = async function(event, context) {
                 if (action === 'regenerate_draft') {
                     return { statusCode: 200, headers, body: JSON.stringify({ new_question_id: newQId }) };
                 } else {
-                    const newIds = currentIds.map(qid => qid === old_question_id ? newQId : qid);
+                    const newIds = currentIds.map(qid => String(qid) === String(old_question_id) ? newQId : qid);
                     const updateRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${id}`, {
                         method: 'PATCH',
                         headers: {
@@ -449,6 +463,25 @@ exports.handler = async function(event, context) {
                     const updated = await updateRes.json();
                     return { statusCode: 200, headers, body: JSON.stringify(updated[0]) };
                 }
+            }
+
+            if (action === 'update_deadline') {
+                if (!id || !body.deadline) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'ID-ul și noul termen (deadline) sunt obligatorii.' }) };
+                }
+                const updateRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({ deadline: body.deadline })
+                });
+                if (!updateRes.ok) throw new Error(await updateRes.text());
+                const updated = await updateRes.json();
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true, test: updated[0] }) };
             }
             
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Acțiune invalidă.' }) };

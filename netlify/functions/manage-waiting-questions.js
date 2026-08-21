@@ -5,7 +5,7 @@ exports.handler = async function(event, context) {
 
     const headers = {
         'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token',
+        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token, Authorization',
         'Access-Control-Allow-Methods': 'POST, PUT, DELETE, OPTIONS',
         'Content-Type': 'application/json'
     };
@@ -77,6 +77,7 @@ exports.handler = async function(event, context) {
                         text: q.text,
                         image_url: q.image_url || null,
                         code: q.code || null,
+                        hint: q.hint || q.explanation || null,
                         options_json: opts,
                         correct_index: parseInt(q.correct_index)
                     };
@@ -141,6 +142,7 @@ exports.handler = async function(event, context) {
                         text: questionData.text,
                         image_url: questionData.image_url || null,
                         code: questionData.code || null,
+                        hint: questionData.hint || questionData.explanation || null,
                         options_json: opts,
                         correct_index: parseInt(questionData.correct_index)
                     })
@@ -199,12 +201,16 @@ exports.handler = async function(event, context) {
             }
             const body = JSON.parse(event.body || '{}');
 
-            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index'];
+            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index', 'hint'];
             const safeBody = {};
             for (const key of allowedFields) {
                 if (body[key] !== undefined) {
                     safeBody[key] = body[key];
                 }
+            }
+
+            if (safeBody.hint === undefined && body.explanation !== undefined) {
+                safeBody.hint = body.explanation;
             }
 
             if (safeBody.options_json && typeof safeBody.options_json === 'string') {

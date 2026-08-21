@@ -6,10 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Test Introductiv Informatică | C++</title>
     <meta name="description"
-        content="Evaluează-ți nivelul de cunoștințe C++ cu acest test introductiv de 50 de întrebări pe 3 nivele de dificultate.">
+        content="Platforma privata de învățare informatică C++ prin exerciții. Testul introductiv cuprinde 30 întrebări în 30 minute. Mult succes!">
     <meta property="og:title" content="Test Introductiv Informatică | C++">
-    <meta property="og:description" content="50 de întrebări C++ pe 3 nivele de dificultate. Află-ți nivelul!">
+    <meta property="og:description" content="Platforma privata de învățare informatică C++ prin exerciții. Testul introductiv cuprinde 30 întrebări în 30 minute. Mult succes!">
     <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Test Introductiv Informatică | C++">
+    <meta name="twitter:description" content="Platforma privata de învățare informatică C++ prin exerciții. Testul introductiv cuprinde 30 întrebări în 30 minute. Mult succes!">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💻</text></svg>">
     <link
@@ -43,7 +46,7 @@
             </p>
             <div class="input-group">
                 <label for="student-username">Nume de utilizator</label>
-                <input type="text" id="student-username" placeholder="ex: tudor123" maxlength="50">
+                <input type="text" id="student-username" placeholder="prenume.nume" maxlength="50">
             </div>
             <div class="input-group">
                 <label for="student-password">Parolă</label>
@@ -57,12 +60,6 @@
                     <path d="m12 5 7 7-7 7" />
                 </svg>
             </button>
-            <div style="margin-top: 24px; font-size: 13px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
-                <a href="#" onclick="logoutStudent(); return false;" style="color: var(--accent-red); text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='#fca5a5'" onmouseout="this.style.color='var(--accent-red)'">Deconectare</a>
-                <a href="admin.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;"
-                    onmouseover="this.style.color='var(--text-secondary)'"
-                    onmouseout="this.style.color='var(--text-muted)'">Panou Administrare</a>
-            </div>
         </div>
     </main>
 
@@ -177,16 +174,29 @@
             </div>
         </div>
         <div class="quiz-container">
-            <div class="question-header" id="question-header">
-                <span class="question-number" id="question-number">01</span>
-                <div class="question-badges">
-                    <span class="badge" id="badge-difficulty">Ușoară</span>
-                    <span class="badge badge-type" id="badge-type">Grilă</span>
+            <div class="question-header" id="question-header" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <span class="question-number" id="question-number">01</span>
+                    <div class="question-badges">
+                        <span class="badge" id="badge-difficulty">Ușoară</span>
+                        <span class="badge badge-type" id="badge-type">Grilă</span>
+                    </div>
                 </div>
+                <button id="btn-hint" class="btn-hint" style="display:none;" onclick="toggleHint()" type="button" aria-label="Afișează indiciu">
+                    <span class="hint-icon">💡</span>
+                    <span class="hint-text">HINT</span>
+                </button>
+            </div>
+            <div id="hint-box" class="hint-box" style="display:none;">
+                <div class="hint-header">
+                    <span>💡 Indiciu</span>
+                    <button class="hint-close-btn" onclick="toggleHint()" type="button">&times;</button>
+                </div>
+                <div id="hint-content" class="hint-body"></div>
             </div>
             <div class="question-content" id="question-content">
                 <p class="question-text" id="question-text"></p>
-                <img id="question-image" src="" alt="Imagine întrebare" style="display:none; max-width: 100%; height: auto; margin-top: 15px; border-radius: 8px;">
+                <div id="question-images-container" class="question-images-container" style="display:none;"></div>
                 <div class="code-block-wrapper" id="code-wrapper" style="display:none">
                     <div class="code-label">C++</div>
                     <pre class="code-block"><code id="code-content"></code></pre>

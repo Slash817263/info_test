@@ -4,8 +4,8 @@
 const CONFIG = {
     tutorPhone: '',
     tutorEmail: '',
-    timerInitial: 20 * 60 * 1000,      // 20 minutes for "Șocul Realității"
-    timerIntermediar: 30 * 60 * 1000,   // 30 minutes for intermediate tests
+    timerInitial: 30 * 60 * 1000,      // 30 minutes for Initial Test
+    timerIntermediar: 60 * 60 * 1000,   // 60 minutes for intermediate tests
 };
 
 /* ========================================================================
@@ -49,7 +49,7 @@ const els = {
     badgeDifficulty: $('#badge-difficulty'),
     badgeType: $('#badge-type'),
     questionText: $('#question-text'),
-    questionImage: $('#question-image'),
+    questionImagesContainer: $('#question-images-container'),
     codeWrapper: $('#code-wrapper'),
     codeContent: $('#code-content'),
     optionsContainer: $('#options-container'),
@@ -72,6 +72,42 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function formatEuropeanDateTime(isoString) {
+    if (!isoString) return '-';
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '-';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} la ora ${hours}:${mins}`;
+}
+window.formatEuropeanDateTime = formatEuropeanDateTime;
+
+function parseImageUrls(imageVal) {
+    if (!imageVal) return [];
+    if (Array.isArray(imageVal)) return imageVal.filter(Boolean);
+    if (typeof imageVal === 'string') {
+        const trimmed = imageVal.trim();
+        if (!trimmed) return [];
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) return parsed.filter(Boolean);
+            } catch (e) {}
+        }
+        if (trimmed.includes('\n')) {
+            return trimmed.split('\n').map(s => s.trim()).filter(Boolean);
+        }
+        if (trimmed.includes(',') && !trimmed.startsWith('data:')) {
+            return trimmed.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        return [trimmed];
+    }
+    return [];
 }
 
 function cleanSymbols(str) {
@@ -138,7 +174,8 @@ function renderQuestion() {
 
     // Generate displayOrder for shuffling options
     if (!q.displayOrder) {
-        q.displayOrder = [0, 1, 2, 3];
+        const numOpts = (q.options && q.options.length) || 4;
+        q.displayOrder = Array.from({ length: numOpts }, (_, i) => i);
         for (let i = q.displayOrder.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [q.displayOrder[i], q.displayOrder[j]] = [q.displayOrder[j], q.displayOrder[i]];
@@ -171,17 +208,19 @@ function renderQuestion() {
     // Question text
     els.questionText.textContent = cleanSymbols(q.text);
 
-    // Image (click to zoom)
-    if (q.image_url) {
-        els.questionImage.src = q.image_url;
-        els.questionImage.style.display = 'block';
-        els.questionImage.style.cursor = 'zoom-in';
-        els.questionImage.onclick = () => openLightbox(q.image_url);
-    } else {
-        els.questionImage.removeAttribute('src');
-        els.questionImage.style.display = 'none';
-        els.questionImage.onclick = null;
-        els.questionImage.style.cursor = 'default';
+    // Images (centered with click to zoom)
+    const qImages = parseImageUrls(q.image_url);
+    const imgContainer = els.questionImagesContainer || $('#question-images-container');
+    if (imgContainer) {
+        if (qImages.length > 0) {
+            imgContainer.style.display = 'flex';
+            imgContainer.innerHTML = qImages.map((url, i) => `
+                <img src="${url}" class="question-img-item" alt="Imagine întrebare ${i + 1}" onclick="openLightbox('${url}')">
+            `).join('');
+        } else {
+            imgContainer.style.display = 'none';
+            imgContainer.innerHTML = '';
+        }
     }
 
     // Code block with Prism C++ Syntax Highlighting
@@ -203,20 +242,39 @@ function renderQuestion() {
         els.codeWrapper.style.display = 'none';
     }
 
-    // Options
-    const letters = ['A', 'B', 'C', 'D'];
+    // Options (supports 4 to 6 options: A, B, C, D, E, F)
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
     let optionsHtml = '';
     q.displayOrder.forEach((originalIndex, displayIndex) => {
         const opt = q.options[originalIndex];
+        if (opt === undefined) return;
         const selectedClass = state.answers[idx] === originalIndex ? 'selected' : '';
         const isCodeOption = q.type === 'code' ? ' code-option' : '';
+        const letter = letters[displayIndex] || String.fromCharCode(65 + displayIndex);
         optionsHtml += `
-                <div class="option-card ${selectedClass}" data-index="${originalIndex}" role="button" tabindex="0" aria-label="Opțiunea ${letters[displayIndex]}">
-                    <div class="option-letter">${letters[displayIndex]}</div>
+                <div class="option-card ${selectedClass}" data-index="${originalIndex}" role="button" tabindex="0" aria-label="Opțiunea ${letter}">
+                    <div class="option-letter">${letter}</div>
                     <div class="option-text${isCodeOption}">${escapeHtml(opt)}</div>
                 </div>`;
     });
     els.optionsContainer.innerHTML = optionsHtml;
+
+    // Hint handling in progress: Allowed ONLY for 'tema' (assigned test) OR 'intermediar' test. NEVER for 'initial'.
+    const isInitialTest = (state.testType === 'initial' || state.examType === 'Initial');
+    const isAllowedInProgress = !isInitialTest && (state.testType === 'intermediar' || state.testType === 'tema' || !!state.assignedTestId);
+
+    const btnHint = $('#btn-hint');
+    const hintBox = $('#hint-box');
+    const hintContent = $('#hint-content');
+
+    if (hintBox) hintBox.style.display = 'none'; // reset collapsed on question change
+
+    if (isAllowedInProgress && q.hint && q.hint.trim() !== '') {
+        if (btnHint) btnHint.style.display = 'inline-flex';
+        if (hintContent) hintContent.textContent = q.hint.trim();
+    } else {
+        if (btnHint) btnHint.style.display = 'none';
+    }
 
     // Navigation buttons
     els.btnPrev.style.visibility = idx === 0 ? 'hidden' : 'visible';
@@ -242,6 +300,38 @@ function renderQuestion() {
     els.optionsContainer.classList.add('question-animate');
 }
 
+window.toggleHint = function () {
+    const hintBox = $('#hint-box');
+    if (!hintBox) return;
+    hintBox.style.display = (hintBox.style.display === 'none' || hintBox.style.display === '') ? 'block' : 'none';
+};
+
+window.toggleReviewHint = function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+};
+
+window.toggleReviewItem = function (el) {
+    if (!el) return;
+    el.classList.toggle('expanded');
+};
+
+window.toggleAllReviewItems = function () {
+    const items = document.querySelectorAll('.review-item');
+    const btn = document.getElementById('btn-toggle-all-text');
+    const isAnyCollapsed = Array.from(items).some(it => !it.classList.contains('expanded'));
+
+    items.forEach(it => {
+        if (isAnyCollapsed) it.classList.add('expanded');
+        else it.classList.remove('expanded');
+    });
+
+    if (btn) {
+        btn.textContent = isAnyCollapsed ? 'Restrânge tot' : 'Extinde tot';
+    }
+};
+
 /* ========================================================================
    LOCAL STORAGE & TIMER & API UTILITIES
    ======================================================================== */
@@ -257,6 +347,10 @@ function saveStateToStorage() {
         localStorage.setItem('quiz_blur_count', state.blurCount);
         localStorage.setItem('quiz_question_timings', JSON.stringify(state.questionTimings));
         localStorage.setItem('quiz_assigned_test_id', state.assignedTestId || '');
+        if (Array.isArray(questions)) {
+            const displayOrders = questions.map(q => q.displayOrder || null);
+            localStorage.setItem('quiz_display_orders', JSON.stringify(displayOrders));
+        }
     } catch (e) {
         console.error('Failed to save state to localStorage', e);
     }
@@ -266,7 +360,7 @@ function clearStateFromStorage() {
     try {
         ['quiz_current_question', 'quiz_answers', 'quiz_start_time', 'quiz_student_username',
             'quiz_student_id', 'quiz_test_type', 'quiz_exam_type', 'quiz_blur_count', 'quiz_question_timings',
-            'quiz_questions_ids', 'quiz_assigned_test_id'].forEach(k => localStorage.removeItem(k));
+            'quiz_questions_ids', 'quiz_assigned_test_id', 'quiz_display_orders'].forEach(k => localStorage.removeItem(k));
     } catch (e) {
         console.error('Failed to clear state from localStorage', e);
     }
@@ -289,34 +383,12 @@ function startTimer() {
         const isInitial = state.testType === 'initial' || state.examType === 'Initial';
 
         if (remaining <= 0) {
-            if (isInitial) {
-                const overtimeLimit = -10 * 60 * 1000; // -10 minutes
-                if (remaining <= overtimeLimit) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                    countdownEl.textContent = '-10:00';
-                    timerBadge.classList.add('warning');
-                    autoSubmitQuiz();
-                    return;
-                } else {
-                    // Display overtime (negative timer)
-                    const overTimeSecs = Math.floor((-remaining) / 1000);
-                    const minutes = Math.floor(overTimeSecs / 60);
-                    const seconds = overTimeSecs % 60;
-                    countdownEl.textContent = `-${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                    timerBadge.classList.add('warning');
-                    timerBadge.style.color = 'var(--accent-red)';
-                    return; // skip the positive timer rendering below
-                }
-            } else {
-                // For non-initial tests, strictly end at 0
-                clearInterval(timerInterval);
-                timerInterval = null;
-                countdownEl.textContent = '00:00';
-                timerBadge.classList.add('warning');
-                autoSubmitQuiz();
-                return;
-            }
+            clearInterval(timerInterval);
+            timerInterval = null;
+            countdownEl.textContent = '00:00';
+            timerBadge.classList.add('warning');
+            autoSubmitQuiz();
+            return;
         }
 
         const totalSeconds = Math.floor(remaining / 1000);
@@ -342,44 +414,53 @@ function autoSubmitQuiz() {
 }
 
 async function submitResult(timeTakenMs) {
-    try {
-        const questionIds = questions.map(q => q.id);
+    const questionIds = questions.map(q => q.id);
+    const payload = {
+        student_username: state.studentUsername,
+        student_id: state.studentId,
+        test_type: state.assignedTestId ? 'tema' : state.testType,
+        exam_type: state.examType,
+        time_taken_ms: state.assignedTestId ? 0 : timeTakenMs,
+        blur_count: state.assignedTestId ? 0 : state.blurCount,
+        answers_json: state.answers,
+        question_ids: questionIds,
+        assigned_test_id: state.assignedTestId
+    };
 
+    try {
+        localStorage.setItem('pending_quiz_result', JSON.stringify(payload));
         const response = await fetch('/.netlify/functions/save-result', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + (localStorage.getItem('active_student_token') || '')
             },
-            body: JSON.stringify({
-                student_username: state.studentUsername,
-                student_id: state.studentId,
-                test_type: state.assignedTestId ? 'tema' : state.testType,
-                exam_type: state.examType,
-                time_taken_ms: state.assignedTestId ? 0 : timeTakenMs,
-                blur_count: state.assignedTestId ? 0 : state.blurCount,
-                answers_json: state.answers,
-                question_ids: questionIds,
-                assigned_test_id: state.assignedTestId
-            })
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            console.error('Server error saving results');
-            els.resultsContainer.innerHTML = '<div class="empty-state"><p style="color:var(--accent-red);">Eroare la salvarea rezultatelor pe server.</p></div>';
-            return;
+            let errorMsg = 'Eroare la salvarea rezultatelor pe server.';
+            try {
+                const errData = await response.json();
+                if (errData.error) errorMsg = errData.error;
+            } catch (e) { }
+            throw new Error(errorMsg);
         }
 
         const data = await response.json();
+        localStorage.removeItem('pending_quiz_result');
 
         const results = {
-            totalCorrect: data.evaluatedDetails.filter(d => d.isCorrect).length,
+            totalCorrect: (data.evaluatedDetails || []).filter(d => d.isCorrect).length,
             totalPoints: data.score,
             maxPoints: data.totalPoints,
-            easyCorrect: data.stats.easy.c, easyTotal: data.stats.easy.t,
-            mediumCorrect: data.stats.medium.c, mediumTotal: data.stats.medium.t,
-            hardCorrect: data.stats.hard.c, hardTotal: data.stats.hard.t,
-            details: data.evaluatedDetails
+            easyCorrect: (data.stats && data.stats.easy) ? data.stats.easy.c : 0,
+            easyTotal: (data.stats && data.stats.easy) ? data.stats.easy.t : 0,
+            mediumCorrect: (data.stats && data.stats.medium) ? data.stats.medium.c : 0,
+            mediumTotal: (data.stats && data.stats.medium) ? data.stats.medium.t : 0,
+            hardCorrect: (data.stats && data.stats.hard) ? data.stats.hard.c : 0,
+            hardTotal: (data.stats && data.stats.hard) ? data.stats.hard.t : 0,
+            details: data.evaluatedDetails || []
         };
 
         const pct = results.totalCorrect / questions.length;
@@ -413,8 +494,30 @@ async function submitResult(timeTakenMs) {
 
     } catch (err) {
         console.error('Network error saving results', err);
-        els.resultsContainer.innerHTML = '<div class="empty-state"><p style="color:var(--accent-red);">Eroare de rețea. Nu s-a putut conecta la server.</p></div>';
+        showToast(err.message || 'Eroare la trimiterea rezultatelor.', true);
+        
+        const isAuthError = err.message && (err.message.includes('Token') || err.message.includes('Autentificare') || err.message.includes('Expirat'));
+        
+        els.resultsContainer.innerHTML = `
+            <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                <h3 style="color: var(--accent-red); margin-bottom: 8px;">Conexiunea cu serverul a fost întreruptă</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 24px; max-width: 480px; margin-left: auto; margin-right: auto;">
+                    ${isAuthError 
+                        ? 'Sesiunea ta a expirat. Te rog să deschizi un alt tab, să te conectezi din nou, iar apoi revino aici și apasă pe butonul de mai jos.'
+                        : 'Răspunsurile tale sunt salvate în siguranță pe acest dispozitiv. Verifică conexiunea la internet și apasă butonul de mai jos pentru a retrimite.'}
+                </p>
+                <button class="btn btn-primary" onclick="retryPendingSubmission(${timeTakenMs})" style="padding: 12px 28px; font-size: 16px;">
+                    🔄 Reîncearcă Trimiterea Rezultatelor
+                </button>
+            </div>
+        `;
     }
+}
+
+function retryPendingSubmission(timeTakenMs) {
+    els.resultsContainer.innerHTML = '<div style="text-align:center; padding:40px;"><p>Se retrimite...</p></div>';
+    submitResult(timeTakenMs);
 }
 
 /* ========================================================================
@@ -541,7 +644,12 @@ function renderResults(results) {
             </div>` : ''}
 
             <div class="review-section">
-                <h3>Detalii întrebări</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="margin:0;">Detalii întrebări</h3>
+                    <button type="button" class="btn btn-ghost" style="padding:6px 14px; font-size:12px; border-radius:6px;" onclick="toggleAllReviewItems()">
+                        <span id="btn-toggle-all-text">Extinde tot</span>
+                    </button>
+                </div>
                 <div class="review-list">
                     ${results.details.map(d => {
         const diffClass = `review-diff-${d.difficulty}`;
@@ -550,16 +658,47 @@ function renderResults(results) {
         const studentOptText = d.studentAnswer !== null ? (d.options[d.studentAnswer] || '—') : '—';
         const correctOptText = d.options[d.correctAnswer] || '—';
         const detail = d.isCorrect
-            ? `Răspuns corect: ${escapeHtml(correctOptText)}`
-            : `Tu: ${escapeHtml(studentOptText)} <br> Corect: ${escapeHtml(correctOptText)}`;
+            ? `<div style="color:var(--accent-green);">Răspuns corect: <strong>${escapeHtml(correctOptText)}</strong></div>`
+            : `<div style="margin-bottom:4px; color:var(--accent-red);">Răspunsul tău: <strong>${escapeHtml(studentOptText)}</strong></div><div style="color:var(--accent-green);">Răspuns corect: <strong>${escapeHtml(correctOptText)}</strong></div>`;
+
+        // Show hint on final review ONLY for intermediate tests (not initial, not tema)
+        const isIntermediate = (state.testType === 'intermediar' && !state.assignedTestId && state.examType !== 'Initial');
+        const hintHtml = (isIntermediate && d.hint && d.hint.trim() !== '') ? `
+            <div class="review-hint-wrapper" style="margin-top:10px;">
+                <button type="button" class="btn-hint-inline" onclick="event.stopPropagation(); toggleReviewHint('rev-hint-${d.number}')">
+                    <span>💡</span> HINT
+                </button>
+                <div id="rev-hint-${d.number}" class="review-hint-box" style="display:none; margin-top:8px;">
+                    <div style="font-weight:700; color:#fbbf24; margin-bottom:4px; font-size:11px; text-transform:uppercase;">💡 Indiciu / Explicație:</div>
+                    <div style="color:#e2e8f0; line-height:1.5;">${escapeHtml(d.hint)}</div>
+                </div>
+            </div>
+        ` : '';
+
+        const codeHtml = d.code ? `<pre class="detail-code" style="background:#0c0d1e; padding:10px; border-radius:4px; font-size:12px; color:#a6accd; margin:8px 0; overflow-x:auto;"><code class="language-cpp">${escapeHtml(d.code)}</code></pre>` : '';
+        const dImgs = parseImageUrls(d.image_url);
+        const imageHtml = dImgs.length > 0 ? `
+            <div class="question-images-container" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin:10px auto; text-align:center;">
+                ${dImgs.map(url => `<img src="${url}" class="question-img-item" style="max-height:160px; border-radius:6px; margin:0 auto;" onclick="openLightbox('${url}')">`).join('')}
+            </div>` : '';
+
         return `
-                            <div class="review-item ${correctClass}">
-                                <span class="review-num">${d.number}</span>
-                                <span class="review-diff ${diffClass}"></span>
-                                <span class="review-text">${escapeHtml(d.text.replace(/\\n/g, '\n'))}</span>
-                                <span class="review-icon">${icon}</span>
-                                <div class="review-answer-detail">
-                                    <strong>${detail}</strong>
+                            <div class="review-item ${correctClass}" onclick="toggleReviewItem(this)">
+                                <div class="review-header-row">
+                                    <span class="review-num">${d.number}</span>
+                                    <span class="review-diff ${diffClass}"></span>
+                                    <span class="review-text">${escapeHtml(d.text.replace(/\\n/g, '\n'))}</span>
+                                    <span class="review-icon">${icon}</span>
+                                    <span class="review-chevron">▼</span>
+                                </div>
+                                <div class="review-answer-detail" onclick="event.stopPropagation()">
+                                    <div style="font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:8px; white-space:pre-wrap;">${escapeHtml(d.text.replace(/\\n/g, '\n'))}</div>
+                                    ${codeHtml}
+                                    ${imageHtml}
+                                    <div style="background:rgba(255,255,255,0.03); padding:10px 14px; border-radius:6px; margin:8px 0; font-size:13px; border:1px solid rgba(255,255,255,0.05);">
+                                        ${detail}
+                                    </div>
+                                    ${hintHtml}
                                 </div>
                             </div>
                         `;
@@ -600,6 +739,10 @@ function animateScore(target) {
    SHARE FUNCTIONALITY
    ======================================================================== */
 
+function getResultsText() {
+    return `Rezultate Test C++ — ${state.studentUsername}`;
+}
+
 function shareEmail() {
     const subject = encodeURIComponent(`Rezultate Test C++ — ${state.studentUsername}`);
     const body = encodeURIComponent(getResultsText());
@@ -611,10 +754,6 @@ function shareEmail() {
 /* ========================================================================
    QUESTION SELECTION & TEST TYPE
    ======================================================================== */
-
-window.startTest = function (type, examType) {
-    selectTestType(type, state.studentUsername, examType);
-};
 
 window.startAssignedTest = async function (assignedTestId, examType, questionsIds) {
     state.testType = 'tema';
@@ -680,6 +819,8 @@ window.startTest = function (type, examType) {
 async function selectTestType(type, username, examType = 'Initial') {
     state.testType = type;
     state.examType = examType;
+    state.assignedTestId = null;
+    localStorage.removeItem('quiz_assigned_test_id');
 
     const btnStartInit = document.getElementById('btn-start-initial');
     if (btnStartInit && type === 'initial') {
@@ -761,7 +902,13 @@ async function loadDashboard(username, studentId) {
             document.getElementById('dash-username').textContent = username;
 
             const history = resultsData.history || [];
-            const hasCompletedInitial = history.some(h => h.test_type === 'initial');
+            const hasCompletedInitial = (resultsData.hasCompletedInitial !== undefined)
+                ? !!resultsData.hasCompletedInitial
+                : history.some(h => {
+                    if (!h || !h.test_type) return true;
+                    const t = h.test_type.toLowerCase().trim();
+                    return t === 'initial' || t.startsWith('initial') || (!t.startsWith('intermediar') && !t.startsWith('tema') && !t.startsWith('progress_'));
+                });
 
             const initialSection = document.getElementById('dash-initial-section');
             const categoriesContainer = document.getElementById('dash-categories-container');
@@ -811,7 +958,7 @@ async function loadDashboard(username, studentId) {
                                             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
                                                 <div>
                                                     <div style="font-weight: 700; font-size: 16px; color: #fff;">Test ${pt.exam_type}</div>
-                                                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Până la: ${new Date(pt.deadline).toLocaleString('ro-RO')}</div>
+                                                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Până la: <strong style="color:var(--accent-purple);">${formatEuropeanDateTime(pt.deadline)}</strong></div>
                                                     ${new Date(pt.deadline) < new Date() ? '<span class="badge" style="background:rgba(248,113,113,0.2); color:var(--accent-red); margin-top:6px; display:inline-block;">Întârziat</span>' : ''}
                                                 </div>
                                                 <div style="font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 6px; color: #e2e8f0;">
@@ -838,6 +985,11 @@ async function loadDashboard(username, studentId) {
             }
 
             showScreen('dashboard');
+
+            // Obligativitate setare numar de telefon daca nu exista in baza de date
+            if (!resultsData.phone_number) {
+                showPhoneModal();
+            }
         } else {
             showToast(resultsData.error || 'Eroare la încărcarea profilului.', true);
             showScreen('welcome');
@@ -849,17 +1001,99 @@ async function loadDashboard(username, studentId) {
     }
 }
 
+function showPhoneModal() {
+    const modal = document.getElementById('modal-phone');
+    const input = document.getElementById('phone-input');
+    const btnSubmit = document.getElementById('btn-submit-phone');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 50);
+    }
+
+    if (btnSubmit && !btnSubmit.dataset.bound) {
+        btnSubmit.dataset.bound = 'true';
+        btnSubmit.addEventListener('click', handlePhoneSubmit);
+    }
+    if (input && !input.dataset.bound) {
+        input.dataset.bound = 'true';
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handlePhoneSubmit();
+            }
+        });
+    }
+}
+
+async function handlePhoneSubmit() {
+    const input = document.getElementById('phone-input');
+    const btnSubmit = document.getElementById('btn-submit-phone');
+    const modal = document.getElementById('modal-phone');
+    if (!input || !modal) return;
+
+    const phone = input.value.trim();
+    const phoneRegex = /^07\d{8}$/;
+    if (!phoneRegex.test(phone)) {
+        showToast('Număr invalid! Trebuie să fie de tipul 07XXXXXXXX (10 cifre).', true);
+        input.focus();
+        return;
+    }
+
+    const originalText = btnSubmit ? btnSubmit.textContent : '';
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Se salvează...';
+    }
+
+    try {
+        const token = localStorage.getItem('active_student_token') || '';
+        const res = await fetch('/.netlify/functions/update-phone', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                student_id: state.studentId || localStorage.getItem('active_student_id'),
+                username: state.studentUsername || localStorage.getItem('active_student_username'),
+                phone_number: phone
+            })
+        });
+
+        if (res.ok) {
+            showToast('Numărul de WhatsApp a fost salvat cu succes!');
+            modal.style.display = 'none';
+        } else {
+            const errData = await res.json().catch(() => ({}));
+            showToast(errData.error || 'Eroare la salvarea numărului de telefon.', true);
+        }
+    } catch (err) {
+        showToast('Eroare de conexiune la salvarea numărului.', true);
+    } finally {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = originalText;
+        }
+    }
+}
+
 function logoutStudent() {
+    clearStateFromStorage();
     localStorage.removeItem('active_student_username');
     localStorage.removeItem('active_student_id');
     localStorage.removeItem('active_student_token');
+    
     state.studentUsername = '';
     state.studentId = null;
+    state.assignedTestId = null;
     showScreen('welcome');
 }
 
 async function handleLogin() {
-    const username = els.studentUsername.value.trim();
+    const username = els.studentUsername.value.trim().toLowerCase();
     const password = els.studentPassword.value.trim();
     if (!username || !password) {
         showToast('Te rugăm să introduci userul și parola.');
@@ -922,9 +1156,10 @@ function startQuiz(isResume = false) {
         if (state.currentQuestion >= questions.length) {
             state.currentQuestion = 0;
         }
-        state.startTime = state.startTime || Date.now();
+        const savedStart = localStorage.getItem('quiz_start_time');
+        state.startTime = state.startTime || (savedStart ? parseInt(savedStart) : Date.now());
         state.endTime = null;
-        state.blurCount = 0;
+        state.blurCount = parseInt(localStorage.getItem('quiz_blur_count') || '0');
     }
 
     const timerBadge = $('#quiz-timer');
@@ -1141,15 +1376,33 @@ els.btnPrev.addEventListener('click', goPrev);
 document.addEventListener('keydown', (e) => {
     if (!els.screenQuiz.classList.contains('active')) return;
 
-    if (e.key >= '1' && e.key <= '4') {
+    // Number keys 1-6
+    if (e.key >= '1' && e.key <= '6') {
         const pressedIndex = parseInt(e.key) - 1;
         const q = questions[state.currentQuestion];
-        if (q && q.displayOrder) {
-            selectAnswer(q.displayOrder[pressedIndex]);
-        } else {
-            selectAnswer(pressedIndex);
+        if (q && q.options && pressedIndex < q.options.length) {
+            if (q.displayOrder && q.displayOrder[pressedIndex] !== undefined) {
+                selectAnswer(q.displayOrder[pressedIndex]);
+            } else {
+                selectAnswer(pressedIndex);
+            }
         }
     }
+
+    // Letter keys A-F
+    const letterMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5 };
+    if (letterMap[e.key] !== undefined) {
+        const pressedIndex = letterMap[e.key];
+        const q = questions[state.currentQuestion];
+        if (q && q.options && pressedIndex < q.options.length) {
+            if (q.displayOrder && q.displayOrder[pressedIndex] !== undefined) {
+                selectAnswer(q.displayOrder[pressedIndex]);
+            } else {
+                selectAnswer(pressedIndex);
+            }
+        }
+    }
+
     if (e.key === 'ArrowRight' && !els.btnNext.disabled) {
         goNext();
     }
@@ -1249,6 +1502,18 @@ async function initApp() {
                 state.questionTimings = JSON.parse(savedTimings);
             } else {
                 state.questionTimings = new Array(questions.length).fill(0);
+            }
+
+            const savedDisplayOrders = localStorage.getItem('quiz_display_orders');
+            if (savedDisplayOrders) {
+                try {
+                    const orders = JSON.parse(savedDisplayOrders);
+                    if (Array.isArray(orders)) {
+                        orders.forEach((ord, i) => {
+                            if (questions[i] && ord) questions[i].displayOrder = ord;
+                        });
+                    }
+                } catch (e) { }
             }
 
             const timerBadge = $('#quiz-timer');
@@ -1372,6 +1637,61 @@ async function showSituatiaMea() {
     }
 }
 
+function getTestDisplayInfo(ht) {
+    const rawType = (ht.test_type || 'initial').toLowerCase().trim();
+    const isAssigned = rawType === 'tema' || rawType.startsWith('tema') || !!ht.assigned_test_id;
+    const isInitial = !isAssigned && (rawType === 'initial' || rawType.startsWith('initial') || !ht.test_type);
+
+    let examCategory = ht.exam_type || '';
+    if (!examCategory && (rawType.includes(':') || (rawType.includes('_') && !rawType.startsWith('progress_')))) {
+        examCategory = rawType.split(/[:_]/)[1];
+    }
+    
+    // If still not determined, inspect details_json
+    if (!examCategory && Array.isArray(ht.details_json) && ht.details_json.length > 0) {
+        const firstWithExam = ht.details_json.find(d => d && d.exam_type);
+        if (firstWithExam) {
+            examCategory = firstWithExam.exam_type;
+        } else {
+            const has6Opts = ht.details_json.some(d => d && Array.isArray(d.options) && d.options.length > 4);
+            if (has6Opts) {
+                examCategory = 'Poli';
+            } else if (ht.details_json.length === 9) {
+                examCategory = 'Academie';
+            } else if (ht.details_json.length === 50) {
+                examCategory = 'Inițial';
+            } else {
+                examCategory = 'Diverse';
+            }
+        }
+    }
+
+    if (isInitial) {
+        return {
+            title: 'Test Inițial',
+            badgeText: 'Inițial',
+            category: 'Inițial'
+        };
+    }
+
+    if (isAssigned) {
+        const cat = examCategory && examCategory !== 'Initial' ? examCategory : 'BAC';
+        return {
+            title: `Temă (${cat})`,
+            badgeText: `Temă • ${cat}`,
+            category: cat
+        };
+    }
+
+    // Intermediate test
+    const cat = examCategory || 'Diverse';
+    return {
+        title: `Test Intermediar (${cat})`,
+        badgeText: `Intermediar • ${cat}`,
+        category: cat
+    };
+}
+
 function renderSituatiaStudent(historyTests) {
     const listHistory = document.getElementById('list-situatia-history');
     if (!listHistory) return;
@@ -1381,28 +1701,26 @@ function renderSituatiaStudent(historyTests) {
         listHistory.innerHTML = '<p style="color: var(--text-muted); font-size: 14px; padding: 20px 0;">Nu ai susținut încă niciun test.</p>';
     } else {
         listHistory.innerHTML = historyTests.map((ht, idx) => {
+            const rawType = (ht.test_type || 'initial').toLowerCase().trim();
+            const isAssigned = rawType === 'tema' || rawType.startsWith('tema') || !!ht.assigned_test_id;
+            const isInitial = !isAssigned && (rawType === 'initial' || rawType.startsWith('initial') || !ht.test_type);
+            const isIntermediate = !isAssigned && !isInitial;
+            const info = getTestDisplayInfo(ht);
+
             const pct = Math.round((ht.score / ht.total_points) * 100) || 0;
-            const isAssigned = ht.assigned_test_id || ht.test_type === 'tema';
-            const isInitial = ht.test_type === 'initial';
-            let testTitle = `Test Intermediar (${ht.exam_type || 'General'})`;
-            if (isAssigned) {
-                testTitle = `Temă (${ht.exam_type || 'BAC'})`;
-            } else if (isInitial) {
-                testTitle = `Test Inițial`;
-            }
             const timeInfo = isAssigned ? '' : ` | Timp: ${formatTime(ht.time_taken_ms)}`;
 
             return `
                         <div class="option-card" style="margin-bottom: 12px; display:block; padding: 16px;" onclick="toggleHistoryDetails('history-details-${ht.id}')">
                             <div style="display:flex; justify-content:space-between; align-items:center; cursor: pointer;">
                                 <div>
-                                    <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${testTitle} - ${ht.score}/${ht.total_points} puncte</div>
+                                    <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${info.title} - ${ht.score}/${ht.total_points} puncte</div>
                                     <div style="font-size: 13px; color: var(--text-secondary);">Data: ${new Date(ht.created_at).toLocaleString('ro-RO')}${timeInfo}</div>
                                 </div>
                                 <div style="font-weight: 700; color: var(--accent-purple); font-size: 18px;">${pct}%</div>
                             </div>
                             <div id="history-details-${ht.id}" style="display:none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
-                                ${generateHistoryDetailsHTML(ht.details_json)}
+                                ${generateHistoryDetailsHTML(ht.details_json, ht.id, isIntermediate)}
                             </div>
                         </div>
                     `;
@@ -1419,7 +1737,7 @@ function toggleHistoryDetails(id) {
     }
 }
 
-function generateHistoryDetailsHTML(details) {
+function generateHistoryDetailsHTML(details, htId = '', isIntermediate = false) {
     if (!details || details.length === 0) {
         return '<p style="color:var(--text-muted); font-size:13px;">Nu există detalii salvate.</p>';
     }
@@ -1440,7 +1758,23 @@ function generateHistoryDetailsHTML(details) {
         }).join('');
 
         const codeHtml = d.code ? `<pre style="background:#0c0d1e; padding:10px; border-radius:4px; font-size:12px; color:#a6accd; margin:8px 0; overflow-x:auto;">${escapeHtml(d.code)}</pre>` : '';
-        const imageHtml = d.image_url ? `<img src="${d.image_url}" style="margin: 10px 0; max-height: 150px; border-radius: 8px;">` : '';
+        const hImgs = parseImageUrls(d.image_url);
+        const imageHtml = hImgs.length > 0 ? `
+            <div class="question-images-container" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin:10px auto; text-align:center;">
+                ${hImgs.map(url => `<img src="${url}" class="question-img-item" style="max-height:160px; border-radius:6px; margin:0 auto;" onclick="openLightbox('${url}')">`).join('')}
+            </div>` : '';
+
+        // Hint only shown for intermediate tests in history
+        const hintHtml = (isIntermediate && d.hint && d.hint.trim() !== '') ? `
+            <div style="margin-top:8px;">
+                <button type="button" class="btn-hint-inline" onclick="event.stopPropagation(); toggleReviewHint('hist-hint-${htId}-${i}');">
+                    <span>💡</span> HINT
+                </button>
+                <div id="hist-hint-${htId}-${i}" style="display:none; margin-top:6px; padding:8px 12px; border-radius:6px; background:rgba(251,191,36,0.06); border-left:3px solid #fbbf24; font-size:13px; color:#cbd5e1; line-height:1.4;">
+                    💡 <em>${escapeHtml(d.hint)}</em>
+                </div>
+            </div>
+        ` : '';
 
         return `
                     <div style="background:rgba(255,255,255,0.02); border-radius:8px; padding:12px; margin-bottom:12px; border:1px solid ${isOk ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'};">
@@ -1452,11 +1786,85 @@ function generateHistoryDetailsHTML(details) {
                         ${codeHtml}
                         ${imageHtml}
                         <div style="margin-top:8px;">${optsHtml}</div>
+                        ${hintHtml}
                     </div>
                 `;
     }).join('');
 }
 
+// ==================== MODAL TELEFON OBLIGATORIU ====================
+function showPhoneModal() {
+    const modal = document.getElementById('modal-phone');
+    if (modal) {
+        modal.style.display = 'flex';
+        const input = document.getElementById('phone-input');
+        if (input) {
+            setTimeout(() => input.focus(), 300);
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') handlePhoneSubmit();
+            };
+        }
+    }
+}
+
+async function handlePhoneSubmit() {
+    const input = document.getElementById('phone-input');
+    const btn = document.getElementById('btn-submit-phone');
+    if (!input || !btn) return;
+
+    const phone = input.value.trim();
+    const phoneRegex = /^07\d{8}$/;
+    if (!phoneRegex.test(phone)) {
+        showToast('Numărul trebuie să înceapă cu 07 și să aibă exact 10 cifre (ex: 0712345678).', true);
+        input.focus();
+        return;
+    }
+
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = 'Se salvează...';
+
+    try {
+        const token = localStorage.getItem('active_student_token') || '';
+        const username = state.studentUsername || localStorage.getItem('active_student_username') || '';
+        const studentId = state.studentId || localStorage.getItem('active_student_id') || '';
+
+        const res = await fetch('/.netlify/functions/update-phone', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                username: username,
+                phone_number: phone
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            showToast('Număr de telefon salvat cu succes!');
+            const modal = document.getElementById('modal-phone');
+            if (modal) modal.style.display = 'none';
+        } else {
+            showToast(data.error || 'Eroare la salvarea numărului de telefon.', true);
+        }
+    } catch (e) {
+        showToast('Eroare de conexiune cu serverul.', true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+}
+
+const btnSubmitPhone = document.getElementById('btn-submit-phone');
+if (btnSubmitPhone) {
+    btnSubmitPhone.addEventListener('click', handlePhoneSubmit);
+}
+
 // Initialize App
 initApp();
-setTimeout(() => els.studentUsername.focus(), 500);
+setTimeout(() => {
+    if (els.studentUsername) els.studentUsername.focus();
+}, 500);

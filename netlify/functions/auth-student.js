@@ -19,21 +19,25 @@ exports.handler = async function(event, context) {
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Missing Supabase vars' }) };
     }
 
     try {
-        const body = JSON.parse(event.body);
+        const body = JSON.parse(event.body || '{}');
         const { username, password } = body;
+        const cleanUsername = (username || '').trim().toLowerCase();
+        // Escape SQL wildcard characters to prevent ilike injection
+        const safeUsername = cleanUsername.replace(/[%_]/g, '\\$&');
+        const cleanPassword = (password || '').trim();
 
-        if (!username || !password) {
+        if (!cleanUsername || !cleanPassword) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Username și parola sunt obligatorii' }) };
         }
 
-        const res = await fetch(`${supabaseUrl}/rest/v1/students?username=eq.${encodeURIComponent(username)}&select=*`, {
+        const res = await fetch(`${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(safeUsername)}&select=*`, {
             headers: {
                 'apikey': supabaseKey,
                 'Authorization': `Bearer ${supabaseKey}`
@@ -57,7 +61,7 @@ exports.handler = async function(event, context) {
 
         // Check password (supports both plain text and bcrypt hash)
         if (student.password.startsWith('$2')) {
-            isPasswordValid = bcrypt.compareSync(password, student.password);
+            isPasswordValid = bcrypt.compareSync(cleanPassword, student.password);
             if (isPasswordValid) {
                 // Restore plain text in database so admin can view it directly
                 fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student.id}`, {
@@ -67,11 +71,11 @@ exports.handler = async function(event, context) {
                         'Authorization': `Bearer ${supabaseKey}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ password: password })
+                    body: JSON.stringify({ password: cleanPassword })
                 }).catch(err => console.error('Eroare restabilire parola plain:', err));
             }
         } else {
-            isPasswordValid = (student.password === password);
+            isPasswordValid = (student.password === cleanPassword);
         }
 
         if (!isPasswordValid) {
@@ -79,10 +83,11 @@ exports.handler = async function(event, context) {
         }
 
         const jwt = require('jsonwebtoken');
-        const hashPrefix = student.password.substring(0, 15);
+        const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+        const hashPrefix = (student.password || '').substring(0, 15);
         const token = jwt.sign(
             { username: student.username, id: student.id, hashPrefix: hashPrefix },
-            process.env.SUPABASE_KEY,
+            jwtSecret,
             { expiresIn: '30d' }
         );
 

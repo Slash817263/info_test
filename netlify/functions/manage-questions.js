@@ -52,14 +52,32 @@ exports.handler = async function(event, context) {
         }
 
         if (method === 'POST') {
-            const body = JSON.parse(event.body);
-            const { exam_type, difficulty, type, category, subcategory, text, image_url, code, options_json, correct_index } = body;
+            const body = JSON.parse(event.body || '{}');
+            const { exam_type, difficulty, type, category, subcategory, text, image_url, code, options_json, correct_index, hint, explanation } = body;
 
             if (!exam_type || !difficulty || !type || !text || !options_json || correct_index === undefined) {
                 return {
                     statusCode: 400,
                     headers,
                     body: JSON.stringify({ error: 'Missing required fields.' })
+                };
+            }
+
+            let parsedOptions = typeof options_json === 'string' ? JSON.parse(options_json) : options_json;
+            if (!Array.isArray(parsedOptions) || parsedOptions.length < 2 || parsedOptions.length > 6) {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ error: 'Numărul de opțiuni de răspuns trebuie să fie între 2 și 6.' })
+                };
+            }
+
+            const parsedCorrectIndex = parseInt(correct_index);
+            if (isNaN(parsedCorrectIndex) || parsedCorrectIndex < 0 || parsedCorrectIndex >= parsedOptions.length) {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ error: 'Indexul răspunsului corect este în afara limitelor opțiunilor.' })
                 };
             }
 
@@ -80,8 +98,9 @@ exports.handler = async function(event, context) {
                     text,
                     image_url: image_url || null,
                     code: code || null,
-                    options_json: typeof options_json === 'string' ? JSON.parse(options_json) : options_json,
-                    correct_index: parseInt(correct_index)
+                    hint: hint || explanation || null,
+                    options_json: parsedOptions,
+                    correct_index: parsedCorrectIndex
                 })
             });
 
@@ -99,19 +118,27 @@ exports.handler = async function(event, context) {
                 return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing question id.' }) };
             }
 
-            const body = JSON.parse(event.body);
+            const body = JSON.parse(event.body || '{}');
 
             // Whitelist allowed fields to prevent injection
-            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index'];
+            const allowedFields = ['exam_type', 'difficulty', 'type', 'category', 'subcategory', 'text', 'image_url', 'code', 'options_json', 'correct_index', 'hint'];
             const safeBody = {};
             for (const key of allowedFields) {
                 if (body[key] !== undefined) {
                     safeBody[key] = body[key];
                 }
             }
+            if (safeBody.hint === undefined && body.explanation !== undefined) {
+                safeBody.hint = body.explanation;
+            }
 
-            if (safeBody.options_json && typeof safeBody.options_json === 'string') {
-                safeBody.options_json = JSON.parse(safeBody.options_json);
+            if (safeBody.options_json) {
+                if (typeof safeBody.options_json === 'string') {
+                    safeBody.options_json = JSON.parse(safeBody.options_json);
+                }
+                if (!Array.isArray(safeBody.options_json) || safeBody.options_json.length < 2 || safeBody.options_json.length > 6) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Numărul de opțiuni trebuie să fie între 2 și 6.' }) };
+                }
             }
             if (safeBody.exam_type) {
                 safeBody.exam_type = normalizeExamType(safeBody.exam_type);

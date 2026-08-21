@@ -24,8 +24,9 @@ exports.handler = async function(event, context) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Supabase env missing' }) };
     }
 
-    const student_username = event.queryStringParameters.student_username;
-    const assigned_test_id = event.queryStringParameters.assigned_test_id;
+    const params = event.queryStringParameters || {};
+    const student_username = params.student_username;
+    const assigned_test_id = params.assigned_test_id;
 
     if (!student_username || !assigned_test_id) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing parameters' }) };
@@ -38,9 +39,10 @@ exports.handler = async function(event, context) {
     }
     const token = authHeader.substring(7);
     const jwt = require('jsonwebtoken');
+    const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
     try {
-        const decoded = jwt.verify(token, process.env.SUPABASE_KEY);
-        if (decoded.username !== student_username) {
+        const decoded = jwt.verify(token, jwtSecret);
+        if ((decoded.username || '').toLowerCase() !== (student_username || '').toLowerCase()) {
             return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden: Username mismatch' }) };
         }
     } catch(e) {

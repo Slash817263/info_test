@@ -32,15 +32,16 @@ exports.handler = async function(event, context) {
     }
     const token = authHeader.substring(7);
     const jwt = require('jsonwebtoken');
+    const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
     let decoded;
     try {
-        decoded = jwt.verify(token, process.env.SUPABASE_KEY);
+        decoded = jwt.verify(token, jwtSecret);
     } catch(e) {
         return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat' }) };
     }
 
     try {
-        const body = JSON.parse(event.body);
+        const body = JSON.parse(event.body || '{}');
         const {
             student_username,
             student_id,
@@ -61,11 +62,45 @@ exports.handler = async function(event, context) {
             };
         }
 
+        if ((decoded.username || '').toLowerCase() !== (student_username || '').toLowerCase()) {
+            return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({ error: 'Forbidden: Username mismatch cu token-ul de autentificare.' })
+            };
+        }
+
+        // Prevent duplicate submissions for assigned tests
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (assigned_test_id && typeof assigned_test_id === 'string' && uuidRegex.test(assigned_test_id)) {
+            const checkRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${assigned_test_id}&select=status`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            });
+            if (checkRes.ok) {
+                const checkData = await checkRes.json();
+                if (checkData.length > 0 && checkData[0].status === 'completed') {
+                    return {
+                        statusCode: 400,
+                        headers,
+                        body: JSON.stringify({ error: 'Această temă a fost deja finalizată și trimisă.' })
+                    };
+                }
+            }
+        }
+
         if (!Array.isArray(answers_json) || !Array.isArray(question_ids) || answers_json.length !== question_ids.length) {
             return {
                 statusCode: 400,
                 headers,
                 body: JSON.stringify({ error: 'Invalid answers payload format or length mismatch.' })
+            };
+        }
+
+        if (new Set(question_ids).size !== question_ids.length) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Duplicate question IDs are not allowed.' })
             };
         }
 
@@ -108,6 +143,18 @@ exports.handler = async function(event, context) {
         const serverDetails = [];
         const difficultyStats = { easy: {c:0, t:0}, medium: {c:0, t:0}, hard: {c:0, t:0} };
 
+        const isAssigned = !!(assigned_test_id && typeof assigned_test_id === 'string' && uuidRegex.test(assigned_test_id));
+        const finalExamType = exam_type || (test_type === 'initial' ? 'Initial' : 'Diverse');
+        let finalTestType = 'initial';
+        if (isAssigned || test_type === 'tema' || (test_type && test_type.startsWith('tema'))) {
+            finalTestType = (finalExamType && finalExamType !== 'Initial') ? `tema:${finalExamType}` : 'tema';
+        } else if (test_type === 'intermediar' || (test_type && test_type.startsWith('intermediar'))) {
+            finalTestType = `intermediar:${finalExamType}`;
+        } else {
+            finalTestType = 'initial';
+        }
+        const isIntermediate = finalTestType.startsWith('intermediar');
+
         for (let i = 0; i < question_ids.length; i++) {
             const qId = question_ids[i];
             const q = questionsMap[qId];
@@ -116,11 +163,15 @@ exports.handler = async function(event, context) {
             const studentAns = answers_json[i];
             const isCorrect = studentAns === q.correct_index;
             
-            difficultyStats[q.difficulty].t += 1;
+            const diff = (q.difficulty || 'easy').toLowerCase();
+            if (!difficultyStats[diff]) {
+                difficultyStats[diff] = { c: 0, t: 0 };
+            }
+            difficultyStats[diff].t += 1;
             
             if (isCorrect) {
                 serverScore += ptsPerQuestion;
-                difficultyStats[q.difficulty].c += 1;
+                difficultyStats[diff].c += 1;
             }
 
             let opts = q.options_json;
@@ -131,21 +182,20 @@ exports.handler = async function(event, context) {
             serverDetails.push({
                 number: i + 1,
                 id: q.id,
-                difficulty: q.difficulty,
+                exam_type: q.exam_type || finalExamType,
+                difficulty: q.difficulty || 'medium',
                 text: q.text,
                 code: q.code || null,
                 image_url: q.image_url || null,
                 isCorrect: isCorrect,
                 studentAnswer: studentAns,
                 correctAnswer: q.correct_index,
-                options: opts
+                options: opts,
+                hint: isIntermediate ? (q.hint || q.explanation || null) : null
             });
         }
 
-        serverScore = Math.round(serverScore);
-
-        const isAssigned = !!(assigned_test_id && typeof assigned_test_id === 'string' && assigned_test_id.trim() !== '');
-        const finalTestType = isAssigned || test_type === 'tema' ? 'tema' : (test_type || 'initial');
+        serverScore = Math.min(Math.round(serverScore), 100);
 
         const insertData = {
             student_name: student_username, // Fallback for old schema compatibility
@@ -178,7 +228,6 @@ exports.handler = async function(event, context) {
         const data = await response.json();
 
         // If this result is from an assigned test, mark it as completed and clean up progress
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (assigned_test_id && typeof assigned_test_id === 'string' && uuidRegex.test(assigned_test_id)) {
             const updateRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${assigned_test_id}`, {
                 method: 'PATCH',

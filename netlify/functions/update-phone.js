@@ -19,7 +19,7 @@ exports.handler = async function(event, context) {
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Missing Supabase vars' }) };
@@ -36,8 +36,9 @@ exports.handler = async function(event, context) {
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.substring(7);
             const jwt = require('jsonwebtoken');
+            const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
             try {
-                const decoded = jwt.verify(token, supabaseKey);
+                const decoded = jwt.verify(token, jwtSecret);
                 authenticatedUsername = decoded.username;
             } catch (e) {
                 return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat.' }) };
@@ -55,7 +56,7 @@ exports.handler = async function(event, context) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Student ID, Username și Numarul de telefon sunt obligatorii' }) };
         }
 
-        if (!isAdmin && authenticatedUsername && authenticatedUsername !== username) {
+        if (!isAdmin && authenticatedUsername && authenticatedUsername.toLowerCase() !== (username || '').toLowerCase()) {
             return { statusCode: 403, headers, body: JSON.stringify({ error: 'Nu ai permisiunea de a modifica acest profil.' }) };
         }
 
@@ -65,7 +66,7 @@ exports.handler = async function(event, context) {
             return { statusCode: 400, headers, body: JSON.stringify({ error: 'Format numar invalid. Trebuie sa fie de tipul 07XXXXXXXX (10 cifre).' }) };
         }
 
-        const res = await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student_id}&username=eq.${encodeURIComponent(username)}`, {
+        const res = await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student_id}&username=ilike.${encodeURIComponent(username)}`, {
             method: 'PATCH',
             headers: {
                 'apikey': supabaseKey,
