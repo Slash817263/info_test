@@ -57,7 +57,7 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        let url = `${supabaseUrl}/rest/v1/results?select=*&order=created_at.desc`;
+        let url = `${supabaseUrl}/rest/v1/results?test_type=not.in.(category_coverage,lead_diagnostic)&select=*&order=created_at.desc&limit=2000`;
         if (requestedUsername) {
             url += `&or=(student_username.eq.${encodeURIComponent(requestedUsername)},student_name.eq.${encodeURIComponent(requestedUsername)})`;
         }
@@ -75,7 +75,7 @@ exports.handler = async function(event, context) {
         }
 
         const data = await response.json();
-        const filteredData = data.filter(d => !d.test_type || !d.test_type.startsWith('progress_'));
+        const filteredData = data.filter(d => !d.test_type || (!d.test_type.startsWith('progress_') && d.test_type !== 'category_coverage' && d.test_type !== 'lead_diagnostic'));
 
         return {
             statusCode: 200,
@@ -87,7 +87,7 @@ exports.handler = async function(event, context) {
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Internal Server Error', details: error.message })
+            body: JSON.stringify({ error: 'Internal Server Error' })
         };
     }
 };

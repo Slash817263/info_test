@@ -32,7 +32,7 @@ exports.handler = async function(event, context) {
     try {
         const queryParams = event.queryStringParameters || {};
         const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-        const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
+        const clientToken = (event.headers && (event.headers['x-admin-token'] || event.headers['X-Admin-Token'])) || '';
         const isAdmin = queryParams.admin === 'true' && clientToken && validTokens.includes(clientToken);
 
         const testType = queryParams.type || 'initial';
@@ -40,9 +40,66 @@ exports.handler = async function(event, context) {
         const username = queryParams.username || '';
         const idsParam = queryParams.ids || '';
 
+        if (!isAdmin && username) {
+            const authHeader = event.headers.authorization || event.headers.Authorization || '';
+            if (!authHeader.startsWith('Bearer ')) {
+                return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Lipsă token autentificare' }) };
+            }
+            const token = authHeader.substring(7);
+            const jwt = require('jsonwebtoken');
+            const utils = require('./_utils');
+            const jwtSecret = utils.getLiveEnv('JWT_SECRET', process.env.JWT_SECRET);
+            if (!jwtSecret) {
+                return { statusCode: 500, headers, body: JSON.stringify({ error: 'Eroare server: JWT_SECRET lipsă.' }) };
+            }
+            
+            try {
+                const decoded = jwt.verify(token, jwtSecret);
+                if (decoded.username.toLowerCase() !== username.toLowerCase()) {
+                    return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden: Token invalid pentru acest utilizator' }) };
+                }
+            } catch (err) {
+                return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Token expirat sau invalid' }) };
+            }
+
+            const { isStudentSubscriptionActive } = require('./_utils.js');
+            const isActive = await isStudentSubscriptionActive(supabaseUrl, supabaseKey, username);
+            if (!isActive) {
+                return {
+                    statusCode: 403,
+                    headers,
+                    body: JSON.stringify({ error: 'Abonamentul tău a expirat. Nu poți accesa întrebări.' })
+                };
+            }
+
+            if (examType === 'Zilnic' && !idsParam) {
+                const checkUrl = `${supabaseUrl}/rest/v1/results?student_username=ilike.${encodeURIComponent(username)}&select=created_at,test_type`;
+                const checkRes = await fetch(checkUrl, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                if (checkRes.ok) {
+                    const existing = await checkRes.json();
+                    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit' });
+                    const todayStr = formatter.format(new Date());
+                    const alreadyDone = existing.some(e => {
+                        if (!e.created_at || !e.test_type) return false;
+                        const t = e.test_type.toLowerCase();
+                        return t.includes('zilnic') && formatter.format(new Date(e.created_at)) === todayStr;
+                    });
+                    if (alreadyDone) {
+                        return {
+                            statusCode: 400,
+                            headers,
+                            body: JSON.stringify({ error: 'Ai susținut deja testul zilnic de astăzi! Revino mâine pentru un nou test.' })
+                        };
+                    }
+                }
+            }
+        }
+
         // Optimization 1: Counts query - only fetch id & exam_type
         if (testType === 'counts') {
-            const countsResponse = await fetch(`${supabaseUrl}/rest/v1/questions?select=id,exam_type`, {
+            const countsResponse = await fetch(`${supabaseUrl}/rest/v1/questions?select=id,exam_type&limit=50000`, {
                 headers: {
                     'apikey': supabaseKey,
                     'Authorization': `Bearer ${supabaseKey}`
@@ -68,14 +125,14 @@ exports.handler = async function(event, context) {
         }
 
         // Construct targeted Supabase query
-        let queryUrl = `${supabaseUrl}/rest/v1/questions?select=*&order=id.asc`;
+        let queryUrl = `${supabaseUrl}/rest/v1/questions?select=*&order=id.asc&limit=50000`;
         if (!isAdmin) {
             if (idsParam) {
                 const requestedIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
                 if (requestedIds.length > 0) {
                     queryUrl += `&id=in.(${requestedIds.join(',')})`;
                 }
-            } else if (examType !== 'Diverse') {
+            } else if (examType !== 'Diverse' && examType !== 'Zilnic') {
                 queryUrl += `&exam_type=ilike.*${encodeURIComponent(examType)}*`;
             }
         }
@@ -132,7 +189,7 @@ exports.handler = async function(event, context) {
         // Double-check category filtering if examType specified and not Diverse
         if (!idsParam) {
             let categoryFiltered = [];
-            if (examType === 'Diverse') {
+            if (examType === 'Diverse' || examType === 'Zilnic') {
                 categoryFiltered = [...mappedQuestions];
             } else {
                 categoryFiltered = mappedQuestions.filter(q => (q.exam_type || 'Diverse').includes(examType));
@@ -165,148 +222,170 @@ exports.handler = async function(event, context) {
             const requestedIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
             selectedQuestions = requestedIds.map(id => mappedQuestions.find(q => String(q.id) === String(id))).filter(Boolean);
         } else if (testType === 'intermediar' && username) {
-            // Fetch past results to dynamically pick questions (checking username or name)
             const encodedUsername = encodeURIComponent(username);
-            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUsername},student_name.ilike.${encodedUsername})&order=created_at.desc`;
+            const resUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUsername},student_name.ilike.${encodedUsername})&order=created_at.asc`;
             const resultsResponse = await fetch(resUrl, {
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`
-                }
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
 
             let targetLength = 10;
-            if (examType === 'Academie') targetLength = 9;
-            else if (examType === 'Poli') targetLength = 10;
-            else if (examType === 'BAC') targetLength = 10;
-            else if (examType === 'Diverse') targetLength = 10;
+            let categoryQuotas = {
+                'Fundamente': 2,
+                'Organizarea Datelor': 3,
+                'Subprograme': 2,
+                'Backtracking': 1,
+                'Grafuri si Arbori': 2
+            };
 
-            const subcatCounts = {};
-            function pickDiverseAware(pool, needed) {
-                if (!pool || pool.length === 0 || needed <= 0) return [];
-                
-                const bySub = {};
-                for (const q of pool) {
-                    const sub = q.subcategory || q.category || 'Altele';
-                    if (!bySub[sub]) bySub[sub] = [];
-                    bySub[sub].push(q);
-                }
-                
-                for (const sub of Object.keys(bySub)) {
-                    shuffle(bySub[sub]);
-                }
-                
-                const picked = [];
-                while (picked.length < needed) {
-                    let minCount = Infinity;
-                    let candidateSubcats = [];
+            if (examType === 'Academie') {
+                targetLength = 9;
+                categoryQuotas['Grafuri si Arbori'] = 1;
+            }
+
+            const questionHistory = {};
+            const catStats = { 'Fundamente': { t:0, c:0 }, 'Organizarea Datelor': { t:0, c:0 }, 'Subprograme': { t:0, c:0 }, 'Backtracking': { t:0, c:0 }, 'Grafuri si Arbori': { t:0, c:0 } };
+            let totalT = 0, totalC = 0;
+            let lastTestWrongCats = [];
+            
+            if (resultsResponse.ok) {
+                const pastResults = await resultsResponse.json();
+                pastResults.forEach((res, testIdx) => {
+                    if (res.test_type && res.test_type.startsWith('progress_')) return;
+                    if (res.test_type === 'category_coverage') return;
                     
-                    for (const sub of Object.keys(bySub)) {
-                        if (bySub[sub].length === 0) continue;
-                        const currentCount = subcatCounts[sub] || 0;
-                        if (currentCount < minCount) {
-                            minCount = currentCount;
-                            candidateSubcats = [sub];
-                        } else if (currentCount === minCount) {
-                            candidateSubcats.push(sub);
+                    const details = res.details_json || [];
+                    const isLastTest = (testIdx === pastResults.length - 1);
+                    
+                    details.forEach(d => {
+                        if (d && d.id !== undefined) {
+                            questionHistory[Number(d.id)] = {
+                                isCorrect: !!d.isCorrect,
+                                lastSeenIndex: testIdx
+                            };
+                            if (d.category && catStats[d.category]) {
+                                catStats[d.category].t++;
+                                totalT++;
+                                if (d.isCorrect) {
+                                    catStats[d.category].c++;
+                                    totalC++;
+                                } else if (isLastTest) {
+                                    lastTestWrongCats.push(d.category);
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+
+            if (examType === 'Diverse' || examType === 'Zilnic') {
+                const overallAcc = totalT > 0 ? (totalC / totalT) : 0;
+                
+                const catAcc = Object.keys(catStats).map(cat => ({
+                    cat, 
+                    acc: catStats[cat].t > 0 ? (catStats[cat].c / catStats[cat].t) : 0.5,
+                    count: catStats[cat].t
+                })).sort((a,b) => b.acc - a.acc); 
+                
+                for (let weakCat of lastTestWrongCats) {
+                    if (categoryQuotas[weakCat]) {
+                        const strong = catAcc.find(c => c.cat !== weakCat && categoryQuotas[c.cat] > 1);
+                        if (strong) {
+                            categoryQuotas[strong.cat]--;
+                            categoryQuotas[weakCat]++;
                         }
                     }
-                    
-                    if (candidateSubcats.length === 0) break;
-                    
-                    const chosenSub = candidateSubcats[Math.floor(Math.random() * candidateSubcats.length)];
-                    const q = bySub[chosenSub].pop();
-                    
-                    picked.push(q);
-                    subcatCounts[chosenSub] = (subcatCounts[chosenSub] || 0) + 1;
                 }
+                
+                // Conform cerinței: dacă scorul e sub 70%, primește doar ușor-mediu (fără greu)
+                if (overallAcc < 0.70) {
+                    mappedQuestions = mappedQuestions.filter(q => (q.difficulty || 'usor').toLowerCase() !== 'greu' && (q.difficulty || 'easy').toLowerCase() !== 'hard');
+                } else if (overallAcc > 0.85) {
+                    mappedQuestions = mappedQuestions.filter(q => (q.difficulty || 'mediu').toLowerCase() !== 'usor' && (q.difficulty || 'medium').toLowerCase() !== 'easy');
+                }
+            }
+
+            function pickCategoryQuestions(catPool, count, useSubcats) {
+                if (!catPool || catPool.length === 0 || count <= 0) return [];
+                const picked = [];
+                
+                if (useSubcats) {
+                    const subcatGroups = {};
+                    catPool.forEach(q => {
+                        const sub = q.subcategory || 'Alta';
+                        if (!subcatGroups[sub]) subcatGroups[sub] = [];
+                        subcatGroups[sub].push(q);
+                    });
+                    
+                    let subcats = Object.keys(subcatGroups);
+                    let i = 0;
+                    while (picked.length < count && subcats.length > 0) {
+                        const sub = subcats[i % subcats.length];
+                        const pool = subcatGroups[sub];
+                        
+                        const unseen = [], wrong = [], correct = [];
+                        pool.forEach(q => {
+                            const h = questionHistory[Number(q.id)];
+                            if (!h) unseen.push(q);
+                            else if (!h.isCorrect) wrong.push(q);
+                            else correct.push({q, idx: h.lastSeenIndex});
+                        });
+                        
+                        shuffle(unseen); shuffle(wrong);
+                        correct.sort((a,b) => a.idx - b.idx);
+                        
+                        let p = unseen.pop() || wrong.pop() || (correct.length ? correct.shift().q : null);
+                        
+                        if (p) {
+                            picked.push(p);
+                            subcatGroups[sub] = pool.filter(x => x.id !== p.id);
+                            i++;
+                        } else {
+                            subcats.splice(i % subcats.length, 1);
+                        }
+                    }
+                } else {
+                    const unseen = [], wrong = [], correct = [];
+                    catPool.forEach(q => {
+                        const h = questionHistory[Number(q.id)];
+                        if (!h) unseen.push(q);
+                        else if (!h.isCorrect) wrong.push(q);
+                        else correct.push({q, idx: h.lastSeenIndex});
+                    });
+                    shuffle(unseen); shuffle(wrong);
+                    correct.sort((a,b) => a.idx - b.idx);
+                    while (picked.length < count && unseen.length > 0) picked.push(unseen.pop());
+                    while (picked.length < count && wrong.length > 0) picked.push(wrong.pop());
+                    while (picked.length < count && correct.length > 0) picked.push(correct.shift().q);
+                }
+                
                 return picked;
             }
 
-            if (resultsResponse.ok) {
-                const pastResults = await resultsResponse.json();
-                
-                // Aggregate last seen status for each question
-                const lastStatus = {};
-                for (let i = pastResults.length - 1; i >= 0; i--) { // older to newer
-                    if (pastResults[i].test_type && pastResults[i].test_type.startsWith('progress_')) continue;
-                    const details = pastResults[i].details_json || [];
-                    for (const d of details) {
-                        if (d && d.id !== undefined) {
-                            lastStatus[d.id] = !!d.isCorrect;
-                        }
-                    }
-                }
+            const chosenQuestions = [];
+            const pickedIds = new Set();
+            const useSubcats = (examType !== 'Diverse');
 
-                if (examType === 'Diverse') {
-                    // LOGICA SPECIALA DIVERSE:
-                    // 1. Diverse nefăcute
-                    // 2. Diverse greșite
-                    // 3. Alte categorii (Bac, Poli, Academie) nefăcute - STRICT RANDOM & echilibrate
-                    // 4. Alte categorii greșite
-                    // 5. Diverse corecte
-                    // 6. Alte categorii corecte
-                    const divPool = mappedQuestions.filter(q => (q.exam_type || '').includes('Diverse'));
-                    const otherPool = mappedQuestions.filter(q => !(q.exam_type || '').includes('Diverse'));
-
-                    const div_unseen = divPool.filter(q => lastStatus[q.id] === undefined);
-                    const div_wrong = divPool.filter(q => lastStatus[q.id] === false);
-                    const div_correct = divPool.filter(q => lastStatus[q.id] === true);
-
-                    const other_unseen = otherPool.filter(q => lastStatus[q.id] === undefined);
-                    const other_wrong = otherPool.filter(q => lastStatus[q.id] === false);
-                    const other_correct = otherPool.filter(q => lastStatus[q.id] === true);
-
-                    shuffle(div_unseen); shuffle(div_wrong); shuffle(div_correct);
-                    shuffle(other_unseen); shuffle(other_wrong); shuffle(other_correct);
-
-                    if (selectedQuestions.length < targetLength) {
-                        selectedQuestions.push(...pickDiverseAware(div_unseen, targetLength - selectedQuestions.length));
-                    }
-                    if (selectedQuestions.length < targetLength) {
-                        selectedQuestions.push(...pickDiverseAware(div_wrong, targetLength - selectedQuestions.length));
-                    }
-                    if (selectedQuestions.length < targetLength) {
-                        selectedQuestions.push(...pickDiverseAware(other_unseen, targetLength - selectedQuestions.length));
-                    }
-                    if (selectedQuestions.length < targetLength) {
-                        selectedQuestions.push(...pickDiverseAware(other_wrong, targetLength - selectedQuestions.length));
-                    }
-                    if (selectedQuestions.length < targetLength) {
-                        selectedQuestions.push(...pickDiverseAware(div_correct, targetLength - selectedQuestions.length));
-                    }
-                    if (selectedQuestions.length < targetLength) {
-                        selectedQuestions.push(...pickDiverseAware(other_correct, targetLength - selectedQuestions.length));
-                    }
-                } else {
-                    const wrongQs = [];
-                    const correctQs = [];
-                    const unseenQs = [];
-
-                    for (const q of mappedQuestions) {
-                        if (lastStatus[q.id] === false) {
-                            wrongQs.push(q);
-                        } else if (lastStatus[q.id] === true) {
-                            correctQs.push(q);
-                        } else {
-                            unseenQs.push(q);
-                        }
-                    }
-
-                    shuffle(unseenQs); shuffle(wrongQs); shuffle(correctQs);
-
-                    selectedQuestions.push(...pickDiverseAware(unseenQs, targetLength - selectedQuestions.length));
-                    selectedQuestions.push(...pickDiverseAware(wrongQs, targetLength - selectedQuestions.length));
-                    selectedQuestions.push(...pickDiverseAware(correctQs, targetLength - selectedQuestions.length));
-                }
-                
-                shuffle(selectedQuestions);
-            } else {
-                // fallback if results fetch fails
-                selectedQuestions = mappedQuestions;
-                shuffle(selectedQuestions);
-                selectedQuestions = selectedQuestions.slice(0, targetLength);
+            for (const [catName, quota] of Object.entries(categoryQuotas)) {
+                const catPool = mappedQuestions.filter(q => q.category === catName && !pickedIds.has(Number(q.id)));
+                const catPicked = pickCategoryQuestions(catPool, quota, useSubcats);
+                catPicked.forEach(q => {
+                    chosenQuestions.push(q);
+                    pickedIds.add(Number(q.id));
+                });
             }
+
+            if (chosenQuestions.length < targetLength) {
+                const remainingPool = mappedQuestions.filter(q => !pickedIds.has(Number(q.id)));
+                const extraNeeded = targetLength - chosenQuestions.length;
+                const extraPicked = pickCategoryQuestions(remainingPool, extraNeeded, false);
+                extraPicked.forEach(q => {
+                    chosenQuestions.push(q);
+                    pickedIds.add(Number(q.id));
+                });
+            }
+
+            shuffle(chosenQuestions);
+            selectedQuestions = chosenQuestions.slice(0, targetLength);
         } else {
             // initial test -> max 30 questions randomly selected
             let pool = shuffle([...mappedQuestions]);
@@ -324,7 +403,7 @@ exports.handler = async function(event, context) {
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Internal Server Error', details: error.message })
+            body: JSON.stringify({ error: 'Internal Server Error' })
         };
     }
 };

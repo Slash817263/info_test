@@ -16,11 +16,9 @@ build/
 db_dump_temp.json
 questions.json
 *.sql
-parse.js
 
 # Personal and config files
 ACTUALmd
-IMPORTANT.txt
 RULES.md
 ME_TO_DO
 waiting_questions.json

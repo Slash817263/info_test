@@ -54,7 +54,7 @@ exports.handler = async function(event, context) {
 
         // We will store this in results table as a special type
         // First delete any previous progress for this test to avoid bloat
-        const deleteUrl = `${supabaseUrl}/rest/v1/results?student_username=eq.${encodeURIComponent(student_username)}&test_type=eq.progress_${assigned_test_id}`;
+        const deleteUrl = `${supabaseUrl}/rest/v1/results?student_username=ilike.${encodeURIComponent(student_username)}&test_type=eq.progress_${assigned_test_id}`;
         await fetch(deleteUrl, {
             method: 'DELETE',
             headers: {

@@ -65,9 +65,9 @@ exports.handler = async function(event, context) {
             
             let url = `${supabaseUrl}/rest/v1/assigned_tests?order=created_at.desc`;
             if (username && !isAdmin) {
-                url += `&student_username=eq.${encodeURIComponent(username)}&status=eq.pending`;
+                url += `&student_username=ilike.${encodeURIComponent(username)}&status=eq.pending`;
             } else if (username && isAdmin) {
-                url += `&student_username=eq.${encodeURIComponent(username)}`;
+                url += `&student_username=ilike.${encodeURIComponent(username)}`;
             }
 
             const response = await fetch(url, {
@@ -82,9 +82,9 @@ exports.handler = async function(event, context) {
 
             let progData = [];
             try {
-                let progUrl = `${supabaseUrl}/rest/v1/results?test_type=like.progress_*&select=test_type,answers_json`;
+                let progUrl = `${supabaseUrl}/rest/v1/results?test_type=like.progress_*&select=test_type,answers_json,score,time_taken_ms,created_at`;
                 if (username) {
-                    progUrl = `${supabaseUrl}/rest/v1/results?student_username=eq.${encodeURIComponent(username)}&test_type=like.progress_*&select=test_type,answers_json`;
+                    progUrl = `${supabaseUrl}/rest/v1/results?student_username=ilike.${encodeURIComponent(username)}&test_type=like.progress_*&select=test_type,answers_json,score,time_taken_ms,created_at`;
                 }
                 const progRes = await fetch(progUrl, {
                     headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
@@ -104,7 +104,11 @@ exports.handler = async function(event, context) {
                 }
                 return {
                     ...at,
-                    answered_count: answered
+                    answered_count: answered,
+                    current_answers: (prog && prog.answers_json) ? prog.answers_json : null,
+                    progress_last_index: (prog && prog.score !== undefined) ? prog.score : null,
+                    progress_time_ms: prog ? prog.time_taken_ms : null,
+                    progress_updated_at: prog ? prog.created_at : null
                 };
             });
 
@@ -137,11 +141,6 @@ exports.handler = async function(event, context) {
                 return { statusCode: 200, headers, body: JSON.stringify({ success: true, test: updated[0] }) };
             }
 
-            const triggerWebhook = async (username, type, len, dline) => {
-                // Notificari WhatsApp dezactivate
-                return;
-            };
-
             if (body.save_draft) {
                 const insertRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests`, {
                     method: 'POST',
@@ -162,9 +161,6 @@ exports.handler = async function(event, context) {
                 });
                 if (!insertRes.ok) throw new Error(await insertRes.text());
                 const inserted = await insertRes.json();
-                
-                await triggerWebhook(body.student_username, body.exam_type, body.target_length, body.deadline);
-
                 return { statusCode: 201, headers, body: JSON.stringify(inserted[0]) };
             }
 
@@ -377,8 +373,6 @@ exports.handler = async function(event, context) {
             if (!insertRes.ok) throw new Error(await insertRes.text());
             const inserted = await insertRes.json();
 
-            await triggerWebhook(student_username, exam_type, target_length, deadline);
-
             return { statusCode: 201, headers, body: JSON.stringify(inserted[0]) };
             
         } else if (method === 'PUT') {
@@ -397,6 +391,10 @@ exports.handler = async function(event, context) {
                     const tRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${id}`, {
                         headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
                     });
+                    if (!tRes.ok) {
+                        const text = await tRes.text().catch(()=>'');
+                        throw new Error(`HTTP ${tRes.status} pe tRes: ${text}`);
+                    }
                     const testData = await tRes.json();
                     if (!testData || testData.length === 0) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Testul nu a fost găsit.' }) };
                     testRow = testData[0];
@@ -409,6 +407,10 @@ exports.handler = async function(event, context) {
                 const qResponse = await fetch(`${supabaseUrl}/rest/v1/questions?select=id,exam_type`, {
                     headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
                 });
+                if (!qResponse.ok) {
+                    const text = await qResponse.text().catch(()=>'');
+                    throw new Error(`HTTP ${qResponse.status} pe qResponse: ${text}`);
+                }
                 let allQuestions = await qResponse.json();
                 let categoryQuestions = allQuestions;
                 if (targetExamType !== 'Diverse') {
@@ -491,21 +493,97 @@ exports.handler = async function(event, context) {
             const params = event.queryStringParameters || {};
             if (!params.id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing id' }) };
             
-            // Delete the assigned test
-            const delRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${params.id}`, {
-                method: 'DELETE',
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-            });
-            
-            if (!delRes.ok) throw new Error(await delRes.text());
+            const id = params.id;
+            const action = (params.action || 'delete').toLowerCase();
 
-            // Also clean up any uncompleted progress row for this test
-            await fetch(`${supabaseUrl}/rest/v1/results?test_type=eq.progress_${params.id}`, {
-                method: 'DELETE',
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-            }).catch(e => console.error('Warning: Failed to clean up progress row for assigned test:', e));
+            if (action === 'reassign') {
+                // 1. Fetch assigned test to check its current deadline
+                const getRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${id}&select=*`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                if (!getRes.ok) throw new Error(await getRes.text());
+                const getJson = await getRes.json();
+                if (getJson.length === 0) {
+                    return { statusCode: 404, headers, body: JSON.stringify({ error: 'Assigned test not found' }) };
+                }
+                const testRow = getJson[0];
 
-            return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+                // 2. Compute deadline:
+                // Dacă termenul inițial este mai mare de 24h din acest moment, îl lasă pe acela.
+                // Altfel, modifică termenul cu cel puțin 24+ ore până la următoarea oră fixă (ex: dacă e 12:01 acum -> 13:00 mâine).
+                const now = new Date();
+                const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+                let newDeadlineIso;
+                if (testRow.deadline && new Date(testRow.deadline).getTime() > twentyFourHoursFromNow.getTime()) {
+                    newDeadlineIso = new Date(testRow.deadline).toISOString();
+                } else {
+                    const target = new Date(twentyFourHoursFromNow);
+                    if (target.getMinutes() > 0 || target.getSeconds() > 0 || target.getMilliseconds() > 0) {
+                        target.setHours(target.getHours() + 1, 0, 0, 0);
+                    } else {
+                        target.setSeconds(0, 0);
+                    }
+                    newDeadlineIso = target.toISOString();
+                }
+
+                // 3. Clean up progress row for this test
+                await fetch(`${supabaseUrl}/rest/v1/results?test_type=eq.progress_${id}`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                }).catch(e => console.error('Warning: Failed to delete progress row', e));
+
+                // 4. Clean up any completion result from results table
+                await fetch(`${supabaseUrl}/rest/v1/results?details_json=cs.%5B%7B%22assigned_test_id%22:%22${id}%22%7D%5D`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                }).catch(e => console.error('Warning: Failed to delete completion result', e));
+
+                // 5. Reset status to pending and update deadline in assigned_tests
+                const patchPayload = {
+                    status: 'pending',
+                    deadline: newDeadlineIso
+                };
+                if (testRow.current_answers !== undefined) {
+                    patchPayload.current_answers = [];
+                }
+
+                const patchRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(patchPayload)
+                });
+                if (!patchRes.ok) throw new Error(await patchRes.text());
+
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true, action: 'reassigned', deadline: newDeadlineIso }) };
+
+            } else {
+                // DEFINITIVE DELETE: șterge definitiv testul și toate răspunsurile / progresul din baza de date
+                // 1. Clean up progress row
+                await fetch(`${supabaseUrl}/rest/v1/results?test_type=eq.progress_${id}`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                }).catch(e => console.error('Warning: Failed to delete progress row', e));
+
+                // 2. Clean up any completion result in results table
+                await fetch(`${supabaseUrl}/rest/v1/results?details_json=cs.%5B%7B%22assigned_test_id%22:%22${id}%22%7D%5D`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                }).catch(e => console.error('Warning: Failed to delete completion result', e));
+
+                // 3. Delete the assigned test row permanently
+                const delRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                if (!delRes.ok) throw new Error(await delRes.text());
+
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true, action: 'deleted' }) };
+            }
         }
 
         return { statusCode: 405, headers, body: 'Method not allowed' };

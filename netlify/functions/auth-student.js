@@ -1,3 +1,7 @@
+let rateLimitCache = {};
+const RATE_LIMIT_MS = 60000;
+const MAX_REQUESTS_PER_MIN = 15;
+
 exports.handler = async function(event, context) {
     const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
     const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
@@ -12,6 +16,22 @@ exports.handler = async function(event, context) {
 
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
+    }
+
+    const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
+    const now = Date.now();
+    if (!rateLimitCache[ip]) {
+        rateLimitCache[ip] = { count: 1, first: now };
+    } else {
+        if (now - rateLimitCache[ip].first > RATE_LIMIT_MS) {
+            rateLimitCache[ip] = { count: 1, first: now };
+        } else {
+            rateLimitCache[ip].count++;
+        }
+    }
+
+    if (rateLimitCache[ip].count > MAX_REQUESTS_PER_MIN) {
+        return { statusCode: 429, headers, body: JSON.stringify({ error: 'Prea multe încercări. Te rugăm să aștepți un minut.' }) };
     }
 
     if (event.httpMethod !== 'POST') {
@@ -55,35 +75,19 @@ exports.handler = async function(event, context) {
         }
 
         const student = data[0];
-        const bcrypt = require('bcryptjs');
-
-        let isPasswordValid = false;
-
-        // Check password (supports both plain text and bcrypt hash)
-        if (student.password.startsWith('$2')) {
-            isPasswordValid = bcrypt.compareSync(cleanPassword, student.password);
-            if (isPasswordValid) {
-                // Restore plain text in database so admin can view it directly
-                fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student.id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ password: cleanPassword })
-                }).catch(err => console.error('Eroare restabilire parola plain:', err));
-            }
-        } else {
-            isPasswordValid = (student.password === cleanPassword);
-        }
+        let isPasswordValid = (student.password === cleanPassword);
 
         if (!isPasswordValid) {
             return { statusCode: 401, headers, body: JSON.stringify({ error: 'Parolă incorectă' }) };
         }
 
+        const utils = require('./_utils');
         const jwt = require('jsonwebtoken');
-        const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+        const jwtSecret = utils.getLiveEnv('JWT_SECRET', process.env.JWT_SECRET);
+        if (!jwtSecret) {
+            return { statusCode: 500, headers, body: JSON.stringify({ error: 'Eroare server: JWT_SECRET lipsă.' }) };
+        }
+        
         const hashPrefix = (student.password || '').substring(0, 15);
         const token = jwt.sign(
             { username: student.username, id: student.id, hashPrefix: hashPrefix },

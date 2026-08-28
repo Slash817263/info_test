@@ -39,7 +39,11 @@ exports.handler = async function(event, context) {
     }
     const token = authHeader.substring(7);
     const jwt = require('jsonwebtoken');
-    const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+    const utils = require('./_utils');
+    const jwtSecret = utils.getLiveEnv('JWT_SECRET', process.env.JWT_SECRET);
+    if (!jwtSecret) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Eroare server: JWT_SECRET lipsă.' }) };
+    }
     try {
         const decoded = jwt.verify(token, jwtSecret);
         if ((decoded.username || '').toLowerCase() !== (student_username || '').toLowerCase()) {
@@ -50,7 +54,7 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        const queryUrl = `${supabaseUrl}/rest/v1/results?student_username=eq.${encodeURIComponent(student_username)}&test_type=eq.progress_${assigned_test_id}&select=*&limit=1`;
+        const queryUrl = `${supabaseUrl}/rest/v1/results?student_username=ilike.${encodeURIComponent(student_username)}&test_type=eq.progress_${assigned_test_id}&select=*&limit=1`;
         
         const response = await fetch(queryUrl, {
             headers: {

@@ -7,14 +7,11 @@ const API_MANAGE_WAITING = '/.netlify/functions/manage-waiting-questions';
 const API_MANAGE_STUDENTS = '/.netlify/functions/manage-students';
 const API_ASSIGNED_TESTS = '/.netlify/functions/manage-assigned-tests';
 
+// Token-ul este gestionat acum 100% de browser (HttpOnly cookie)
 const urlParams = new URLSearchParams(window.location.search);
-let adminToken = urlParams.get('token') || sessionStorage.getItem('adminToken');
-if (adminToken) {
-    sessionStorage.setItem('adminToken', adminToken);
-    if (urlParams.has('token')) {
-        const cleanUrl = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, document.title, cleanUrl);
-    }
+if (urlParams.has('token')) {
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
 }
 
 function normalizeSearchText(str) {
@@ -28,36 +25,15 @@ function normalizeSearchText(str) {
         .trim();
 }
 
-function showAdminLoginModal() {
-    const modal = document.getElementById('modal-admin-login');
-    const input = document.getElementById('input-admin-pass');
-    if (modal) {
-        modal.style.display = 'flex';
-        if (input) {
-            input.value = '';
-            setTimeout(() => input.focus(), 100);
-        }
-    }
-}
 
-function hideAdminLoginModal() {
-    const modal = document.getElementById('modal-admin-login');
-    if (modal) modal.style.display = 'none';
-}
 
 const fetchWithToken = async (url, options = {}) => {
-    if (!adminToken) {
-        showAdminLoginModal();
-        return { ok: false, status: 401, json: async () => ({ error: 'Unauthorized' }) };
-    }
-    const headers = { ...options.headers, 'x-admin-token': adminToken };
+    // Cererile vor trimite automat cookie-ul HttpOnly
     try {
-        const res = await fetch(url, { ...options, headers });
-        if (res.status === 401) {
-            sessionStorage.removeItem('adminToken');
-            adminToken = null;
-            showAdminLoginModal();
-            showToast('Cheie admin invalidă sau neautorizată.', true);
+        const res = await fetch(url, options);
+        if (res.status === 401 || res.status === 403) {
+            showToast('Sesiune expirată sau neautorizată.', true);
+            setTimeout(() => { window.location.href = '/admin-login.html'; }, 1500);
         }
         return res;
     } catch (e) {
@@ -245,10 +221,14 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.add('active');
         document.getElementById(btn.dataset.target).classList.add('active');
 
-        if (btn.dataset.target === 'tab-rezultate') loadSituatie();
+        if (btn.dataset.target === 'tab-rezultate') {
+            closeSituatieDetail();
+            loadSituatie();
+        }
         if (btn.dataset.target === 'tab-intrebari' && questionsData.length === 0) loadQuestions();
         if (btn.dataset.target === 'tab-waiting') loadWaitingQuestions();
         if (btn.dataset.target === 'tab-elevi' && studentsData.length === 0) loadStudents();
+        if (btn.dataset.target === 'tab-leads') loadLeads();
     });
 });
 
@@ -258,34 +238,9 @@ async function loadResults() {
         const res = await fetchWithToken(API_RESULTS);
         if (!res.ok) throw new Error();
         resultsData = await res.json();
-
-        const loadingEl = document.getElementById('loading-results');
-        if (loadingEl) loadingEl.style.display = 'none';
-
-        if (resultsData.length === 0) {
-            const emptyEl = document.getElementById('empty-results');
-            if (emptyEl) emptyEl.style.display = 'block';
-        } else {
-            const wrapEl = document.getElementById('wrapper-results');
-            if (wrapEl) wrapEl.style.display = 'block';
-            if (document.getElementById('results-body')) renderResults();
-            if (document.getElementById('stat-total')) calcResultStats();
-        }
     } catch (e) {
-        const loadingEl = document.getElementById('loading-results');
-        if (loadingEl) loadingEl.innerHTML = `<p style="color:var(--accent-red)">Eroare la încărcare rezultate.</p>`;
+        console.error('Error loading results:', e);
     }
-}
-
-function calcResultStats() {
-    const len = resultsData.length;
-    const sumPct = resultsData.reduce((acc, r) => acc + (r.score / r.total_points * 100), 0);
-    const sumTime = resultsData.reduce((acc, r) => acc + r.time_taken_ms, 0);
-
-    document.getElementById('stat-total').textContent = len;
-    document.getElementById('stat-avg').textContent = (sumPct / len).toFixed(1) + '%';
-    document.getElementById('stat-time').textContent = formatTime(sumTime / len);
-    document.getElementById('stats-area').style.display = '';
 }
 
 function getAdminTestInfo(r) {
@@ -297,7 +252,7 @@ function getAdminTestInfo(r) {
     if (!examCategory && (rawType.includes(':') || (rawType.includes('_') && !rawType.startsWith('progress_')))) {
         examCategory = rawType.split(/[:_]/)[1];
     }
-    
+
     if (!examCategory && Array.isArray(r.details_json) && r.details_json.length > 0) {
         const firstWithExam = r.details_json.find(d => d && d.exam_type);
         if (firstWithExam) {
@@ -331,6 +286,13 @@ function getAdminTestInfo(r) {
             badge: `<span class="badge" style="background:rgba(124,106,255,0.2); color:#c4b5fd; border:1px solid rgba(124,106,255,0.4);">TEMĂ (${cat})</span>`
         };
     }
+    if (examCategory === 'Zilnic' || rawType.includes('zilnic')) {
+        return {
+            title: 'Test Zilnic Adaptiv',
+            label: '🎯 Zilnic',
+            badge: '<span class="badge" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4);">🎯 Zilnic</span>'
+        };
+    }
     const cat = examCategory || 'Diverse';
     return {
         title: `Test Intermediar (${cat})`,
@@ -339,61 +301,7 @@ function getAdminTestInfo(r) {
     };
 }
 
-function renderResults() {
-    const tbody = document.getElementById('results-body');
-    const htmlArr = [];
-    resultsData.forEach(r => {
-        const pct = Math.round((r.score / r.total_points) * 100) || 0;
-        let sc = 'score-low'; if (pct >= 85) sc = 'score-excellent'; else if (pct >= 60) sc = 'score-good'; else if (pct >= 35) sc = 'score-medium';
-        const isAssigned = r.assigned_test_id || r.test_type === 'tema' || (r.test_type && r.test_type.startsWith('tema'));
-        const isInitial = r.test_type === 'initial';
-        const bl = r.blur_count || 0;
-        
-        const testInfo = getAdminTestInfo(r);
-        const testTypeLabel = testInfo.label;
 
-        const blurLabel = isAssigned ? '-' : `<span class="blur-badge ${bl === 0 ? 'safe' : ''}">${bl} pierderi focus</span>`;
-        const timeLabel = isAssigned ? '-' : formatTime(r.time_taken_ms);
-
-        htmlArr.push(`
-                    <tr>
-                        <td>
-                            <div class="student-name">${escapeHtml(r.student_name)}</div>
-                            <div style="font-size:11px; color:var(--text-muted)">@${escapeHtml(r.student_username || 'anonim')}</div>
-                        </td>
-                        <td>${testTypeLabel}</td>
-                        <td><span class="score-badge ${sc}">${r.score}/${r.total_points} (${pct}%)</span></td>
-                        <td>${blurLabel}</td>
-                        <td style="font-family:var(--font-code); color:var(--text-secondary)">${timeLabel}</td>
-                        <td style="color:var(--text-secondary)">${formatDate(r.created_at)}</td>
-                        <td>
-                            <button class="btn btn-edit" style="margin-right:6px;" onclick="openDetailsModal(${r.id})">👁️ Detalii</button>
-                            <button class="btn btn-edit" style="margin-right:6px; background: rgba(248, 113, 113, 0.1); color: var(--accent-red); border-color: rgba(248, 113, 113, 0.3);" onclick="openDetailsModal(${r.id}, 'wrong')">❌ Greșeli</button>
-                            <button class="btn btn-primary" style="margin-right:6px;" onclick="openReportModal(${r.id})">📊 Raport</button>
-                            <button class="btn btn-danger" onclick="deleteResult(${r.id})">Șterge</button>
-                        </td>
-                    </tr>
-                `);
-    });
-    tbody.innerHTML = htmlArr.join('');
-}
-
-async function deleteResult(id) {
-    if (!confirm("Sigur ștergi acest rezultat?")) return;
-    try {
-        const res = await fetchWithToken(`${API_DEL_RESULT}?id=${id}`, { method: 'DELETE' });
-        if (res.ok) {
-            showToast('Rezultat șters!');
-            resultsData = resultsData.filter(r => r.id !== id);
-            renderResults();
-            calcResultStats();
-            if (resultsData.length === 0) {
-                document.getElementById('wrapper-results').style.display = 'none';
-                document.getElementById('empty-results').style.display = 'block';
-            }
-        } else showToast('Eroare la ștergere', true);
-    } catch (e) { showToast('Eroare de rețea', true); }
-}
 
 /* ==================== MODAL DETALII REZULTAT ==================== */
 let currentSelectedResult = null;
@@ -499,36 +407,95 @@ async function openReportModal(resultId) {
         }
     });
 
-    // Build HTML
-    let html = '';
-    for (const cat in stats) {
-        html += `<div style="margin-bottom: 20px;">
-                            <h3 style="color: var(--accent-purple); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">${cat}</h3>
-                            <ul style="list-style: none; padding: 0; margin: 0;">`;
+    // Build rich category diagnostic cards
+    const categoryList = Object.entries(stats).map(([catName, subcats]) => {
+        let catTotal = 0;
+        let catCorrect = 0;
+        Object.values(subcats).forEach(s => {
+            catTotal += s.total;
+            catCorrect += s.correct;
+        });
+        const catWrong = catTotal - catCorrect;
+        const pct = Math.round((catCorrect / catTotal) * 100) || 0;
+        return {
+            name: catName,
+            total: catTotal,
+            correct: catCorrect,
+            wrong: catWrong,
+            pct: pct,
+            subcategories: subcats
+        };
+    });
 
-        for (const subcat in stats[cat]) {
-            const { total, correct } = stats[cat][subcat];
-            const p = correct / total;
-            let icon = '✔️';
-            let color = 'var(--accent-green)';
+    categoryList.sort((a, b) => (a.correct / a.total) - (b.correct / b.total));
+    const criticalList = categoryList.filter(c => c.pct < 50);
+    const hasCritical = criticalList.length > 0;
 
-            if (p === 0) {
-                icon = '❌';
-                color = 'var(--accent-red)';
-            } else if (p < 0.7) {
-                icon = '⚠️';
-                color = '#fbbf24'; // yellow
-            }
+    let html = `
+        <div style="margin-bottom: 20px;">
+            <div class="diagnostic-alert-banner ${hasCritical ? 'critical' : 'stable'}" style="margin-bottom: 16px;">
+                <span style="font-size: 22px; flex-shrink: 0;">${hasCritical ? '🚨' : '📊'}</span>
+                <div style="font-size: 13px; color: #e2e8f0; line-height: 1.5;">
+                    ${hasCritical
+            ? `<strong>Atenție:</strong> Elevul are lipsuri majore la <strong>${criticalList.map(c => c.name).join(', ')}</strong>. Este necesară o intervenție didactică pe aceste capitole.`
+            : `Elevul are o bază echilibrată. Continuă cu consolidarea noțiunilor unde au apărut ezitări.`}
+                </div>
+            </div>
+            <div class="diagnostic-cards-grid">
+                ${categoryList.map(cat => {
+                let cardClass = 'good';
+                let fillClass = 'good';
+                let textColor = '#34d399';
+                let badge = '<span class="diagnostic-badge-good">✔️ Bine Consolidat</span>';
 
-            html += `<li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--bg-card); border-radius: 6px; margin-bottom: 6px; border: 1px solid var(--border-color);">
-                                <span>${subcat}</span>
-                                <span style="font-weight: 600; color: ${color};">${correct}/${total} corecte ${icon}</span>
-                             </li>`;
-        }
-        html += `</ul></div>`;
-    }
+                if (cat.pct < 50) {
+                    cardClass = 'critical';
+                    fillClass = 'critical';
+                    textColor = '#f87171';
+                    badge = `<span class="diagnostic-badge-critical">⚠️ ${cat.pct === 0 ? '0%! Lipsuri Majore' : 'Nivel Critic'}</span>`;
+                } else if (cat.pct < 75) {
+                    cardClass = 'medium';
+                    fillClass = 'medium';
+                    textColor = '#fbbf24';
+                    badge = '<span class="diagnostic-badge-medium">⚠️ Nivel Mediu</span>';
+                }
 
-    if (!html) {
+                const subItems = Object.entries(cat.subcategories).map(([subName, sData]) => {
+                    const sPct = Math.round((sData.correct / sData.total) * 100);
+                    const sColor = sPct >= 75 ? 'var(--accent-green)' : (sPct >= 50 ? '#fbbf24' : 'var(--accent-red)');
+                    const sIcon = sPct >= 75 ? '✔️' : (sPct >= 50 ? '⚠️' : '❌');
+                    return `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(0,0,0,0.3); border-radius: 4px; font-size: 12px; margin-top: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                                <span style="color: var(--text-primary);">${escapeHtml(subName)}</span>
+                                <span style="font-weight: 700; color: ${sColor};">${sData.correct}/${sData.total} (${sPct}%) ${sIcon}</span>
+                            </div>
+                        `;
+                }).join('');
+
+                return `
+                        <div class="diagnostic-cat-card ${cardClass}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <span style="font-size: 15px; font-weight: 800; color: #fff;">${escapeHtml(cat.name)}</span>
+                                ${badge}
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                                <span style="font-size: 12px; color: var(--text-secondary);">${cat.correct} din ${cat.total} corecte (${cat.wrong} greșite)</span>
+                                <span style="font-size: 16px; font-weight: 800; color: ${textColor};">${cat.pct}%</span>
+                            </div>
+                            <div class="diagnostic-progress-bar">
+                                <div class="diagnostic-progress-fill ${fillClass}" style="width: ${cat.pct}%;"></div>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                ${subItems}
+                            </div>
+                        </div>
+                    `;
+            }).join('')}
+            </div>
+        </div>
+    `;
+
+    if (categoryList.length === 0) {
         html = '<div style="text-align:center; padding: 20px; color: var(--text-secondary);">Nu există date de afișat.</div>';
     }
 
@@ -614,7 +581,7 @@ function renderDetailsList(details, filter) {
         const itemImgs = parseImageUrls(item.image_url);
         const imageHtml = itemImgs.length > 0 ? `
             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; margin:12px auto; text-align:center; width:100%;">
-                ${itemImgs.map(u => `<img src="${u}" style="max-height:220px; max-width:100%; border-radius:8px; border:1px solid rgba(255,255,255,0.1); margin:0 auto; display:block; box-shadow:0 4px 12px rgba(0,0,0,0.3);">`).join('')}
+                ${itemImgs.map(u => `<img src="${u}" style="max-height:220px; max-width:100%; border-radius:8px; border:1px solid rgba(255,255,255,0.1); margin:0 auto; display:block; box-shadow:0 4px 12px rgba(0,0,0,0.3); cursor:zoom-in;" onclick="openAdminLightbox('${u}')" title="Click pentru mărire">`).join('')}
             </div>` : '';
         const hintHtml = (item.hint || item.explanation) ? `<div style="margin-top:8px; font-size:12px; color:var(--text-secondary); background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:6px; border-left:3px solid var(--accent-purple);">💡 <em>${escapeHtml(item.hint || item.explanation)}</em></div>` : '';
 
@@ -729,7 +696,7 @@ function renderQuestions() {
     // Update tab texts
     ['Initial', 'Academie', 'Poli', 'BAC', 'Diverse'].forEach(tab => {
         const el = document.getElementById(`tab-count-${tab}`);
-        if (el) el.textContent = `(${counts[tab]})`;
+        if (el) el.textContent = counts[tab];
     });
 
     // Filter data for the current view
@@ -859,6 +826,7 @@ async function deleteQuestion(id) {
 function updateSubcategories(selectedSub = '') {
     const cat = document.getElementById('q-category').value;
     const subSel = document.getElementById('q-subcategory');
+    if (!subSel) return;
     subSel.innerHTML = '<option value="">-- Alege Subcategorie --</option>';
     if (cat && subcategoriesMap[cat]) {
         subcategoriesMap[cat].forEach(s => {
@@ -867,7 +835,19 @@ function updateSubcategories(selectedSub = '') {
             subSel.appendChild(opt);
         });
     }
-    if (selectedSub) subSel.value = selectedSub;
+    if (selectedSub) {
+        const normSelected = String(selectedSub).trim().toLowerCase();
+        const match = Array.from(subSel.options).find(o => o.value.trim().toLowerCase() === normSelected);
+        if (match) {
+            subSel.value = match.value;
+        } else {
+            const customOpt = document.createElement('option');
+            customOpt.value = String(selectedSub).trim();
+            customOpt.textContent = String(selectedSub).trim();
+            subSel.appendChild(customOpt);
+            subSel.value = customOpt.value;
+        }
+    }
 }
 
 let cmEditor = null;
@@ -930,7 +910,7 @@ function parseImageUrls(imageVal) {
             try {
                 const parsed = JSON.parse(trimmed);
                 if (Array.isArray(parsed)) return parsed.filter(Boolean);
-            } catch (e) {}
+            } catch (e) { }
         }
         if (trimmed.includes('\n')) {
             return trimmed.split('\n').map(s => s.trim()).filter(Boolean);
@@ -946,6 +926,78 @@ window.parseImageUrls = parseImageUrls;
 
 let currentQuestionImages = []; // Array of { type: 'url'|'file', url: string, file?: File, previewUrl?: string }
 
+function addDroppedOrPastedFiles(files, sourceDesc = 'Fișier') {
+    if (!files || files.length === 0) return;
+    let addedCount = 0;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith('image/') && !file.name.match(/\.(png|jpe?g|webp|gif|bmp|svg)$/i)) {
+            continue;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            showToast(`Fișierul ${file.name || 'atașat'} depășește limita de 5MB!`, true);
+            continue;
+        }
+
+        let previewUrl = '';
+        try {
+            previewUrl = URL.createObjectURL(file);
+        } catch (e) {
+            console.warn('URL.createObjectURL failed:', e);
+        }
+
+        const imgObj = { type: 'file', file, previewUrl };
+        currentQuestionImages.push(imgObj);
+        addedCount++;
+
+        // Convert immediately to DataURL (base64) so thumbnail displays 100% reliably in all browsers and under any CSP
+        if (window.FileReader) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imgObj.previewUrl = e.target.result;
+                renderQuestionImagesManager();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    if (addedCount > 0) {
+        renderQuestionImagesManager();
+        if (sourceDesc === 'Clipboard') {
+            showToast('📋 Imagine adăugată din Clipboard / Snipping Tool!');
+        } else if (sourceDesc === 'Drag & Drop') {
+            showToast(`📥 ${addedCount} ${addedCount === 1 ? 'imagine adăugată' : 'imagini adăugate'} prin Drag & Drop!`);
+        }
+    }
+}
+window.addDroppedOrPastedFiles = addDroppedOrPastedFiles;
+
+function openAdminLightbox(url) {
+    if (!url) return;
+    const modal = document.getElementById('admin-lightbox-modal');
+    const img = document.getElementById('admin-lightbox-img');
+    if (modal && img) {
+        img.src = url;
+        modal.style.display = 'flex';
+    }
+}
+window.openAdminLightbox = openAdminLightbox;
+
+function closeAdminLightbox() {
+    const modal = document.getElementById('admin-lightbox-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        const img = document.getElementById('admin-lightbox-img');
+        if (img) img.src = '';
+    }
+}
+window.closeAdminLightbox = closeAdminLightbox;
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAdminLightbox();
+    }
+});
+
 function renderQuestionImagesManager() {
     const list = document.getElementById('q-images-preview-list');
     const badge = document.getElementById('q-images-count-badge');
@@ -956,21 +1008,37 @@ function renderQuestionImagesManager() {
     }
 
     if (currentQuestionImages.length === 0) {
-        list.innerHTML = `<span style="font-size:12px; color:var(--text-secondary); padding:4px; text-align:center; width:100%;">Nicio imagine atașată.</span>`;
+        list.innerHTML = `
+            <div class="q-img-drop-empty" onclick="document.getElementById('q-image-files').click()">
+                <div class="q-img-drop-icon">📥 ✂️ 📋</div>
+                <div class="q-img-drop-title">Trage & plasează imagini aici sau apasă <kbd>Ctrl + V</kbd></div>
+                <div class="q-img-drop-sub">Suportă capturi din Snipping Tool / Clipboard, fișiere PNG, JPG, WebP (max 5MB)</div>
+            </div>
+        `;
         return;
     }
 
-    list.innerHTML = currentQuestionImages.map((img, idx) => {
+    let cardsHtml = currentQuestionImages.map((img, idx) => {
         const displaySrc = img.type === 'file' ? img.previewUrl : img.url;
         const label = img.type === 'file' ? (img.file ? img.file.name : 'Fișier nou') : 'Link Web';
         return `
             <div class="q-img-card">
-                <img src="${displaySrc}" alt="Imagine ${idx + 1}" onclick="window.open('${displaySrc}', '_blank')" style="cursor:zoom-in;">
+                <img src="${displaySrc}" alt="Imagine ${idx + 1}" onclick="openAdminLightbox('${displaySrc}')" style="cursor:zoom-in;" title="Click pentru mărire imagine (ESC pentru a închide)">
                 <div class="q-img-info" title="${escapeHtml(label)}">#${idx + 1} ${escapeHtml(label)}</div>
                 <button type="button" class="q-img-del-btn" onclick="removeQuestionImage(${idx})">🗑️ Șterge</button>
             </div>
         `;
     }).join('');
+
+    cardsHtml += `
+        <div class="q-img-card q-img-card-add" onclick="document.getElementById('q-image-files').click()" title="Apasă pentru a alege fișier, trage imagini sau apasă Ctrl+V">
+            <div style="font-size: 24px; margin-bottom: 2px;">➕</div>
+            <div style="font-size: 11px; font-weight: 700; color: var(--accent-purple);">Adaugă / Paste</div>
+            <div style="font-size: 9px; color: var(--text-muted); text-align: center;">Trage fișiere sau <kbd style="background:rgba(255,255,255,0.1); padding:1px 3px; border-radius:3px;">Ctrl+V</kbd></div>
+        </div>
+    `;
+
+    list.innerHTML = cardsHtml;
 }
 window.renderQuestionImagesManager = renderQuestionImagesManager;
 
@@ -999,20 +1067,91 @@ window.addImageUrlFromInput = addImageUrlFromInput;
 function handleImageFilesSelect(e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.size > 5 * 1024 * 1024) {
-            showToast(`Fișierul ${file.name} e prea mare (max 5MB)`, true);
-            continue;
-        }
-        const previewUrl = URL.createObjectURL(file);
-        currentQuestionImages.push({ type: 'file', file, previewUrl });
-    }
-    renderQuestionImagesManager();
+    addDroppedOrPastedFiles(files, 'Fișiere');
     e.target.value = '';
 }
 window.handleImageFilesSelect = handleImageFilesSelect;
+
+function initImageDropAndPasteHandlers() {
+    const dropzone = document.getElementById('q-images-preview-list');
+    const modalQ = document.getElementById('modal-question');
+
+    if (dropzone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'dragend', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('drag-over');
+            });
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('drag-over');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                addDroppedOrPastedFiles(e.dataTransfer.files, 'Drag & Drop');
+            }
+        });
+    }
+
+    // Global Paste Listener (Snipping tool / clipboard screenshots)
+    window.addEventListener('paste', (e) => {
+        // Only trigger when modal-question is active/open
+        if (!modalQ || modalQ.style.display === 'none') return;
+
+        const clipboardData = e.clipboardData || window.clipboardData;
+        if (!clipboardData) return;
+
+        const items = clipboardData.items;
+        const imageFiles = [];
+
+        if (items) {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.type.indexOf('image') !== -1) {
+                    const blob = item.getAsFile();
+                    if (blob) {
+                        const timeStamp = new Date().toISOString().replace(/[:.]/g, '-').slice(11, 19);
+                        const file = new File([blob], `snippet-${timeStamp}.png`, { type: blob.type || 'image/png' });
+                        imageFiles.push(file);
+                    }
+                }
+            }
+        } else if (clipboardData.files) {
+            for (let i = 0; i < clipboardData.files.length; i++) {
+                const file = clipboardData.files[i];
+                if (file.type.startsWith('image/')) {
+                    imageFiles.push(file);
+                }
+            }
+        }
+
+        if (imageFiles.length > 0) {
+            e.preventDefault(); // Prevent pasting binary / weird text if input is focused
+            addDroppedOrPastedFiles(imageFiles, 'Clipboard');
+        }
+    });
+}
+window.initImageDropAndPasteHandlers = initImageDropAndPasteHandlers;
+
+function normalizeDifficulty(diff) {
+    if (!diff) return 'medium';
+    const d = String(diff).trim().toLowerCase();
+    if (d === 'easy' || d === 'usor' || d === 'usoara' || d === 'ușor' || d === 'ușoară') return 'easy';
+    if (d === 'medium' || d === 'mediu' || d === 'medie') return 'medium';
+    if (d === 'hard' || d === 'greu' || d === 'grea') return 'hard';
+    return 'medium';
+}
+window.normalizeDifficulty = normalizeDifficulty;
 
 function openQuestionModal(q = null) {
     const m = document.getElementById('modal-question');
@@ -1020,35 +1159,45 @@ function openQuestionModal(q = null) {
     document.getElementById('modal-title').textContent = q ? 'Editează Întrebare' : 'Adaugă Întrebare Nouă';
 
     if (q) {
-        document.getElementById('q-id').value = q.id;
-        const examTypes = (q.exam_type || 'Diverse').split(',').map(s => s.trim());
+        document.getElementById('q-id').value = q.id || '';
+        const examTypes = (q.exam_type || 'Diverse').split(',').map(s => s.trim().toLowerCase());
         document.querySelectorAll('.q-exam-cb').forEach(cb => {
-            cb.checked = examTypes.includes(cb.value);
+            cb.checked = examTypes.includes(cb.value.toLowerCase());
         });
 
-        document.getElementById('q-category').value = q.category || '';
-        updateSubcategories(q.subcategory);
-        document.getElementById('q-difficulty').value = q.difficulty;
-        document.getElementById('q-type').value = q.type;
-        document.getElementById('q-text').value = q.text;
+        document.getElementById('q-category').value = q.category ? q.category.trim() : '';
+        updateSubcategories(q.subcategory ? q.subcategory.trim() : '');
+
+        const normDiff = normalizeDifficulty(q.difficulty);
+        const diffSelect = document.getElementById('q-difficulty');
+        if (diffSelect) {
+            diffSelect.value = normDiff;
+            // Fallback if not matched: force first or medium
+            if (!diffSelect.value) diffSelect.value = 'medium';
+        }
         
+        // Default to 'choice' (Grilă Standard) if q.type is missing, null, or empty
+        const qTypeVal = (q.type && String(q.type).trim().toLowerCase() === 'code') ? 'code' : 'choice';
+        document.getElementById('q-type').value = qTypeVal;
+        
+        document.getElementById('q-text').value = q.text || '';
+
         currentQuestionImages = parseImageUrls(q.image_url).map(url => ({ type: 'url', url }));
         renderQuestionImagesManager();
-        
+
         let opts = q.options_json || q.options || [];
         if (typeof opts === 'string') {
             try { opts = JSON.parse(opts); } catch (e) { opts = []; }
         }
         if (!Array.isArray(opts)) opts = [];
 
-        document.getElementById('q-opt-0').value = opts[0] || '';
-        document.getElementById('q-opt-1').value = opts[1] || '';
-        document.getElementById('q-opt-2').value = opts[2] || '';
-        document.getElementById('q-opt-3').value = opts[3] || '';
-        document.getElementById('q-opt-4').value = opts[4] || '';
-        document.getElementById('q-opt-5').value = opts[5] || '';
+        for (let i = 0; i < 6; i++) {
+            const el = document.getElementById(`q-opt-${i}`);
+            if (el) el.value = (opts[i] !== undefined && opts[i] !== null) ? opts[i] : '';
+        }
 
-        updateCorrectDropdown(q.correct_index);
+        const correctIdx = (q.correct_index !== undefined && q.correct_index !== null) ? parseInt(q.correct_index) : 0;
+        updateCorrectDropdown(isNaN(correctIdx) ? 0 : correctIdx);
 
         document.getElementById('q-hint').value = q.hint || q.explanation || '';
 
@@ -1076,6 +1225,9 @@ function openQuestionModal(q = null) {
         });
         updateSubcategories();
         updateCorrectDropdown(0);
+
+        // Default to Grilă Standard for new questions
+        document.getElementById('q-type').value = 'choice';
 
         setTimeout(() => {
             initCodeMirror();
@@ -1345,7 +1497,7 @@ function renderWaitingQuestions() {
         const qImgs = parseImageUrls(q.image_url);
         const imageHtml = qImgs.length > 0 ? `
             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; margin:12px auto; text-align:center; width:100%;">
-                ${qImgs.map(u => `<img src="${u}" style="max-height:200px; max-width:100%; border-radius:8px; display:block; margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.3);">`).join('')}
+                ${qImgs.map(u => `<img src="${u}" style="max-height:200px; max-width:100%; border-radius:8px; display:block; margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:zoom-in;" onclick="openAdminLightbox('${u}')" title="Click pentru mărire">`).join('')}
             </div>` : '';
 
         const rawExam = q.exam_type || 'Initial';
@@ -1356,6 +1508,28 @@ function renderWaitingQuestions() {
         else if (rawExam.includes('Diverse')) selectedExam = 'Diverse';
         else if (rawExam.includes('Initial')) selectedExam = 'Initial';
 
+        const hasHint = q.hint && q.hint.trim() !== '';
+        const hintHtml = hasHint ? `
+            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: flex-start;">
+                <button type="button" class="btn-hint-inline" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; border-radius: 6px; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.35); color: #fbbf24; cursor: pointer; transition: all 0.2s;" onclick="toggleWaitingHint('waiting-hint-${q.id || idx}')">
+                    <span>💡</span> Vezi Indiciu (Hint)
+                </button>
+                <div id="waiting-hint-${q.id || idx}" class="review-hint-box" style="display:none; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 12px 14px; border-radius: 8px; background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24; font-size: 13px; color: #e2e8f0; line-height: 1.5; animation: fadeIn 0.2s ease;">
+                    <div style="font-weight: 700; color: #fbbf24; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                        <span>💡</span> Indiciu pentru Elev:
+                    </div>
+                    <div style="color: #cbd5e1; white-space: pre-wrap; font-size: 13px;">${escapeHtml(q.hint)}</div>
+                </div>
+            </div>` : `
+            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: flex-start;">
+                <button type="button" class="btn-hint-inline" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.18); color: var(--text-muted); cursor: pointer; transition: all 0.2s;" onclick="toggleWaitingHint('waiting-hint-${q.id || idx}')">
+                    <span>💡</span> Indiciu (Nesetat)
+                </button>
+                <div id="waiting-hint-${q.id || idx}" class="review-hint-box" style="display:none; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 10px 14px; border-radius: 8px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid rgba(255,255,255,0.2); font-size: 13px; color: var(--text-secondary); animation: fadeIn 0.2s ease;">
+                    <em>Această întrebare nu are încă un indiciu setat. Poți adăuga unul din „✏️ Editează & Aprobă”.</em>
+                </div>
+            </div>`;
+
         return `
                     <div class="detail-card" style="border-left: 4px solid var(--accent-amber); background: rgba(15, 15, 40, 0.75);">
                         <div class="detail-header" style="flex-wrap: wrap; gap: 8px;">
@@ -1363,7 +1537,7 @@ function renderWaitingQuestions() {
                                 <span style="font-weight:700; color:var(--accent-amber); font-size:13px;">#${q.id || (idx + 1)}</span>
                                 <span class="badge ${diffClass}">${diffLabel}</span>
                                 <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-secondary);">${escapeHtml(q.category || 'General')} • ${escapeHtml(q.subcategory || '')}</span>
-                                <select class="form-control" style="width: auto; padding: 3px 8px; font-size: 12px; height: 26px; border-color: var(--accent-purple);" onchange="updateWaitingExamType(${q.id}, this.value)">
+                                <select class="form-control" style="width: 130px; min-width: 130px; padding: 4px 28px 4px 10px; font-size: 12px; font-weight: 600; height: 28px; border-color: var(--accent-purple); background-position: right 8px center; background-size: 12px; border-radius: 6px;" onchange="updateWaitingExamType(${q.id}, this.value)">
                                     <option value="Initial" ${selectedExam === 'Initial' ? 'selected' : ''}>Test Inițial</option>
                                     <option value="Poli" ${selectedExam === 'Poli' ? 'selected' : ''}>Poli</option>
                                     <option value="Academie" ${selectedExam === 'Academie' ? 'selected' : ''}>Academie</option>
@@ -1381,12 +1555,20 @@ function renderWaitingQuestions() {
                         ${codeHtml}
                         ${imageHtml}
                         <div style="margin-top:10px;">${optsHtml}</div>
+                        ${hintHtml}
                     </div>
                 `;
     }).join('');
 
     container.innerHTML = html;
 }
+
+function toggleWaitingHint(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+}
+window.toggleWaitingHint = toggleWaitingHint;
 
 function updateWaitingExamType(id, val) {
     const q = waitingQuestionsData.find(x => x.id === id);
@@ -1481,12 +1663,6 @@ async function rejectWaitingQuestion(id) {
 }
 
 
-function decodeHtml(html) {
-    const txt = document.createElement("textarea");
-    txt.innerHTML = html;
-    return txt.value;
-}
-
 function editAndApproveWaitingQuestion(id) {
     const q = waitingQuestionsData.find(x => x.id === id);
     if (!q) return;
@@ -1547,6 +1723,38 @@ async function loadStudents() {
     }
 }
 
+function getSubscriptionBadge(expiresAt) {
+    if (!expiresAt) {
+        return `<span style="background:rgba(124,106,255,0.15); color:var(--accent-purple); border:1px solid rgba(124,106,255,0.4); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">🟣 Nelimitat</span>`;
+    }
+    let exp;
+    if (expiresAt.includes('/')) {
+        const parts = expiresAt.split('/');
+        if (parts.length === 3) {
+            exp = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`);
+        } else {
+            exp = new Date(expiresAt);
+        }
+    } else {
+        exp = new Date(expiresAt);
+    }
+
+    if (isNaN(exp.getTime())) {
+        return `<span style="color:var(--text-muted); font-size:11px;">-</span>`;
+    }
+    const diffMs = exp.getTime() - Date.now();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) {
+        return `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.5); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">🔴 Expirat (${exp.toLocaleDateString('ro-RO')})</span>`;
+    } else if (diffDays <= 5) {
+        return `<span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.5); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">⚠️ ${diffDays} zile rămase</span>`;
+    } else {
+        return `<span style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.4); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">🟢 Activ (${diffDays} zile)</span>`;
+    }
+}
+window.getSubscriptionBadge = getSubscriptionBadge;
+
 function renderStudents() {
     const tbody = document.getElementById('students-body');
     if (!tbody) return;
@@ -1562,7 +1770,7 @@ function renderStudents() {
     });
 
     if (filteredStudents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; opacity:0.6; padding: 20px;">Nu s-au găsit elevi.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; opacity:0.6; padding: 20px;">Nu s-au găsit elevi.</td></tr>';
         return;
     }
 
@@ -1570,6 +1778,8 @@ function renderStudents() {
         const dateStr = formatDate(s.created_at);
         const phoneStr = s.phone_number ? escapeHtml(s.phone_number) : '<span style="color:var(--accent-red); font-size:12px;">Nesetat</span>';
         const pwDisplay = s.password ? escapeHtml(s.password) : 'Nesetat';
+        const subBadge = getSubscriptionBadge(s.expires_at);
+
         return `
                     <tr>
                         <td>${s.id}</td>
@@ -1583,10 +1793,16 @@ function renderStudents() {
                             <span id="pw-val-${s.id}" style="display:none; font-size:13px; font-weight:600; color:var(--accent-purple); letter-spacing:0;">${pwDisplay}</span>
                             <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px; margin-left: 6px;" onclick="togglePassword(${s.id})">👁️</button>
                         </td>
-                        <td style="color:var(--text-secondary); font-size:12px;">${dateStr}</td>
                         <td>
-                            <button class="btn btn-secondary" style="padding: 6px; font-size:12px; margin-right: 4px;" onclick="promptResetPassword(${s.id}, '${escapeHtml(s.username)}')">🔑 Reset</button>
-                            <button class="btn btn-secondary" style="padding: 6px; font-size:12px; border-color: rgba(248,113,113,0.3); color: var(--accent-red);" onclick="deleteStudent(${s.id}, '${escapeHtml(s.username)}')">Șterge</button>
+                            ${subBadge}
+                            <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px; margin-left: 6px;" onclick="openSubscriptionModal(${s.id}, '${escapeHtml(s.username)}', '${s.expires_at || ''}')" title="Modifică Valabilitate">⏱️</button>
+                        </td>
+                        <td style="color:var(--text-secondary); font-size:12px;">${dateStr}</td>
+                        <td style="white-space: nowrap;">
+                            <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                <button class="btn btn-secondary" style="padding: 6px 10px; font-size:12px;" onclick="promptResetPassword(${s.id}, '${escapeHtml(s.username)}')">🔑 Reset</button>
+                                <button class="btn btn-secondary" style="padding: 6px 10px; font-size:12px; border-color: rgba(248,113,113,0.3); color: var(--accent-red);" onclick="deleteStudent(${s.id}, '${escapeHtml(s.username)}')">Șterge</button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1643,6 +1859,145 @@ async function handleEditPhoneSubmit(e) {
     }
 }
 
+/* ==================== SUBSCRIPTION MODAL (VALABILITATE) ==================== */
+function formatSubDateEuropean(d) {
+    if (!d || isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
+function openSubscriptionModal(id, username, currentExpiresAt) {
+    document.getElementById('sub-student-id').value = id;
+    document.getElementById('sub-student-name').value = `@${username}`;
+    const dateInput = document.getElementById('sub-exact-date');
+    if (currentExpiresAt) {
+        let d;
+        if (currentExpiresAt.includes('/')) {
+            const parts = currentExpiresAt.split('/');
+            if (parts.length === 3) {
+                d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`);
+            } else {
+                d = new Date(currentExpiresAt);
+            }
+        } else {
+            d = new Date(currentExpiresAt);
+        }
+        dateInput.value = formatSubDateEuropean(d);
+    } else {
+        dateInput.value = '';
+    }
+    document.getElementById('modal-subscription').style.display = 'flex';
+}
+window.openSubscriptionModal = openSubscriptionModal;
+
+function closeSubscriptionModal() {
+    document.getElementById('modal-subscription').style.display = 'none';
+}
+window.closeSubscriptionModal = closeSubscriptionModal;
+
+function setSubDuration(days) {
+    const targetDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    document.getElementById('sub-exact-date').value = formatSubDateEuropean(targetDate);
+}
+window.setSubDuration = setSubDuration;
+
+function setSubUnlimited() {
+    document.getElementById('sub-exact-date').value = '';
+}
+window.setSubUnlimited = setSubUnlimited;
+
+async function handleEditSubscriptionSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('sub-student-id').value;
+    const dateVal = document.getElementById('sub-exact-date').value;
+    const btn = document.getElementById('btn-save-sub');
+
+    btn.disabled = true;
+    btn.textContent = 'Se salvează...';
+
+    let expiresAtIso = null;
+    if (dateVal && dateVal.trim()) {
+        const trimmed = dateVal.trim();
+        let day, month, year;
+
+        if (trimmed.includes('/')) {
+            const parts = trimmed.split('/');
+            if (parts.length === 3) {
+                day = parseInt(parts[0], 10);
+                month = parseInt(parts[1], 10) - 1;
+                year = parseInt(parts[2], 10);
+            }
+        } else if (trimmed.includes('.')) {
+            const parts = trimmed.split('.');
+            if (parts.length === 3) {
+                day = parseInt(parts[0], 10);
+                month = parseInt(parts[1], 10) - 1;
+                year = parseInt(parts[2], 10);
+            }
+        } else if (trimmed.includes('-')) {
+            const parts = trimmed.split('-');
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    year = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10) - 1;
+                    day = parseInt(parts[2], 10);
+                } else {
+                    day = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10) - 1;
+                    year = parseInt(parts[2], 10);
+                }
+            }
+        }
+
+        if (day >= 1 && day <= 31 && !isNaN(month) && month >= 0 && month <= 11 && year >= 2020 && year <= 2100) {
+            // Set expiration to 23:59:59 local/UTC
+            const dateObj = new Date(year, month, day, 23, 59, 59);
+            if (!isNaN(dateObj.getTime())) {
+                expiresAtIso = dateObj.toISOString();
+            } else {
+                showToast('Data introdusă este invalidă!', true);
+                btn.disabled = false;
+                btn.textContent = 'Salvează Valabilitatea';
+                return;
+            }
+        } else {
+            showToast('Format dată invalid! Folosiți zz/ll/aaaa (ex: 25/09/2026)', true);
+            btn.disabled = false;
+            btn.textContent = 'Salvează Valabilitatea';
+            return;
+        }
+    }
+
+    try {
+        const res = await fetchWithToken(API_MANAGE_STUDENTS, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'update_expiration',
+                id: id,
+                expires_at: expiresAtIso
+            })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Eroare la actualizarea abonamentului');
+        }
+
+        showToast('Valabilitate actualizată cu succes!');
+        closeSubscriptionModal();
+        loadStudents();
+    } catch (err) {
+        showToast(err.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Salvează Valabilitatea';
+    }
+}
+window.handleEditSubscriptionSubmit = handleEditSubscriptionSubmit;
+
 async function promptResetPassword(id, username) {
     const newPassword = prompt(`Introduceți o nouă parolă pentru ${username}:`);
     if (!newPassword || newPassword.trim() === '') return;
@@ -1668,6 +2023,10 @@ async function promptResetPassword(id, username) {
 function openStudentModal() {
     document.getElementById('new-student-username').value = '';
     document.getElementById('new-student-password').value = Math.random().toString(36).slice(-8);
+    const phoneEl = document.getElementById('new-student-phone');
+    if (phoneEl) phoneEl.value = '';
+    const durEl = document.getElementById('new-student-duration');
+    if (durEl) durEl.value = '30';
     document.getElementById('modal-student').style.display = 'flex';
 }
 
@@ -1683,12 +2042,26 @@ async function handleCreateStudent(e) {
 
     const username = document.getElementById('new-student-username').value.trim();
     const password = document.getElementById('new-student-password').value.trim();
+    const phone = document.getElementById('new-student-phone') ? document.getElementById('new-student-phone').value.trim() : null;
+    const duration = document.getElementById('new-student-duration') ? document.getElementById('new-student-duration').value : '30';
+
+    let expiresAt = null;
+    if (duration !== 'unlimited') {
+        const days = parseInt(duration) || 30;
+        expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    }
 
     try {
         const res = await fetchWithToken(API_MANAGE_STUDENTS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'create', username, password })
+            body: JSON.stringify({
+                action: 'create',
+                username,
+                password,
+                phone_number: phone || null,
+                expires_at: expiresAt
+            })
         });
 
         const data = await res.json();
@@ -1727,11 +2100,13 @@ async function deleteStudent(id, username) {
 let assignedTestsData = [];
 
 async function loadSituatie() {
-    document.getElementById('loading-situatie-students').style.display = 'flex';
-    document.getElementById('situatie-students-grid').style.display = 'none';
+    const loadingEl = document.getElementById('loading-situatie-students');
+    const gridEl = document.getElementById('situatie-students-grid');
+    if (loadingEl) loadingEl.style.display = 'flex';
+    if (gridEl) gridEl.style.display = 'none';
     try {
-        if (studentsData.length === 0) await loadStudents();
-        if (resultsData.length === 0) await loadResults();
+        await loadStudents();
+        await loadResults();
 
         const asRes = await fetchWithToken(API_ASSIGNED_TESTS);
         if (asRes.ok) {
@@ -1743,8 +2118,8 @@ async function loadSituatie() {
         console.error(err);
         showToast('Eroare la încărcarea situației', true);
     } finally {
-        document.getElementById('loading-situatie-students').style.display = 'none';
-        document.getElementById('situatie-students-grid').style.display = 'grid';
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (gridEl) gridEl.style.display = 'grid';
     }
 }
 
@@ -1766,31 +2141,155 @@ function renderSituatieGrid() {
         return;
     }
 
-    filteredStudents.forEach(student => {
-        const doneTests = resultsData.filter(r => r.student_username === student.username).length;
-        const pendingTests = assignedTestsData.filter(t => t.student_username === student.username && t.status === 'pending').length;
+    // Calculate Risk Score for each student
+    const studentsWithRisk = filteredStudents.map(student => {
+        const studentUserLower = (student.username || '').toLowerCase().trim();
+        
+        // Results
+        const studentResults = resultsData.filter(r => {
+            const u = (r.student_username || '').toLowerCase().trim();
+            const n = (r.student_name || '').toLowerCase().trim();
+            return (u === studentUserLower || n === studentUserLower) && r.test_type !== 'category_coverage' && r.test_type !== 'lead_diagnostic';
+        }).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+        
+        // Pending Tests
+        const pendingTests = assignedTestsData.filter(t => (t.student_username || '').toLowerCase().trim() === studentUserLower && t.status === 'pending');
+        const overdueTests = pendingTests.filter(t => new Date(t.deadline) < new Date());
 
+        let riskScore = 0;
+        let riskReasons = [];
+
+        // 1. Inactivity (7 / 14 days)
+        if (studentResults.length > 0) {
+            const lastActive = new Date(studentResults[studentResults.length - 1].created_at);
+            const daysInactive = Math.floor((new Date() - lastActive) / (1000 * 60 * 60 * 24));
+            if (daysInactive >= 14) {
+                riskScore += 30;
+                riskReasons.push(`Inactiv > 14 zile`);
+            } else if (daysInactive >= 7) {
+                riskScore += 15;
+                riskReasons.push(`Inactiv > 7 zile`);
+            }
+        } else {
+            riskScore += 15; // never active
+            riskReasons.push(`Niciun test susținut`);
+        }
+
+        // 2. Pending / Overdue Homework
+        if (overdueTests.length > 0) {
+            riskScore += 25;
+            riskReasons.push(`${overdueTests.length} teme depășite`);
+        } else if (pendingTests.length > 0) {
+            riskScore += 10;
+            riskReasons.push(`${pendingTests.length} teme restante`);
+        }
+
+        // 3. Weak Category & Wrong answers
+        const catStats = {};
+        let lastTestAcc = null;
+
+        studentResults.forEach((r, idx) => {
+            const isLast = (idx === studentResults.length - 1);
+            let t = 0, c = 0;
+            let details = r.details_json;
+            if (typeof details === 'string') try { details = JSON.parse(details); } catch(e){ details = []; }
+            (details || []).forEach(d => {
+                if (d && d.category) {
+                    if (!catStats[d.category]) catStats[d.category] = { seen: 0, correct: 0 };
+                    catStats[d.category].seen++;
+                    t++;
+                    if (d.isCorrect) {
+                        catStats[d.category].correct++;
+                        c++;
+                    }
+                }
+            });
+            if (isLast && t > 0) lastTestAcc = c / t;
+        });
+
+        let weakCats = [];
+        for (const cat in catStats) {
+            if (catStats[cat].seen >= 5) {
+                const acc = catStats[cat].correct / catStats[cat].seen;
+                if (acc <= 0.3) weakCats.push(cat);
+            }
+        }
+        
+        if (weakCats.length > 0) {
+            riskScore += 25;
+            riskReasons.push(`Categorie slabă (<30%): ${weakCats.slice(0, 2).join(', ')}`);
+        }
+
+        if (lastTestAcc !== null && lastTestAcc <= 0.4) {
+            riskScore += 20;
+            riskReasons.push(`Scor foarte mic la ultimul test`);
+        }
+
+        return {
+            ...student,
+            doneTestsCount: studentResults.length,
+            pendingTestsCount: pendingTests.length,
+            riskScore: Math.min(riskScore, 100),
+            riskReasons
+        };
+    });
+
+    studentsWithRisk.sort((a, b) => b.riskScore - a.riskScore);
+
+    const highRiskStudents = studentsWithRisk.filter(s => s.riskScore >= 40);
+
+    if (highRiskStudents.length > 0 && !searchVal) {
+        const triageHeader = document.createElement('div');
+        triageHeader.style.gridColumn = '1 / -1';
+        triageHeader.style.marginBottom = '10px';
+        triageHeader.innerHTML = `<h3 style="color: var(--accent-red); margin: 0;">🚨 ${highRiskStudents.length} elevi necesită atenție azi</h3>`;
+        grid.appendChild(triageHeader);
+    }
+
+    studentsWithRisk.forEach(student => {
         const card = document.createElement('div');
         card.className = 'option-card';
         card.style.display = 'block';
         card.style.padding = '20px';
         card.style.cursor = 'pointer';
+        
+        let borderStyle = '';
+        if (student.riskScore >= 70) borderStyle = 'border: 1px solid var(--accent-red);';
+        else if (student.riskScore >= 40) borderStyle = 'border: 1px solid var(--accent-amber);';
+        
+        card.style = `display: block; padding: 20px; cursor: pointer; ${borderStyle}`;
         card.onclick = () => openSituatieDetail(student.username);
 
+        let riskBadge = '';
+        if (student.riskScore >= 70) riskBadge = `<span class="badge" style="background:rgba(248,113,113,0.15); color:var(--accent-red)">Risc Critic (${student.riskScore} pct)</span>`;
+        else if (student.riskScore >= 40) riskBadge = `<span class="badge" style="background:rgba(251,191,36,0.15); color:var(--accent-amber)">Risc Moderat (${student.riskScore} pct)</span>`;
+        else riskBadge = `<span class="badge" style="background:rgba(52,211,153,0.15); color:var(--accent-green)">Risc Scăzut</span>`;
+
+        let reasonsHtml = '';
+        if (student.riskReasons.length > 0) {
+            reasonsHtml = `<div style="margin-top: 10px; font-size: 12px; color: var(--text-secondary); display:flex; flex-direction:column; gap:4px;">
+                ${student.riskReasons.map(r => `<div>• ${r}</div>`).join('')}
+            </div>`;
+        }
+
         card.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:16px; margin-bottom: 16px;">
-                        <div style="background:linear-gradient(135deg, var(--accent-purple), #4a3e9c); width:48px; height:48px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-weight:800; font-size:20px; color:#fff; box-shadow: 0 4px 10px rgba(124, 106, 255, 0.3);">
-                            ${student.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary);">${escapeHtml(student.username)}</div>
-                        </div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="display:flex; align-items:center; gap:16px; margin-bottom: 12px;">
+                    <div style="background:linear-gradient(135deg, var(--accent-purple), #4a3e9c); width:48px; height:48px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-weight:800; font-size:20px; color:#fff; box-shadow: 0 4px 10px rgba(124, 106, 255, 0.3);">
+                        ${student.username.charAt(0).toUpperCase()}
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <span class="badge" style="background:rgba(52,211,153,0.15); color:var(--accent-green)">${doneTests} Teste Susținute</span>
-                        ${pendingTests > 0 ? `<span class="badge" style="background:rgba(251,191,36,0.15); color:var(--accent-amber)">${pendingTests} În Așteptare</span>` : ''}
+                    <div>
+                        <div style="font-size: 18px; font-weight: 700; color: var(--text-primary);">${escapeHtml(student.username)}</div>
                     </div>
-                `;
+                </div>
+                ${riskBadge}
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <span class="badge" style="background:rgba(52,211,153,0.15); color:var(--accent-green)">${student.doneTestsCount} Teste Susținute</span>
+                ${student.pendingTestsCount > 0 ? `<span class="badge" style="background:rgba(251,191,36,0.15); color:var(--accent-amber)">${student.pendingTestsCount} Temă</span>` : ''}
+            </div>
+            ${student.riskScore >= 40 ? reasonsHtml : ''}
+        `;
         grid.appendChild(card);
     });
 }
@@ -1800,13 +2299,23 @@ function closeSituatieDetail() {
     document.getElementById('situatie-list-view').style.display = 'block';
 }
 
-function openSituatieDetail(username) {
+async function openSituatieDetail(username) {
     document.getElementById('situatie-list-view').style.display = 'none';
     document.getElementById('situatie-detail-view').style.display = 'block';
     document.getElementById('situatie-detail-name').textContent = username;
 
-    const studentResults = resultsData.filter(r => r.student_username === username);
-    const studentPending = assignedTestsData.filter(t => t.student_username === username && t.status === 'pending');
+    try {
+        const res = await fetchWithToken(API_RESULTS);
+        if (res.ok) resultsData = await res.json();
+    } catch (e) { }
+
+    const target = (username || '').toLowerCase().trim();
+    const studentResults = resultsData.filter(r => {
+        const u = (r.student_username || '').toLowerCase().trim();
+        const n = (r.student_name || '').toLowerCase().trim();
+        return (u === target || n === target) && r.test_type !== 'category_coverage' && r.test_type !== 'lead_diagnostic';
+    });
+    const studentPending = assignedTestsData.filter(t => (t.student_username || '').toLowerCase().trim() === target && t.status === 'pending');
 
     // Render stats
     let total = studentResults.length;
@@ -1820,6 +2329,9 @@ function openSituatieDetail(username) {
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-avg').textContent = avg;
     document.getElementById('stat-time').textContent = total > 0 ? formatTime(Math.round(timeSum / total)) : '0m';
+
+    // Render Student Category Coverage
+    loadAdminStudentCoverage(username);
 
     // Render Assigned
     const assignedList = document.getElementById('situatie-assigned-list');
@@ -1845,10 +2357,14 @@ function openSituatieDetail(username) {
                             </div>
                             <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Deadline: <strong style="color:var(--accent-purple);">${formatEuropeanDateTime(pt.deadline)}</strong></div>
                         </div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="btn btn-secondary" onclick="openEditDeadlineModal('${pt.id}', '${pt.deadline}', '${escapeHtml(pt.student_username)}')" style="padding:6px 12px; font-size:12px; border-color:var(--accent-purple); color:var(--accent-purple);">🕒 Modifică Termen</button>
-                            <button class="btn btn-secondary" onclick="previewAssignedTest('${pt.id}')" style="padding:6px 12px; font-size:12px;">Vizualizare</button>
-                            <button class="btn btn-secondary" onclick="deleteAssignedTest('${pt.id}')" style="padding:6px 12px; font-size:12px; border-color:rgba(248,113,113,0.3); color:var(--accent-red);">Șterge</button>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" onclick="openEditDeadlineModal('${pt.id}', '${pt.deadline}', '${escapeHtml(pt.student_username)}')" style="padding:6px 12px; font-size:12px; border-color:var(--accent-purple); color:var(--accent-purple); white-space:nowrap;">🕒 Modifică Termen</button>
+                            <button class="btn ${answered > 0 ? 'btn-primary' : 'btn-secondary'}" onclick="previewAssignedTest('${pt.id}')" style="padding:6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                                <span>${answered > 0 ? '👁️' : '📋'}</span>
+                                <span>${answered > 0 ? `Vezi Răspunsuri (${answered}/${total})` : 'Vizualizare Întrebări'}</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="reassignTest('${pt.id}')" style="padding:6px 12px; font-size:12px; border-color:rgba(251,191,36,0.45); color:#fbbf24; background:rgba(251,191,36,0.06); white-space:nowrap;" title="Șterge răspunsurile și prelungește termenul cu cel puțin 24h">🔄 Șterge & Reasignează</button>
+                            <button class="btn btn-secondary" onclick="deleteAssignedTest('${pt.id}')" style="padding:6px 12px; font-size:12px; border-color:rgba(248,113,113,0.35); color:var(--accent-red); background:rgba(248,113,113,0.05); white-space:nowrap;" title="Șterge definitiv testul și toate răspunsurile din baza de date">🗑️ Șterge</button>
                         </div>
                     </div>
                     <div>
@@ -1890,14 +2406,16 @@ function openSituatieDetail(username) {
             const timeDisplay = isAssigned ? '-' : timeStr;
 
             tr.innerHTML = `
-                        <td>${typeBadge}</td>
-                        <td style="font-weight:700;">${r.score}/${r.total_points} <span style="color:var(--accent-purple); font-size:12px; margin-left:4px;">${pct}%</span></td>
-                        <td>${blurDisplay}</td>
-                        <td>${timeDisplay}</td>
-                        <td style="color:var(--text-secondary); font-size:12px;">${dateStr}</td>
-                        <td style="display: flex; gap: 8px;">
-                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="viewResultDetails(${r.id})">Detalii</button>
-                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;" onclick="deleteResultHistory(${r.id}, '${r.student_username}')">Șterge</button>
+                        <td style="text-align: center; vertical-align: middle;">${typeBadge}</td>
+                        <td style="text-align: center; vertical-align: middle; font-weight:700;">${r.score}/${r.total_points} <span style="color:var(--accent-purple); font-size:12px; margin-left:4px;">${pct}%</span></td>
+                        <td style="text-align: center; vertical-align: middle;">${blurDisplay}</td>
+                        <td style="text-align: center; vertical-align: middle;">${timeDisplay}</td>
+                        <td style="text-align: center; vertical-align: middle; color:var(--text-secondary); font-size:12px;">${dateStr}</td>
+                        <td style="text-align: center; vertical-align: middle;">
+                            <div style="display: inline-flex; gap: 8px; justify-content: center; align-items: center;">
+                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="viewResultDetails(${r.id})">Detalii</button>
+                                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;" onclick="deleteResultHistory(${r.id}, '${r.student_username}')">Șterge</button>
+                            </div>
                         </td>
                     `;
             tbody.appendChild(tr);
@@ -1909,12 +2427,231 @@ function openSituatieDetail(username) {
     document.getElementById('assign-student-name').value = username;
 }
 
+function generateRadarChartSVG(categories) {
+    const defaultCats = [
+        { name: 'Fundamente', icon: '📘' },
+        { name: 'Organizarea Datelor', icon: '📗' },
+        { name: 'Subprograme', icon: '📙' },
+        { name: 'Backtracking', icon: '📕' },
+        { name: 'Grafuri si Arbori', icon: '📓' }
+    ];
+
+    const catMap = {};
+    (categories || []).forEach(c => { catMap[c.category] = c.percent !== undefined ? c.percent : (c.percentage || 0); });
+
+    const svgWidth = 840;
+    const svgHeight = 440;
+    const cx = 420, cy = 220, R = 115, n = 5;
+
+    const getLogRadius = (pct) => {
+        if (!pct || pct <= 0) return 0.08 * R;
+        const norm = Math.min(Math.max(pct, 0), 100) / 100;
+        const logRatio = Math.log10(1 + 9 * norm);
+        return Math.max(logRatio, 0.08) * R;
+    };
+
+    const milestoneLevels = [
+        { pct: 10, ratio: Math.log10(1 + 9 * 0.10) },
+        { pct: 25, ratio: Math.log10(1 + 9 * 0.25) },
+        { pct: 50, ratio: Math.log10(1 + 9 * 0.50) },
+        { pct: 75, ratio: Math.log10(1 + 9 * 0.75) },
+        { pct: 100, ratio: 1.0 }
+    ];
+
+    let gridSvg = '';
+    milestoneLevels.forEach((m, mIdx) => {
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+            const angle = (-Math.PI / 2) + (i * 2 * Math.PI / n);
+            const x = cx + m.ratio * R * Math.cos(angle);
+            const y = cy + m.ratio * R * Math.sin(angle);
+            pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+        }
+        gridSvg += `<polygon class="radar-grid ${mIdx === milestoneLevels.length - 1 ? 'outer' : ''}" points="${pts.join(' ')}" style="fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 1;" />`;
+        const labelY = cy - m.ratio * R + 3;
+        gridSvg += `<text x="${cx + 4}" y="${labelY.toFixed(1)}" fill="rgba(255,255,255,0.35)" font-size="9" font-family="monospace">${m.pct}%</text>`;
+    });
+
+    let axesSvg = '', dataPts = [], vertexSvg = '', labelsSvg = '';
+
+    for (let i = 0; i < n; i++) {
+        const catInfo = defaultCats[i];
+        const pct = catMap[catInfo.name] !== undefined ? catMap[catInfo.name] : 0;
+        const angle = (-Math.PI / 2) + (i * 2 * Math.PI / n);
+
+        const axX = cx + R * Math.cos(angle), axY = cy + R * Math.sin(angle);
+        axesSvg += `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${axX.toFixed(1)}" y2="${axY.toFixed(1)}" style="stroke: rgba(255,255,255,0.1); stroke-width: 1;" />`;
+
+        const valR = getLogRadius(pct);
+        const px = cx + valR * Math.cos(angle), py = cy + valR * Math.sin(angle);
+        dataPts.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+
+        vertexSvg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="#38bdf8"></circle>`;
+
+        const labelR = R + 26;
+        const lx = cx + labelR * Math.cos(angle), ly = cy + labelR * Math.sin(angle);
+        
+        let textAnchor = 'middle';
+        if (Math.cos(angle) > 0.2) textAnchor = 'start';
+        else if (Math.cos(angle) < -0.2) textAnchor = 'end';
+
+        const pctColor = pct >= 80 ? '#34d399' : (pct >= 50 ? '#fbbf24' : (pct > 0 ? '#f87171' : '#94a3b8'));
+
+        labelsSvg += `
+            <text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${textAnchor}" fill="#fff" font-size="12px" font-weight="600" dominant-baseline="central" style="font-family: var(--font-primary);">
+                ${catInfo.icon} ${catInfo.name}
+                <tspan dx="5" fill="${pctColor}">(${pct}%)</tspan>
+            </text>
+        `;
+    }
+
+    return `
+        <svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width: 100%; height: auto; max-width: ${svgWidth}px; display: block; margin: 0 auto; overflow: visible;" xmlns="http://www.w3.org/2000/svg">
+            ${gridSvg}
+            ${axesSvg}
+            <polygon points="${dataPts.join(' ')}" style="fill: rgba(124, 106, 255, 0.3); stroke: #7c6aff; stroke-width: 2;" />
+            ${vertexSvg}
+            ${labelsSvg}
+        </svg>
+    `;
+}
+
+async function loadAdminStudentCoverage(username) {
+    const listEl = document.getElementById('situatie-admin-categories-list');
+    const percentEl = document.getElementById('situatie-admin-coverage-percent');
+    const fillEl = document.getElementById('situatie-admin-master-fill');
+    if (!listEl) return;
+
+    listEl.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:var(--text-secondary); font-size:12px; padding:10px;">Se încarcă progresul...</div>';
+
+    try {
+        const res = await fetchWithToken(`/.netlify/functions/fetch-mastery?username=${encodeURIComponent(username)}`);
+        if (!res.ok) {
+            listEl.innerHTML = '<div style="grid-column: 1 / -1; color:var(--text-muted); font-size:12px;">Nu s-au putut încărca datele de acoperire.</div>';
+            return;
+        }
+        const data = await res.json();
+        
+        const catArray = Object.keys(data.mastery).map(catName => ({
+            category: catName,
+            percent: data.mastery[catName].percentage,
+            mastered: data.mastery[catName].correct,
+            total: data.mastery[catName].seen,
+        }));
+        
+        let totalMastered = 0, totalSeen = 0;
+        catArray.forEach(c => { totalMastered += c.mastered; totalSeen += c.total; });
+        const overall_percent = totalSeen > 0 ? Math.round((totalMastered/totalSeen)*100) : 0;
+
+        if (percentEl) percentEl.textContent = `${overall_percent}% Acuratețe (${totalMastered}/${totalSeen} corecte)`;
+        if (fillEl) fillEl.style.width = `${overall_percent}%`;
+
+        const radarHtml = generateRadarChartSVG(catArray);
+
+        const catIcons = {
+            'Fundamente': '📘',
+            'Organizarea Datelor': '📗',
+            'Subprograme': '📙',
+            'Backtracking': '📕',
+            'Grafuri si Arbori': '📓'
+        };
+
+        let html = `
+            <div style="grid-column: 1 / -1; margin-bottom: 20px;">
+                ${radarHtml}
+            </div>
+        `;
+
+        if (catArray.length > 0) {
+            html += catArray.map(cat => {
+                const icon = catIcons[cat.category] || '📂';
+                let statusColor = cat.percent >= 80 ? 'var(--accent-green)' : (cat.percent >= 50 ? 'var(--accent-yellow)' : 'var(--accent-red)');
+                let statusText = cat.percent >= 80 ? 'Stăpânit' : (cat.percent >= 50 ? 'Aproape' : (cat.total > 0 ? 'Risc ridicat. Trebuie lucrat' : 'Neatins'));
+                return `
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;">
+                        <div style="display:flex; justify-content:space-between; font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px;">
+                            <span>${icon} ${escapeHtml(cat.category)}</span>
+                            <span style="color: ${statusColor};">${cat.percent}% — ${statusText}</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; margin-bottom: 4px;">
+                            <div style="height: 100%; background: linear-gradient(90deg, var(--accent-purple), #38bdf8); width: ${cat.percent}%; border-radius: 10px;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-secondary);">
+                            <span>${cat.mastered}/${cat.total} întrebări răspuns corect</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        listEl.innerHTML = html;
+        // set layout to stack items
+        listEl.style.display = 'block';
+
+    } catch (e) {
+        console.error('Error loading admin student coverage:', e);
+        listEl.innerHTML = '<div style="grid-column: 1 / -1; color:var(--text-muted); font-size:12px;">Eroare la încărcare.</div>';
+    }
+}
+window.loadAdminStudentCoverage = loadAdminStudentCoverage;
+
+async function openStudentPracticeDetails(username, category = 'all') {
+    const modal = document.getElementById('modal-details');
+    const titleEl = document.getElementById('details-student-name');
+    const metaEl = document.getElementById('details-student-meta');
+    const listEl = document.getElementById('details-list');
+
+    modal.style.display = 'flex';
+    titleEl.textContent = `📚 Lucru Individual: ${username}`;
+    metaEl.textContent = `Se încarcă întrebările (${category === 'all' ? 'Toate Categoriile' : category})...`;
+    listEl.innerHTML = '<div style="text-align:center; padding: 40px;"><div class="spinner" style="margin: 0 auto 12px auto;"></div><p style="color:var(--text-secondary);">Se preiau răspunsurile elevului...</p></div>';
+
+    try {
+        const res = await fetchWithToken(`/.netlify/functions/manage-practice?action=get_student_practice_details&student_username=${encodeURIComponent(username)}&category=${encodeURIComponent(category)}`);
+        if (!res.ok) throw new Error('Nu s-au putut prelua detaliile de lucru individual.');
+        const data = await res.json();
+
+        const totalQs = (data.details || []).length;
+        const correctQs = (data.details || []).filter(d => d && d.isCorrect === true).length;
+        const wrongQs = totalQs - correctQs;
+
+        currentSelectedResult = {
+            student_name: username,
+            student_username: username,
+            score: correctQs,
+            total_points: totalQs,
+            time_taken_ms: 0,
+            blur_count: 0,
+            details_json: data.details || []
+        };
+
+        const countAllEl = document.getElementById('count-all');
+        const countWrongEl = document.getElementById('count-wrong');
+        const countCorrectEl = document.getElementById('count-correct');
+        if (countAllEl) countAllEl.textContent = totalQs;
+        if (countWrongEl) countWrongEl.textContent = wrongQs;
+        if (countCorrectEl) countCorrectEl.textContent = correctQs;
+
+        metaEl.textContent = `Total: ${totalQs} întrebări întâlnite (${correctQs} corecte, ${wrongQs} greșite) • ${category === 'all' ? 'Toate Categoriile' : category}`;
+
+        // Reset filter buttons UI
+        document.querySelectorAll('.details-filter-btn').forEach(btn => btn.classList.remove('active'));
+        const defaultFilterBtn = document.getElementById('filter-btn-all');
+        if (defaultFilterBtn) defaultFilterBtn.classList.add('active');
+
+        renderDetailsList(data.details || [], 'all');
+    } catch (e) {
+        console.error('Error opening student practice details:', e);
+        listEl.innerHTML = `<p style="color:var(--accent-red); padding:20px; text-align:center;">Eroare: ${escapeHtml(e.message)}</p>`;
+    }
+}
+window.openStudentPracticeDetails = openStudentPracticeDetails;
+
 let manuallySelectedQuestions = new Set();
 
 async function openManualSelectModal() {
     document.getElementById('modal-manual-select').style.display = 'flex';
     const list = document.getElementById('manual-select-list');
-    
+
     // Sync category filter with assign-category
     const assignCat = document.getElementById('assign-category') ? document.getElementById('assign-category').value : 'Diverse';
     const modalCat = document.getElementById('manual-filter-cat');
@@ -1924,7 +2661,7 @@ async function openManualSelectModal() {
         list.innerHTML = '<div style="text-align:center; padding: 40px;"><div class="spinner" style="margin: 0 auto 12px auto;"></div><p style="color:var(--text-secondary);">Se încarcă întrebările din baza de date...</p></div>';
         await loadQuestions();
     }
-    
+
     renderManualSelectionList();
 }
 
@@ -1932,34 +2669,99 @@ function closeManualSelectModal() {
     document.getElementById('modal-manual-select').style.display = 'none';
 }
 
+function getStudentQuestionStatus(username) {
+    const statusMap = {};
+    if (!resultsData || !username) return statusMap;
+    const lowerUser = username.toLowerCase().trim();
+    const studentResults = resultsData.filter(r => 
+        (r.student_name && r.student_name.toLowerCase().trim() === lowerUser) || 
+        (r.student_username && r.student_username.toLowerCase().trim() === lowerUser)
+    );
+
+    studentResults.forEach(r => {
+        let details = r.details_json;
+        if (typeof details === 'string') {
+            try { details = JSON.parse(details); } catch(e) { details = []; }
+        }
+        if (Array.isArray(details)) {
+            details.forEach(item => {
+                if (item && item.id) {
+                    if (item.isCorrect) {
+                        statusMap[item.id] = 'CORECT'; // Prioritize correct
+                    } else if (statusMap[item.id] !== 'CORECT') {
+                        statusMap[item.id] = 'GRESIT';
+                    }
+                }
+            });
+        }
+    });
+    return statusMap;
+}
+
+window.updateManualSubcats = function() {
+    const cat = document.getElementById('manual-filter-subject').value;
+    const subcatSelect = document.getElementById('manual-filter-subcat');
+    if (!subcatSelect) return;
+    if (cat === 'Toate') {
+        subcatSelect.style.display = 'none';
+        subcatSelect.innerHTML = '<option value="Toate">Toate Subcategoriile</option>';
+        return;
+    }
+    subcatSelect.style.display = 'block';
+    subcatSelect.innerHTML = '<option value="Toate">Toate Subcategoriile</option>';
+    if (subcategoriesMap[cat]) {
+        subcategoriesMap[cat].forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            subcatSelect.appendChild(opt);
+        });
+    }
+};
+
 function renderManualSelectionList() {
     const list = document.getElementById('manual-select-list');
     const searchTerm = (document.getElementById('manual-search').value || '').toLowerCase().trim();
     const modalCat = document.getElementById('manual-filter-cat');
-    const category = modalCat ? modalCat.value : (document.getElementById('assign-category').value || 'Diverse');
+    const examType = modalCat ? modalCat.value : (document.getElementById('assign-category').value || 'Diverse');
     
+    const modalSubject = document.getElementById('manual-filter-subject');
+    const subject = modalSubject ? modalSubject.value : 'Toate';
+    
+    const modalSubcat = document.getElementById('manual-filter-subcat');
+    const subcat = modalSubcat ? modalSubcat.value : 'Toate';
+    
+    const targetUsername = document.getElementById('assign-username').value;
+    const statusMap = getStudentQuestionStatus(targetUsername);
+
     let filtered = questionsData;
-    if (category !== 'Diverse' && category !== 'Toate') {
-        filtered = questionsData.filter(q => (q.exam_type || 'Diverse').includes(category));
+    if (examType !== 'Diverse' && examType !== 'Toate') {
+        filtered = filtered.filter(q => (q.exam_type || 'Diverse').includes(examType));
     }
-    
+    if (subject !== 'Toate') {
+        filtered = filtered.filter(q => (q.category || '') === subject);
+    }
+    if (subcat !== 'Toate') {
+        filtered = filtered.filter(q => (q.subcategory || '') === subcat);
+    }
+
     if (searchTerm) {
-        filtered = filtered.filter(q => 
-            (q.text || '').toLowerCase().includes(searchTerm) || 
-            (q.code || '').toLowerCase().includes(searchTerm) || 
-            (q.category || '').toLowerCase().includes(searchTerm) || 
-            (q.subcategory || '').toLowerCase().includes(searchTerm) || 
+        filtered = filtered.filter(q =>
+            (q.text || '').toLowerCase().includes(searchTerm) ||
+            (q.code || '').toLowerCase().includes(searchTerm) ||
+            (q.category || '').toLowerCase().includes(searchTerm) ||
+            (q.subcategory || '').toLowerCase().includes(searchTerm) ||
             String(q.id).includes(searchTerm)
         );
     }
-    
+
     list.innerHTML = '';
-    
+
     if (filtered.length === 0) {
         list.innerHTML = '<p style="color:var(--text-secondary); text-align:center; padding: 30px;">Nu există întrebări disponibile conform filtrelor selectate.</p>';
         return;
     }
-    
+
     filtered.forEach((q, idx) => {
         const card = document.createElement('div');
         card.className = 'detail-card';
@@ -1974,11 +2776,11 @@ function renderManualSelectionList() {
         card.style.flexShrink = '0';
         card.style.width = '100%';
         card.style.boxSizing = 'border-box';
-        
+
         const isChecked = manuallySelectedQuestions.has(q.id) ? 'checked' : '';
         const formattedCode = formatCodeText(q.code);
         const formattedText = formatQuestionText(q.text);
-        
+
         let optsHtml = '';
         try {
             const opts = typeof q.options_json === 'string' ? JSON.parse(q.options_json) : q.options_json;
@@ -1991,11 +2793,18 @@ function renderManualSelectionList() {
             }
         } catch (e) { }
 
+        let statusHtml = `<div style="padding: 6px 12px; font-size: 13px; font-weight: bold; border-radius: 6px; background:var(--bg-lighter); color:var(--text-secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 6px;"><span style="font-size: 14px;">🆕</span> NOU</div>`;
+        if (statusMap[q.id] === 'CORECT') {
+            statusHtml = `<div style="padding: 6px 12px; font-size: 13px; font-weight: bold; border-radius: 6px; background:rgba(74, 222, 128, 0.15); color:var(--accent-green); box-shadow: 0 2px 8px rgba(74, 222, 128, 0.1); display: inline-flex; align-items: center; gap: 6px;"><span style="font-size: 14px;">✅</span> CORECT</div>`;
+        } else if (statusMap[q.id] === 'GRESIT') {
+            statusHtml = `<div style="padding: 6px 12px; font-size: 13px; font-weight: bold; border-radius: 6px; background:rgba(239, 68, 68, 0.15); color:var(--accent-red); box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1); display: inline-flex; align-items: center; gap: 6px;"><span style="font-size: 14px;">❌</span> GREȘIT</div>`;
+        }
+
         card.innerHTML = `
             <div style="margin-top: 4px; padding: 4px; flex-shrink: 0;">
                 <input type="checkbox" id="chk-manual-q-${q.id}" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--accent-purple, #7c6aff);" onchange="toggleManualSelection(${q.id}, this.checked)" ${isChecked}>
             </div>
-            <div style="flex: 1; min-width: 0;">
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     <span class="badge badge-${q.difficulty || 'medium'}">${q.difficulty || 'Normal'}</span>
                     <span class="badge" style="background:rgba(255,255,255,0.1);">${q.exam_type || 'Diverse'}</span>
@@ -2006,13 +2815,17 @@ function renderManualSelectionList() {
                 <label for="chk-manual-q-${q.id}" class="q-text" style="margin-top:8px; display:block; cursor:pointer; font-weight:500; white-space:pre-wrap; word-break:break-word;">${escapeHtml(formattedText)}</label>
                 ${formattedCode ? `<div class="detail-code" style="background:#0c0d1e; padding:10px; border-radius:4px; font-size:12px; color:#a6accd; margin:8px 0; max-width:100%; overflow-x:auto;"><pre style="margin:0; font-family: monospace; white-space: pre-wrap; word-break: break-word;">${escapeHtml(formattedCode)}</pre></div>` : ''}
                 ${(() => {
-                    const qImgs = parseImageUrls(q.image_url);
-                    return qImgs.length > 0 ? `
+                const qImgs = parseImageUrls(q.image_url);
+                return qImgs.length > 0 ? `
                         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; margin:10px auto; text-align:center; width:100%;">
                             ${qImgs.map(u => `<img src="${u}" style="max-height:180px; border-radius:8px; max-width:100%; display:block; margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.3);">`).join('')}
                         </div>` : '';
-                })()}
+            })()}
                 ${optsHtml}
+                <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                    <span style="font-size: 12px; color: var(--text-muted); margin-right: 12px;">Status Elev Curent:</span>
+                    ${statusHtml}
+                </div>
             </div>
         `;
         list.appendChild(card);
@@ -2033,7 +2846,7 @@ function confirmManualSelection() {
     closeManualSelectModal();
     const status = document.getElementById('manual-selection-status');
     const inputCount = document.getElementById('assign-count');
-    
+
     if (manuallySelectedQuestions.size > 0) {
         status.innerText = `Ai selectat manual ${manuallySelectedQuestions.size} întrebări.`;
         if (parseInt(inputCount.value) < manuallySelectedQuestions.size) {
@@ -2049,7 +2862,7 @@ function openAssignTestModal(username) {
         document.getElementById('assign-username').value = username;
         document.getElementById('assign-student-name').value = username;
     }
-    
+
     manuallySelectedQuestions.clear();
     const statusEl = document.getElementById('manual-selection-status');
     if (statusEl) statusEl.innerText = 'Nicio întrebare selectată.';
@@ -2058,7 +2871,7 @@ function openAssignTestModal(username) {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(20, 0, 0, 0);
-    
+
     setDateTimeSelects('assign', tomorrow);
     updateAssignDeadlinePreview();
 
@@ -2072,7 +2885,7 @@ function closeAssignModal() {
 function openEditDeadlineModal(testId, currentDeadlineIso, username) {
     document.getElementById('edit-deadline-test-id').value = testId;
     document.getElementById('edit-deadline-student-username').value = username || '';
-    
+
     const test = assignedTestsData.find(t => String(t.id) === String(testId));
     const infoEl = document.getElementById('edit-deadline-info');
     if (infoEl) {
@@ -2169,7 +2982,7 @@ document.getElementById('assign-form').addEventListener('submit', async (e) => {
     const category = document.getElementById('assign-category').value;
     const count = parseInt(document.getElementById('assign-count').value);
     const deadline = getDateTimeFromSelects('assign');
-    
+
     if (!deadline) {
         showToast('Te rugăm să selectezi data și ora termenului limită!', true);
         return;
@@ -2241,6 +3054,15 @@ async function saveDraftTest() {
 
 let currentlyPreviewedTestId = null;
 let isPreviewingDraft = false;
+let currentAssignedFilter = 'all';
+let currentlyPreviewedTestObj = null;
+let currentlyPreviewedTestQuestions = [];
+
+function setAssignedPreviewFilter(filter) {
+    currentAssignedFilter = filter;
+    renderPreviewTest(currentlyPreviewedTestQuestions, currentlyPreviewedTestObj);
+}
+window.setAssignedPreviewFilter = setAssignedPreviewFilter;
 
 async function previewAssignedTest(id, draftTest = null) {
     let test;
@@ -2259,6 +3081,18 @@ async function previewAssignedTest(id, draftTest = null) {
     list.innerHTML = '<div class="spinner" style="margin: 20px auto;"></div>';
     document.getElementById('modal-preview-test').style.display = 'flex';
 
+    // Update Modal Header Title
+    const titleEl = document.querySelector('#modal-preview-test h2');
+    if (titleEl) {
+        if (isPreviewingDraft) {
+            titleEl.textContent = 'Vizualizare Întrebări (Draft)';
+        } else if (test.student_username) {
+            titleEl.textContent = `Status & Răspunsuri Temă: ${test.student_username}`;
+        } else {
+            titleEl.textContent = 'Vizualizare Întrebări Test Asignat';
+        }
+    }
+
     // Insert Save Button if Draft
     let actionDiv = document.getElementById('preview-actions');
     if (!actionDiv) {
@@ -2276,14 +3110,20 @@ async function previewAssignedTest(id, draftTest = null) {
     }
 
     // Extract questions
-    if (questionsData.length === 0) await loadQuestions();
+    if (questionsData.length === 0 || (Array.isArray(test.questions_ids) && test.questions_ids.some(qid => !questionsData.some(q => String(q.id) === String(qid))))) {
+        await loadQuestions();
+    }
 
     const testQs = (test.questions_ids || []).map(qid => questionsData.find(q => String(q.id) === String(qid))).filter(Boolean);
 
-    renderPreviewTest(testQs);
+    currentlyPreviewedTestObj = test;
+    currentlyPreviewedTestQuestions = testQs;
+    currentAssignedFilter = 'all';
+
+    renderPreviewTest(testQs, test);
 }
 
-function renderPreviewTest(testQs) {
+function renderPreviewTest(testQs, test = null) {
     const list = document.getElementById('preview-test-list');
     list.innerHTML = '';
 
@@ -2292,49 +3132,216 @@ function renderPreviewTest(testQs) {
         return;
     }
 
+    const hasAnswers = test && test.current_answers && Array.isArray(test.current_answers);
+
+    // Summary Header Banner & Filter Tabs for Assigned Tests
+    if (test && !isPreviewingDraft) {
+        let answeredCount = 0;
+        let correctCount = 0;
+
+        testQs.forEach((q, idx) => {
+            const a = hasAnswers ? test.current_answers[idx] : null;
+            if (a !== null && a !== undefined) {
+                answeredCount++;
+                if (a === q.correct_index) correctCount++;
+            }
+        });
+
+        const wrongCount = answeredCount - correctCount;
+        const totalCount = testQs.length;
+        const unansweredCount = totalCount - answeredCount;
+        const pct = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
+
+        const banner = document.createElement('div');
+        banner.style.cssText = 'background: rgba(124, 106, 255, 0.12); border: 1px solid var(--accent-purple); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; width: 100%; box-sizing: border-box;';
+        banner.innerHTML = `
+            <div>
+                <div style="font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    <span>📝</span> Progres Temă Elev: <strong style="color: var(--accent-purple);">${escapeHtml(test.student_username || '')}</strong>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                    Test ${escapeHtml(test.exam_type || '')} • Termen: <strong>${formatEuropeanDateTime(test.deadline)}</strong>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 18px; font-weight: 800; color: #fff; font-family: var(--font-code);">
+                    ${answeredCount} / ${totalCount} <span style="font-size: 13px; font-weight: 500; color: var(--text-secondary);">răspunsuri salvate (${pct}%)</span>
+                </div>
+                <div style="font-size: 12px; margin-top: 2px;">
+                    ${answeredCount > 0 
+                        ? `<span style="color: var(--accent-green); font-weight: 700;">✓ ${correctCount} Corecte</span> &nbsp;•&nbsp; <span style="color: var(--accent-red); font-weight: 700;">✗ ${wrongCount} Greșite</span>`
+                        : '<span style="color: var(--text-muted);">Elevul nu a început încă rezolvarea</span>'}
+                </div>
+            </div>
+        `;
+        list.appendChild(banner);
+
+        // Filter tabs bar (identical styling to results modal)
+        const tabsBar = document.createElement('div');
+        tabsBar.style.cssText = 'display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;';
+        tabsBar.innerHTML = `
+            <button class="btn btn-secondary details-filter-btn ${currentAssignedFilter === 'all' ? 'active' : ''}" onclick="setAssignedPreviewFilter('all')">Toate ( ${totalCount} )</button>
+            <button class="btn btn-secondary details-filter-btn ${currentAssignedFilter === 'wrong' ? 'active' : ''}" style="border-color: rgba(248, 113, 113, 0.4);" onclick="setAssignedPreviewFilter('wrong')">❌ Greșite ( ${wrongCount} )</button>
+            <button class="btn btn-secondary details-filter-btn ${currentAssignedFilter === 'correct' ? 'active' : ''}" style="border-color: rgba(52, 211, 153, 0.4);" onclick="setAssignedPreviewFilter('correct')">✔️ Corecte ( ${correctCount} )</button>
+            <button class="btn btn-secondary details-filter-btn ${currentAssignedFilter === 'unanswered' ? 'active' : ''}" style="border-color: rgba(255, 255, 255, 0.2);" onclick="setAssignedPreviewFilter('unanswered')">⏳ Necompletate ( ${unansweredCount} )</button>
+        `;
+        list.appendChild(tabsBar);
+    }
+
+    let renderedCardsCount = 0;
+
     testQs.forEach((q, idx) => {
+        const studentAns = (hasAnswers && test.current_answers[idx] !== undefined) ? test.current_answers[idx] : null;
+        const isAnswered = (studentAns !== null && studentAns !== undefined);
+        const isStudentCorrect = isAnswered && (studentAns === q.correct_index);
+
+        // Apply tab filter if viewing an assigned test in progress
+        if (test && !isPreviewingDraft) {
+            if (currentAssignedFilter === 'wrong' && (!isAnswered || isStudentCorrect)) return;
+            if (currentAssignedFilter === 'correct' && (!isAnswered || !isStudentCorrect)) return;
+            if (currentAssignedFilter === 'unanswered' && isAnswered) return;
+        }
+
+        renderedCardsCount++;
+
         const card = document.createElement('div');
-        card.className = 'detail-card';
+        // Card styling: exact match with viewResultDetails
+        let cardClass = 'detail-card';
+        if (test && !isPreviewingDraft && isAnswered) {
+            cardClass += isStudentCorrect ? ' correct' : ' wrong';
+        }
+        card.className = cardClass;
         card.style.overflow = 'hidden';
         card.style.flexShrink = '0';
         card.style.width = '100%';
         card.style.boxSizing = 'border-box';
+        card.style.marginBottom = '14px';
 
         const formattedCode = formatCodeText(q.code);
         const formattedText = formatQuestionText(q.text);
+        const codeHtml = formattedCode ? `<div class="detail-code">${escapeHtml(formattedCode)}</div>` : '';
+        const qImgs = parseImageUrls(q.image_url);
+        const imageHtml = qImgs.length > 0 ? `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; margin:10px auto; text-align:center; width:100%;">
+                ${qImgs.map(u => `<img src="${u}" style="max-height:180px; border-radius:8px; max-width:100%; display:block; margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:zoom-in;" onclick="openAdminLightbox('${u}')" title="Click pentru mărire">`).join('')}
+            </div>` : '';
+
+        const diffMap = { easy: 'Ușoară', medium: 'Medie', hard: 'Grea' };
+        const diffLabel = diffMap[q.difficulty] || q.difficulty || 'Normal';
+
+        // Right side badge in header
+        let statusBadge = '';
+        if (test && !isPreviewingDraft) {
+            if (isAnswered) {
+                statusBadge = isStudentCorrect
+                    ? `<span class="score-badge score-excellent" style="padding: 4px 12px; font-size: 12px;">✔️ Corect</span>`
+                    : `<span class="score-badge score-low" style="padding: 4px 12px; font-size: 12px;">❌ Greșit</span>`;
+            } else {
+                statusBadge = `<span class="score-badge" style="background:rgba(255,255,255,0.08); color:var(--text-muted); padding: 4px 12px; font-size: 12px;">⏳ Necompletat</span>`;
+            }
+        }
+
+        let opts = [];
+        if (Array.isArray(q.options)) {
+            opts = q.options;
+        } else if (typeof q.options === 'string') {
+            try { opts = JSON.parse(q.options); } catch (e) { opts = []; }
+        } else if (Array.isArray(q.options_json)) {
+            opts = q.options_json;
+        } else if (typeof q.options_json === 'string') {
+            try { opts = JSON.parse(q.options_json); } catch (e) { opts = []; }
+        }
+        if (!Array.isArray(opts)) opts = [];
 
         let optsHtml = '';
-        try {
-            const opts = typeof q.options_json === 'string' ? JSON.parse(q.options_json) : q.options_json;
-            if (opts && Array.isArray(opts)) {
-                optsHtml = opts.map((opt, i) => {
-                    const isCorrect = i === q.correct_index;
-                    return `<div style="font-size:13px; color:var(--text-secondary); margin-bottom:4px; ${isCorrect ? 'color:var(--accent-green, #4ade80); font-weight:bold;' : ''}">${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}${isCorrect ? ' (Corect)' : ''}</div>`;
+        let hintHtml = '';
+
+        if (test && !isPreviewingDraft) {
+            if (isAnswered) {
+                // Întrebări la care elevul a răspuns deja (similar ca în interfața rezultat test)
+                optsHtml = opts.map((optText, optIdx) => {
+                    const isStudentChoice = studentAns === optIdx;
+                    const isCorrectChoice = q.correct_index === optIdx;
+
+                    let optClass = '';
+                    let tagHtml = '';
+
+                    if (isCorrectChoice) {
+                        optClass = 'opt-correct';
+                        tagHtml = `<span class="detail-opt-tag tag-correct">${isStudentChoice ? 'Ales de student (Corect)' : 'Răspuns Corect'}</span>`;
+                    } else if (isStudentChoice && !isStudentCorrect) {
+                        optClass = 'opt-wrong';
+                        tagHtml = `<span class="detail-opt-tag tag-wrong">Ales de student (Incorect)</span>`;
+                    }
+
+                    const optLetter = String.fromCharCode(65 + optIdx);
+                    return `
+                        <div class="detail-opt ${optClass}">
+                            <span><strong>${optLetter}.</strong> ${escapeHtml(optText)}</span>
+                            ${tagHtml}
+                        </div>
+                    `;
                 }).join('');
-                optsHtml = `<div style="margin-top:8px;">${optsHtml}</div>`;
+            } else {
+                // Întrebări la care elevul NU a răspuns încă: profesorul vede toate variantele, cu răspunsul corect evidențiat
+                optsHtml = opts.map((optText, optIdx) => {
+                    const isCorrectChoice = q.correct_index === optIdx;
+                    let optClass = '';
+                    let tagHtml = '';
+
+                    if (isCorrectChoice) {
+                        optClass = 'opt-correct';
+                        tagHtml = `<span class="detail-opt-tag tag-correct">Răspuns Corect</span>`;
+                    }
+
+                    const optLetter = String.fromCharCode(65 + optIdx);
+                    return `
+                        <div class="detail-opt ${optClass}">
+                            <span><strong>${optLetter}.</strong> ${escapeHtml(optText)}</span>
+                            ${tagHtml}
+                        </div>
+                    `;
+                }).join('');
             }
-        } catch (e) { }
+
+            if (q.hint || q.explanation) {
+                hintHtml = `<div style="margin-top:14px; font-size:13px; color:var(--text-secondary); background:rgba(255,255,255,0.03); padding:10px 14px; border-radius:6px; border-left:3px solid var(--accent-purple); line-height: 1.5;">💡 <em>${escapeHtml(q.hint || q.explanation)}</em></div>`;
+            }
+        } else {
+            // Mod Draft (înainte de trimitere test către elev)
+            optsHtml = opts.map((optText, optIdx) => {
+                const isCorrectOpt = optIdx === q.correct_index;
+                return `
+                    <div class="detail-opt ${isCorrectOpt ? 'opt-correct' : ''}">
+                        <span><strong>${String.fromCharCode(65 + optIdx)}.</strong> ${escapeHtml(optText)}</span>
+                        ${isCorrectOpt ? '<span class="detail-opt-tag tag-correct">Răspuns Corect</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+            if (q.hint || q.explanation) {
+                hintHtml = `<div style="margin-top:12px; font-size:12px; color:var(--text-secondary); background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border-left:3px solid var(--accent-purple);">💡 <em>${escapeHtml(q.hint || q.explanation)}</em></div>`;
+            }
+        }
 
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; width: 100%;">
                 <div style="flex: 1; min-width: 0;">
-                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <span class="badge badge-${q.difficulty || 'medium'}">${q.difficulty || 'Normal'}</span>
-                        <span class="badge" style="background:rgba(255,255,255,0.1);">${q.exam_type || 'Diverse'}</span>
-                        <span class="badge" style="background:rgba(124,106,255,0.15); color:var(--accent-purple);">${q.category || ''}</span>
-                        ${q.subcategory ? `<span class="badge" style="background:rgba(255,255,255,0.05); font-size:11px;">${q.subcategory}</span>` : ''}
-                        <span style="font-size: 11px; color: var(--text-secondary); margin-left: auto;">ID: #${q.id}</span>
+                    <div class="detail-header">
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <span style="font-weight:700; color:var(--accent-purple); font-size:14px;">#${idx + 1}</span>
+                            <span class="badge" style="background:rgba(255,255,255,0.06); color:var(--text-secondary);">DIFICULTATE: ${diffLabel.toUpperCase()}</span>
+                            <span class="badge" style="background:rgba(255,255,255,0.08);">${q.exam_type || 'Diverse'}</span>
+                            <span class="badge" style="background:rgba(124,106,255,0.15); color:var(--accent-purple);">${q.category || ''}</span>
+                            ${q.subcategory ? `<span class="badge" style="background:rgba(255,255,255,0.05); font-size:11px;">${q.subcategory}</span>` : ''}
+                            <span style="font-size: 11px; color: var(--text-secondary); margin-left: 6px;">ID: #${q.id}</span>
+                        </div>
+                        <div>${statusBadge}</div>
                     </div>
-                    <div class="q-text" style="margin-top:8px; font-weight:500; white-space:pre-wrap; word-break:break-word;"><strong>${idx + 1}.</strong> ${escapeHtml(formattedText)}</div>
-                    ${formattedCode ? `<div class="detail-code" style="background:#0c0d1e; padding:10px; border-radius:6px; font-size:13px; color:#a6accd; margin:8px 0; max-width:100%; overflow-x:auto;"><pre style="margin:0; font-family: monospace; white-space: pre-wrap; word-break: break-word;">${escapeHtml(formattedCode)}</pre></div>` : ''}
-                    ${(() => {
-                        const qImgs = parseImageUrls(q.image_url);
-                        return qImgs.length > 0 ? `
-                            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; margin:10px auto; text-align:center; width:100%;">
-                                ${qImgs.map(u => `<img src="${u}" style="max-height:180px; border-radius:8px; max-width:100%; display:block; margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.3);">`).join('')}
-                            </div>` : '';
-                    })()}
-                    ${optsHtml}
+                    <div class="q-text" style="margin-top:10px; font-size:15px; font-weight:600; color:var(--text-primary); white-space:pre-wrap; word-break:break-word;">${escapeHtml(formattedText)}</div>
+                    ${codeHtml}
+                    ${imageHtml}
+                    <div style="margin-top:14px;">${optsHtml}</div>
+                    ${hintHtml}
                 </div>
                 ${isPreviewingDraft ? `
                     <div style="display:flex; flex-direction:column; gap:8px; flex-shrink: 0;">
@@ -2346,17 +3353,24 @@ function renderPreviewTest(testQs) {
         `;
         list.appendChild(card);
     });
+
+    if (renderedCardsCount === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.style.cssText = 'text-align:center; padding:30px; color:var(--text-secondary);';
+        emptyDiv.textContent = 'Nicio întrebare găsită pentru filtrul selectat.';
+        list.appendChild(emptyDiv);
+    }
 }
 
 let replacingQuestionId = null;
 let replacingDraftId = null;
 
-window.openManualReplaceModal = async function(draftId, oldQuestionId) {
+window.openManualReplaceModal = async function (draftId, oldQuestionId) {
     replacingDraftId = draftId;
     replacingQuestionId = oldQuestionId;
     document.getElementById('modal-manual-replace').style.display = 'flex';
     const list = document.getElementById('manual-replace-list');
-    
+
     // Sync category filter in modal with assign-category
     const assignCat = document.getElementById('assign-category') ? document.getElementById('assign-category').value : 'Diverse';
     const modalCat = document.getElementById('manual-replace-filter-cat');
@@ -2366,45 +3380,78 @@ window.openManualReplaceModal = async function(draftId, oldQuestionId) {
         list.innerHTML = '<div style="text-align:center; padding: 40px;"><div class="spinner" style="margin: 0 auto 12px auto;"></div><p style="color:var(--text-secondary);">Se încarcă întrebările...</p></div>';
         await loadQuestions();
     }
-    
+
     renderManualReplaceList();
 };
 
-window.closeManualReplaceModal = function() {
+window.closeManualReplaceModal = function () {
     document.getElementById('modal-manual-replace').style.display = 'none';
 };
 
-window.renderManualReplaceList = function() {
+window.updateManualReplaceSubcats = function() {
+    const cat = document.getElementById('manual-replace-filter-subject').value;
+    const subcatSelect = document.getElementById('manual-replace-filter-subcat');
+    if (!subcatSelect) return;
+    if (cat === 'Toate') {
+        subcatSelect.style.display = 'none';
+        subcatSelect.innerHTML = '<option value="Toate">Toate Subcategoriile</option>';
+        return;
+    }
+    subcatSelect.style.display = 'block';
+    subcatSelect.innerHTML = '<option value="Toate">Toate Subcategoriile</option>';
+    if (subcategoriesMap[cat]) {
+        subcategoriesMap[cat].forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            subcatSelect.appendChild(opt);
+        });
+    }
+};
+
+window.renderManualReplaceList = function () {
     const list = document.getElementById('manual-replace-list');
     const searchTerm = (document.getElementById('manual-replace-search').value || '').toLowerCase().trim();
     const modalCat = document.getElementById('manual-replace-filter-cat');
-    const category = modalCat ? modalCat.value : (document.getElementById('assign-category').value || 'Diverse');
+    const examType = modalCat ? modalCat.value : (document.getElementById('assign-category').value || 'Diverse');
     
+    const modalSubject = document.getElementById('manual-replace-filter-subject');
+    const subject = modalSubject ? modalSubject.value : 'Toate';
+    
+    const modalSubcat = document.getElementById('manual-replace-filter-subcat');
+    const subcat = modalSubcat ? modalSubcat.value : 'Toate';
+
     const currentIds = new Set(currentDraftTest ? currentDraftTest.questions_ids : []);
-    
+
     let filtered = questionsData.filter(q => !currentIds.has(q.id));
-    
-    if (category !== 'Diverse' && category !== 'Toate') {
-        filtered = filtered.filter(q => (q.exam_type || 'Diverse').includes(category));
+
+    if (examType !== 'Diverse' && examType !== 'Toate') {
+        filtered = filtered.filter(q => (q.exam_type || 'Diverse').includes(examType));
     }
-    
+    if (subject !== 'Toate') {
+        filtered = filtered.filter(q => (q.category || '') === subject);
+    }
+    if (subcat !== 'Toate') {
+        filtered = filtered.filter(q => (q.subcategory || '') === subcat);
+    }
+
     if (searchTerm) {
-        filtered = filtered.filter(q => 
-            (q.text || '').toLowerCase().includes(searchTerm) || 
-            (q.code || '').toLowerCase().includes(searchTerm) || 
-            (q.category || '').toLowerCase().includes(searchTerm) || 
-            (q.subcategory || '').toLowerCase().includes(searchTerm) || 
+        filtered = filtered.filter(q =>
+            (q.text || '').toLowerCase().includes(searchTerm) ||
+            (q.code || '').toLowerCase().includes(searchTerm) ||
+            (q.category || '').toLowerCase().includes(searchTerm) ||
+            (q.subcategory || '').toLowerCase().includes(searchTerm) ||
             String(q.id).includes(searchTerm)
         );
     }
-    
+
     list.innerHTML = '';
-    
+
     if (filtered.length === 0) {
         list.innerHTML = '<p style="color:var(--text-secondary); text-align:center; padding: 30px;">Nu există alte întrebări disponibile pentru înlocuire conform filtrelor.</p>';
         return;
     }
-    
+
     filtered.forEach(q => {
         const card = document.createElement('div');
         card.className = 'detail-card';
@@ -2419,10 +3466,10 @@ window.renderManualReplaceList = function() {
         card.style.flexShrink = '0';
         card.style.width = '100%';
         card.style.boxSizing = 'border-box';
-        
+
         const formattedCode = formatCodeText(q.code);
         const formattedText = formatQuestionText(q.text);
-        
+
         let optsHtml = '';
         try {
             const opts = typeof q.options_json === 'string' ? JSON.parse(q.options_json) : q.options_json;
@@ -2447,12 +3494,12 @@ window.renderManualReplaceList = function() {
                 <div class="q-text" style="margin-top:8px; font-weight:500; white-space:pre-wrap; word-break:break-word;">${escapeHtml(formattedText)}</div>
                 ${formattedCode ? `<div class="detail-code" style="background:#0c0d1e; padding:10px; border-radius:4px; font-size:12px; color:#a6accd; margin:8px 0; max-width:100%; overflow-x:auto;"><pre style="margin:0; font-family: monospace; white-space: pre-wrap; word-break: break-word;">${escapeHtml(formattedCode)}</pre></div>` : ''}
                 ${(() => {
-                    const qImgs = parseImageUrls(q.image_url);
-                    return qImgs.length > 0 ? `
+                const qImgs = parseImageUrls(q.image_url);
+                return qImgs.length > 0 ? `
                         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; margin:10px auto; text-align:center; width:100%;">
-                            ${qImgs.map(u => `<img src="${u}" style="max-height:180px; border-radius:8px; max-width:100%; display:block; margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.3);">`).join('')}
+                            ${qImgs.map(u => `<img src="${u}" style="max-height:180px; border-radius:8px; max-width:100%; display:block; margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:zoom-in;" onclick="openAdminLightbox('${u}')" title="Click pentru mărire">`).join('')}
                         </div>` : '';
-                })()}
+            })()}
                 ${optsHtml}
             </div>
             <div style="flex-shrink: 0;">
@@ -2463,7 +3510,7 @@ window.renderManualReplaceList = function() {
     });
 };
 
-window.confirmManualReplace = function(newQuestionId) {
+window.confirmManualReplace = function (newQuestionId) {
     if (currentDraftTest && currentDraftTest.questions_ids) {
         const idx = currentDraftTest.questions_ids.findIndex(id => String(id) === String(replacingQuestionId));
         if (idx !== -1) {
@@ -2474,22 +3521,50 @@ window.confirmManualReplace = function(newQuestionId) {
     previewAssignedTest(replacingDraftId, currentDraftTest);
 };
 
-window.deleteAssignedTest = async function (id) {
-    if (!confirm("Sigur ștergi acest test asignat?")) return;
+window.reassignTest = async function (id) {
+    const testToReassign = assignedTestsData.find(t => t.id === id);
+    const studentName = testToReassign ? testToReassign.student_username : 'elevului';
+    if (!confirm(`Sigur dorești să ștergi răspunsurile și să reasignezi acest test pentru ${studentName}?\n\nToate răspunsurile salvate vor fi șterse (progresul revine la 0%), iar termenul va fi prelungit cu cel puțin 24 de ore (până la următoarea oră fixă).`)) return;
+
     try {
-        const res = await fetchWithToken(API_ASSIGNED_TESTS + '?id=' + id, { method: 'DELETE' });
+        const res = await fetchWithToken(API_ASSIGNED_TESTS + '?id=' + id + '&action=reassign', { method: 'DELETE' });
         if (res.ok) {
-            showToast('Test șters cu succes!');
-            const testToDelete = assignedTestsData.find(t => t.id === id);
+            showToast('Testul a fost resetat și reasignat cu succes!');
+            const asRes = await fetchWithToken(API_ASSIGNED_TESTS);
+            if (asRes.ok) assignedTestsData = await asRes.json();
+            await loadResults();
+            if (testToReassign) {
+                openSituatieDetail(testToReassign.student_username);
+            }
+        } else {
+            const errData = await res.json().catch(() => ({}));
+            showToast(errData.error || 'Eroare la reasignarea testului.', true);
+        }
+    } catch (e) {
+        showToast('Eroare de rețea.', true);
+    }
+};
+
+window.deleteAssignedTest = async function (id) {
+    const testToDelete = assignedTestsData.find(t => t.id === id);
+    const studentName = testToDelete ? testToDelete.student_username : 'elevului';
+    if (!confirm(`Sigur ștergi DEFINITIV acest test asignat pentru ${studentName}?\n\nAceastă acțiune va șterge ireversibil tema și toate răspunsurile asociate din baza de date.`)) return;
+
+    try {
+        const res = await fetchWithToken(API_ASSIGNED_TESTS + '?id=' + id + '&action=delete', { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Test șters definitiv din baza de date!');
             assignedTestsData = assignedTestsData.filter(t => t.id !== id);
+            await loadResults();
             if (testToDelete) {
                 openSituatieDetail(testToDelete.student_username);
             }
         } else {
-            showToast('Eroare la ștergere', true);
+            const errData = await res.json().catch(() => ({}));
+            showToast(errData.error || 'Eroare la ștergerea testului.', true);
         }
     } catch (e) {
-        showToast('Eroare de rețea', true);
+        showToast('Eroare de rețea.', true);
     }
 };
 
@@ -2571,33 +3646,317 @@ function closePreviewModal() {
     currentlyPreviewedTestId = null;
 }
 
+/* ==================== LEADS & TESTE GRATUITE (MODUL 2) ==================== */
+const API_MANAGE_LEADS = '/.netlify/functions/manage-leads';
+let allLeads = [];
+
+async function loadLeads() {
+    const loading = document.getElementById('loading-leads');
+    const empty = document.getElementById('empty-leads');
+    const wrapper = document.getElementById('wrapper-leads');
+    const badge = document.getElementById('badge-leads-count');
+
+    if (loading) loading.style.display = 'block';
+    if (empty) empty.style.display = 'none';
+    if (wrapper) wrapper.style.display = 'none';
+
+    try {
+        const res = await fetchWithToken(API_MANAGE_LEADS + '?action=list_leads');
+        if (!res.ok) throw new Error(await res.text());
+        allLeads = await res.json();
+
+        if (badge) badge.textContent = allLeads.length;
+
+        if (loading) loading.style.display = 'none';
+
+        if (allLeads.length === 0) {
+            if (empty) empty.style.display = 'block';
+        } else {
+            if (wrapper) wrapper.style.display = 'block';
+            renderLeads();
+        }
+    } catch (e) {
+        console.error('loadLeads error:', e);
+        if (loading) loading.style.display = 'none';
+        showToast('Eroare la încărcarea lead-urilor: ' + e.message, true);
+    }
+}
+window.loadLeads = loadLeads;
+
+function renderLeads() {
+    const tbody = document.getElementById('leads-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = allLeads.map(lead => {
+        const total = lead.total_points || 30;
+        const score = lead.score || 0;
+        const pct = Math.round((score / total) * 100);
+        let badgeClass = 'badge-beginner';
+        if (pct >= 80) badgeClass = 'badge-expert';
+        else if (pct >= 60) badgeClass = 'badge-advanced';
+        else if (pct >= 35) badgeClass = 'badge-intermediate';
+
+        const phoneClean = (lead.student_username || '').replace(/[^0-9+]/g, '');
+        const waNumber = phoneClean.startsWith('+') ? phoneClean.substring(1) : (phoneClean.startsWith('0') ? '40' + phoneClean.substring(1) : phoneClean);
+        const cleanStudentName = (lead.student_name || 'Elev').replace(/\s*\(Test\s+Introductiv\)/gi, '').trim();
+        const waMsg = encodeURIComponent(`Salut, ${cleanStudentName}! Am analizat raportul tău la testul de informatică.💻\nCa să ajungi la excelență, vom rezolva împreună aceste lipsuri, pas cu pas.💯\nPentru moment, aș dori să programăm sesiunea gratuită de diagnosticare!🕑`);
+        const waUrl = `https://wa.me/${waNumber}?text=${waMsg}`;
+
+        const timeStr = formatTime(lead.time_taken_ms || 0);
+        const blurCount = lead.blur_count || 0;
+        const dateStr = formatEuropeanDateTime(lead.created_at);
+
+        return `
+            <tr>
+                <td style="padding-left: 20px;">
+                    <div style="font-weight: 700; color: #fff; font-size: 14px;">${escapeHtml(lead.student_name || 'Fără nume')}</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Lead ID: #${lead.id}</div>
+                </td>
+                <td style="text-align: center;">
+                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span style="font-family: monospace; font-weight: 600; color: #e2e8f0; font-size: 13px;">${escapeHtml(lead.student_username || '-')}</span>
+                        <a href="${waUrl}" target="_blank" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px; color: #22c55e; border-color: rgba(34, 197, 94, 0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; border-radius: 6px;" title="Deschide WhatsApp">
+                            <span>💬 WhatsApp</span>
+                        </a>
+                    </div>
+                </td>
+                <td style="text-align: center;">
+                    <span class="badge ${badgeClass}" style="font-weight: 800; font-size: 13px; padding: 4px 12px; display: inline-block;">${score} / ${total} (${pct}%)</span>
+                </td>
+                <td style="text-align: center;">
+                    <div style="font-size: 13px; font-weight: 600;">⏱️ ${timeStr}</div>
+                    ${blurCount > 0 ? `<div style="font-size: 11px; color: var(--accent-amber); margin-top: 2px;">⚠️ ${blurCount} abateri focus</div>` : '<div style="font-size: 11px; color: var(--accent-green); margin-top: 2px;">🔒 Focus 100%</div>'}
+                </td>
+                <td style="text-align: center; font-size: 12px; color: var(--text-secondary);">${dateStr}</td>
+                <td style="text-align: center; padding-right: 20px;">
+                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="openLeadDetails(${lead.id})" style="padding: 6px 12px; font-size: 12px;" title="Vezi detalii întrebări">
+                            👁️ Detalii
+                        </button>
+                        <button class="btn btn-primary" onclick="openConvertLeadModal(${lead.id})" style="padding: 6px 14px; font-size: 12px; background: linear-gradient(135deg, #7c6aff, #38bdf8); font-weight: 600;" title="Creează Cont Elev">
+                            🎓 Creează Cont
+                        </button>
+                        <button class="btn btn-secondary" onclick="deleteLead(${lead.id})" style="padding: 6px 10px; font-size: 12px; color: var(--accent-red); border-color: rgba(239, 68, 68, 0.3);" title="Șterge Lead">
+                            🗑️
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function openLeadDetails(leadId) {
+    const lead = allLeads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    currentSelectedResult = lead;
+    currentDetailsFilter = 'all';
+
+    const modal = document.getElementById('modal-details');
+    const modalTitle = document.getElementById('details-student-name') || document.getElementById('details-modal-title');
+    const subtitle = document.getElementById('details-student-meta') || document.getElementById('details-modal-subtitle');
+
+    if (modalTitle) modalTitle.textContent = `Raport Lead: ${lead.student_name || 'Fără nume'}`;
+    if (subtitle) subtitle.textContent = `Telefon: ${lead.student_username || '-'} • Scor: ${lead.score || 0}/${lead.total_points || 30} • Timp: ${formatTime(lead.time_taken_ms || 0)} • ${lead.blur_count || 0} pierderi focus`;
+
+    let details = lead.details_json;
+    if (typeof details === 'string') {
+        try { details = JSON.parse(details); } catch (e) { details = []; }
+    }
+    if (!Array.isArray(details)) details = [];
+
+    const totalQs = details.length;
+    const correctQs = details.filter(d => d && (d.isCorrect === true || d.is_correct === true || d.correct === true || (d.studentAnswer !== null && d.studentAnswer !== undefined && d.studentAnswer === d.correctAnswer))).length;
+    const wrongQs = totalQs - correctQs;
+
+    const countAllEl = document.getElementById('count-all');
+    const countWrongEl = document.getElementById('count-wrong');
+    const countCorrectEl = document.getElementById('count-correct');
+    if (countAllEl) countAllEl.textContent = totalQs;
+    if (countWrongEl) countWrongEl.textContent = wrongQs;
+    if (countCorrectEl) countCorrectEl.textContent = correctQs;
+
+    // Reset filter buttons UI
+    document.querySelectorAll('.details-filter-btn').forEach(btn => btn.classList.remove('active'));
+    const defaultFilterBtn = document.getElementById('filter-btn-all');
+    if (defaultFilterBtn) defaultFilterBtn.classList.add('active');
+
+    renderDetailsList(details, 'all');
+    if (modal) modal.style.display = 'flex';
+}
+window.openLeadDetails = openLeadDetails;
+
+function openConvertLeadModal(leadId) {
+    const lead = allLeads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    document.getElementById('convert-lead-id').value = lead.id;
+    document.getElementById('convert-lead-fullname').value = lead.student_name || '';
+
+    // Generate suggested username (e.g., prenume.nume or phone)
+    const nameParts = (lead.student_name || '').trim().toLowerCase().split(/\s+/);
+    let suggestedUsername = nameParts.length >= 2 ? `${nameParts[0]}.${nameParts[1]}` : (nameParts[0] || 'elev');
+    suggestedUsername = normalizeSearchText(suggestedUsername).replace(/[^a-z0-9.]/g, '');
+
+    document.getElementById('convert-lead-username').value = suggestedUsername;
+    document.getElementById('convert-lead-password').value = 'Elev' + Math.floor(1000 + Math.random() * 9000);
+
+    const modal = document.getElementById('modal-convert-lead');
+    if (modal) modal.style.display = 'flex';
+}
+window.openConvertLeadModal = openConvertLeadModal;
+
+function closeConvertLeadModal() {
+    const modal = document.getElementById('modal-convert-lead');
+    if (modal) modal.style.display = 'none';
+}
+window.closeConvertLeadModal = closeConvertLeadModal;
+
+async function handleConvertLeadSubmit(event) {
+    event.preventDefault();
+    const leadId = document.getElementById('convert-lead-id').value;
+    const fullName = document.getElementById('convert-lead-fullname').value.trim();
+    const username = document.getElementById('convert-lead-username').value.trim();
+    const password = document.getElementById('convert-lead-password').value.trim();
+    const duration = document.getElementById('convert-lead-duration') ? document.getElementById('convert-lead-duration').value : '30';
+    const btn = document.getElementById('btn-submit-convert-lead');
+
+    if (!leadId || !username || !password) {
+        showToast('Completează toate câmpurile.', true);
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Se creează contul...';
+
+    try {
+        const res = await fetchWithToken(API_MANAGE_LEADS, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'convert_lead',
+                lead_id: leadId,
+                username: username,
+                password: password,
+                full_name: fullName,
+                duration: duration
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Eroare la crearea contului.');
+
+        showToast(data.message || 'Contul a fost creat și testul asociat cu succes!');
+        closeConvertLeadModal();
+
+        // Refresh leads, reload students, results & situatie
+        loadLeads();
+        loadStudents();
+        loadResults();
+        loadSituatie();
+
+    } catch (e) {
+        console.error('handleConvertLeadSubmit error:', e);
+        showToast(e.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Creează & Asociază Test';
+    }
+}
+window.handleConvertLeadSubmit = handleConvertLeadSubmit;
+
+async function deleteLead(leadId) {
+    if (!confirm('Sigur dorești să ștergi acest lead?')) return;
+
+    try {
+        const res = await fetchWithToken(API_MANAGE_LEADS, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'delete_lead',
+                lead_id: leadId
+            })
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        showToast('Lead șters cu succes!');
+        loadLeads();
+    } catch (e) {
+        showToast('Eroare la ștergerea lead-ului: ' + e.message, true);
+    }
+}
+window.deleteLead = deleteLead;
+
+/* ==================== WINDOW EXPORTS ==================== */
+window.closeQuestionModal = closeQuestionModal;
+window.closePhoneModal = closePhoneModal;
+window.closeStudentModal = closeStudentModal;
+window.closeReportModal = closeReportModal;
+window.closeDetailsModal = closeDetailsModal;
+window.closeAssignModal = closeAssignModal;
+window.closePreviewModal = closePreviewModal;
+window.closeManualSelectModal = closeManualSelectModal;
+window.openQuestionModal = openQuestionModal;
+window.openAssignTestModal = openAssignTestModal;
+window.openStudentModal = openStudentModal;
+window.openManualSelectModal = openManualSelectModal;
+window.deleteStudent = deleteStudent;
+window.deleteQuestion = deleteQuestion;
+window.setDetailsFilter = setDetailsFilter;
+window.setAssignQuickDate = setAssignQuickDate;
+window.setEditDeadlineQuickDate = setEditDeadlineQuickDate;
+window.updateAssignDeadlinePreview = updateAssignDeadlinePreview;
+window.updateEditDeadlinePreview = updateEditDeadlinePreview;
+window.updateFilterSub = updateFilterSub;
+window.updateWFilterSub = updateWFilterSub;
+window.updateSubcategories = updateSubcategories;
+window.updateCorrectDropdown = updateCorrectDropdown;
+window.addImageUrlFromInput = addImageUrlFromInput;
+window.handleImageFilesSelect = handleImageFilesSelect;
+window.removeQuestionImage = removeQuestionImage;
+window.approveWaitingQuestion = approveWaitingQuestion;
+window.approveAllWaitingQuestions = approveAllWaitingQuestions;
+window.rejectWaitingQuestion = rejectWaitingQuestion;
+window.editAndApproveWaitingQuestion = editAndApproveWaitingQuestion;
+window.renderSituatieGrid = renderSituatieGrid;
+window.closeSituatieDetail = closeSituatieDetail;
+window.openSituatieDetail = openSituatieDetail;
+window.togglePassword = togglePassword;
+window.promptEditPhone = promptEditPhone;
+window.promptResetPassword = promptResetPassword;
+window.toggleManualSelection = toggleManualSelection;
+window.confirmManualSelection = confirmManualSelection;
+window.loadLeads = loadLeads;
+window.renderQuestions = renderQuestions;
+window.renderWaitingQuestions = renderWaitingQuestions;
+window.renderStudents = renderStudents;
+window.openSubscriptionModal = openSubscriptionModal;
+window.closeSubscriptionModal = closeSubscriptionModal;
+window.setSubDuration = setSubDuration;
+window.setSubUnlimited = setSubUnlimited;
+window.handleEditSubscriptionSubmit = handleEditSubscriptionSubmit;
+
 /* ==================== INITIALIZATION ==================== */
 document.addEventListener('DOMContentLoaded', () => {
-    const btnSubmit = document.getElementById('btn-submit-admin-login');
-    const input = document.getElementById('input-admin-pass');
+    loadSituatie();
+    loadLeads();
 
-    const handleAdminLogin = () => {
-        const pass = input ? input.value.trim() : '';
-        if (!pass) {
-            showToast('Introdu parola de administrare.', true);
-            return;
-        }
-        adminToken = pass;
-        sessionStorage.setItem('adminToken', adminToken);
-        hideAdminLoginModal();
-        loadSituatie();
-    };
-
-    if (btnSubmit) btnSubmit.addEventListener('click', handleAdminLogin);
-    if (input) {
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleAdminLogin();
+    // Auto-mask for zz/ll/aaaa date input
+    const subDateInput = document.getElementById('sub-exact-date');
+    if (subDateInput) {
+        subDateInput.addEventListener('input', function() {
+            let v = this.value.replace(/\D/g, '');
+            if (v.length > 8) v = v.substring(0, 8);
+            if (v.length >= 5) {
+                this.value = `${v.substring(0, 2)}/${v.substring(2, 4)}/${v.substring(4)}`;
+            } else if (v.length >= 3) {
+                this.value = `${v.substring(0, 2)}/${v.substring(2)}`;
+            } else {
+                this.value = v;
+            }
         });
     }
 
-    if (!adminToken) {
-        showAdminLoginModal();
-    } else {
-        loadSituatie();
-    }
+    // Initialize Drag & Drop and Paste Handlers for Question Modal Images
+    initImageDropAndPasteHandlers();
 });

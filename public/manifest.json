@@ -1,0 +1,17 @@
+{
+  "name": "AcaDe QUIZ",
+  "short_name": "AcaDe QUIZ",
+  "description": "Platformă interactivă de evaluare și pregătire C++",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1e",
+  "theme_color": "#0a0a1e",
+  "icons": [
+    {
+      "src": "/SIGLA2.jpg",
+      "sizes": "192x192 512x512 2048x2048",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

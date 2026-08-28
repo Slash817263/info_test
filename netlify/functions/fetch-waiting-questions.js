@@ -28,25 +28,27 @@ exports.handler = async function(event, context) {
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
-    try {
-        if (supabaseUrl && supabaseKey) {
-            const response = await fetch(`${supabaseUrl}/rest/v1/waiting_questions?select=*&order=id.asc`, {
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`
-                }
-            });
+    if (!supabaseUrl || !supabaseKey) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Supabase credentials missing.' }) };
+    }
 
-            if (response.ok) {
-                const data = await response.json();
-                if (Array.isArray(data)) {
-                    const mapped = data.map(q => ({ ...q, exam_type: q.exam_type || 'Initial' }));
-                    return {
-                        statusCode: 200,
-                        headers,
-                        body: JSON.stringify(mapped)
-                    };
-                }
+    try {
+        const response = await fetch(`${supabaseUrl}/rest/v1/waiting_questions?select=*&order=id.asc`, {
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                const mapped = data.map(q => ({ ...q, exam_type: q.exam_type || 'Initial' }));
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(mapped)
+                };
             }
         }
 
@@ -61,7 +63,7 @@ exports.handler = async function(event, context) {
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Internal Server Error', details: error.message })
+            body: JSON.stringify({ error: 'Internal Server Error' })
         };
     }
 };

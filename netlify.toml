@@ -1,5 +1,5 @@
 [build]
-  publish = "."
+  publish = "public"
   functions = "netlify/functions"
 
 [[redirects]]
@@ -12,4 +12,24 @@
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
-    X-XSS-Protection = "1; mode=block"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://zarojtvcruwqywzkshbl.supabase.co https://cdn.jsdelivr.net"
+
+[[edge_functions]]
+  function = "protect-admin"
+  path = "/admin"
+
+[[edge_functions]]
+  function = "protect-admin"
+  path = "/admin.html"
+
+[[edge_functions]]
+  function = "protect-admin"
+  path = "/assets/js/admin.js"
+
+[[edge_functions]]
+  function = "protect-admin"
+  path = "/assets/css/admin.css"
+
+[[edge_functions]]
+  function = "protect-admin"
+  path = "/.netlify/functions/*"

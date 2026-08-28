@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AcaDe QUIZ | Autentificare Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/admin.css">
+    <style>
+        body {
+            background-color: #0a0a1e;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+        .login-card {
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            background: rgba(20, 20, 40, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px rgba(124,106,255,0.2);
+            backdrop-filter: blur(10px);
+        }
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(10, 10, 25, 0.8);
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus {
+            border-color: #7c6aff;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #7c6aff, #38bdf8);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(124, 106, 255, 0.4);
+            transition: opacity 0.2s;
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        #error-msg {
+            color: #ef4444;
+            font-size: 14px;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+        <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Securitate Admin</h2>
+        <p style="font-size: 14px; color: #94a3b8; margin-bottom: 24px;">Panoul de administrare este blocat. Introdu cheia secretă pentru a continua.</p>
+        
+        <p id="error-msg"></p>
+
+        <form id="login-form">
+            <input type="password" id="input-admin-pass" class="form-control" placeholder="Cheie secretă..." required>
+            <button type="submit" id="btn-submit" class="btn-primary">Deblochează</button>
+        </form>
+        
+        <div style="margin-top: 24px;">
+            <a href="/" style="color: #64748b; font-size: 13px; text-decoration: none;">← Înapoi la platformă</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pass = document.getElementById('input-admin-pass').value;
+            const btn = document.getElementById('btn-submit');
+            const errorMsg = document.getElementById('error-msg');
+            
+            btn.disabled = true;
+            btn.innerText = 'Se verifică...';
+            errorMsg.style.display = 'none';
+
+            try {
+                const res = await fetch('/.netlify/functions/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pass })
+                });
+
+                if (res.ok) {
+                    btn.innerText = 'Succes! Redirecționare...';
+                    window.location.href = '/admin.html';
+                } else {
+                    const data = await res.json();
+                    errorMsg.innerText = data.error || 'Parolă incorectă!';
+                    errorMsg.style.display = 'block';
+                    btn.disabled = false;
+                    btn.innerText = 'Deblochează';
+                }
+            } catch (err) {
+                errorMsg.innerText = 'Eroare de conexiune.';
+                errorMsg.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = 'Deblochează';
+            }
+        });
+    </script>
+</body>
+</html>

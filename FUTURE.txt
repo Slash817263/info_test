@@ -1,1 +1,5 @@
-1. 
+MODUL 1: GENERAREA DE MAI MULTE VARIANTE
+Crearea de noi intrebari pe baza arhivelor din baza de date
+(intrebari similare ca nivel de dificultate si logica, dar diferite)
+Prioritate - voi specifica eu categoria si subcategoria
+

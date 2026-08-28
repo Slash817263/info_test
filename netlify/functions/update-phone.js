@@ -1,14 +1,7 @@
-exports.handler = async function(event, context) {
-    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
-    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
-    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+const utils = require('./_utils');
 
-    const headers = {
-        'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+exports.handler = async function(event, context) {
+    const headers = utils.getCorsHeaders(event);
 
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
@@ -26,47 +19,64 @@ exports.handler = async function(event, context) {
     }
 
     // Verify token (either Admin token or Student JWT)
-    const adminToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
-    const validAdminTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-    const isAdmin = adminToken && validAdminTokens.includes(adminToken);
-
+    const isAdmin = utils.verifyAdminToken(event);
     let authenticatedUsername = null;
     if (!isAdmin) {
-        const authHeader = event.headers.authorization || event.headers.Authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.substring(7);
-            const jwt = require('jsonwebtoken');
-            const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
-            try {
-                const decoded = jwt.verify(token, jwtSecret);
-                authenticatedUsername = decoded.username;
-            } catch (e) {
-                return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat.' }) };
-            }
-        } else {
-            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autentificare necesară.' }) };
+        const decoded = utils.parseJwt(event);
+        if (decoded && decoded.username) {
+            authenticatedUsername = decoded.username;
         }
     }
 
     try {
         const body = JSON.parse(event.body || '{}');
-        const { student_id, username, phone_number } = body;
+        const { student_id, username, phone_number, phone } = body;
+        const rawPhone = phone_number || phone;
+        const targetUsername = username || authenticatedUsername;
 
-        if (!student_id || !username || !phone_number) {
-            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Student ID, Username și Numarul de telefon sunt obligatorii' }) };
+        if (!rawPhone || (!student_id && !targetUsername)) {
+            return { 
+                statusCode: 400, 
+                headers, 
+                body: JSON.stringify({ error: 'Numărul de telefon și identificatorul elevului sunt obligatorii.' }) 
+            };
         }
 
-        if (!isAdmin && authenticatedUsername && authenticatedUsername.toLowerCase() !== (username || '').toLowerCase()) {
-            return { statusCode: 403, headers, body: JSON.stringify({ error: 'Nu ai permisiunea de a modifica acest profil.' }) };
+        if (!isAdmin && authenticatedUsername && targetUsername && authenticatedUsername.toLowerCase() !== targetUsername.toLowerCase()) {
+            return { 
+                statusCode: 403, 
+                headers, 
+                body: JSON.stringify({ error: 'Nu ai permisiunea de a modifica acest profil.' }) 
+            };
         }
+
+        // Normalize Romanian phone numbers if starting with +40, 40, etc
+        let cleanPhone = String(rawPhone).trim().replace(/\s+/g, '').replace(/[-().]/g, '');
+        if (cleanPhone.startsWith('+40')) cleanPhone = '0' + cleanPhone.substring(3);
+        else if (cleanPhone.startsWith('40') && cleanPhone.length === 11) cleanPhone = '0' + cleanPhone.substring(2);
+        else if (cleanPhone.startsWith('7') && cleanPhone.length === 9) cleanPhone = '0' + cleanPhone;
 
         // Validate Romanian phone number (starts with 07, exactly 10 digits)
         const phoneRegex = /^07\d{8}$/;
-        if (!phoneRegex.test(phone_number)) {
-            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Format numar invalid. Trebuie sa fie de tipul 07XXXXXXXX (10 cifre).' }) };
+        if (!phoneRegex.test(cleanPhone)) {
+            return { 
+                statusCode: 400, 
+                headers, 
+                body: JSON.stringify({ error: 'Format număr invalid. Trebuie să fie de tipul 07XXXXXXXX (10 cifre).' }) 
+            };
         }
 
-        const res = await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student_id}&username=ilike.${encodeURIComponent(username)}`, {
+        // Try updating by student_id and/or username
+        let filterQuery = '';
+        if (student_id && targetUsername) {
+            filterQuery = `id=eq.${student_id}&username=ilike.${encodeURIComponent(targetUsername)}`;
+        } else if (student_id) {
+            filterQuery = `id=eq.${student_id}`;
+        } else {
+            filterQuery = `username=ilike.${encodeURIComponent(targetUsername)}`;
+        }
+
+        let res = await fetch(`${supabaseUrl}/rest/v1/students?${filterQuery}`, {
             method: 'PATCH',
             headers: {
                 'apikey': supabaseKey,
@@ -74,30 +84,55 @@ exports.handler = async function(event, context) {
                 'Content-Type': 'application/json',
                 'Prefer': 'return=representation'
             },
-            body: JSON.stringify({ phone_number })
+            body: JSON.stringify({ phone_number: cleanPhone })
         });
 
         if (!res.ok) {
-            return { statusCode: 500, headers, body: JSON.stringify({ error: 'Eroare la baza de date la actualizarea numarului' }) };
+            return { 
+                statusCode: 500, 
+                headers, 
+                body: JSON.stringify({ error: 'Eroare la baza de date la actualizarea numărului' }) 
+            };
         }
 
-        const data = await res.json();
+        let data = await res.json();
         
-        if (data.length === 0) {
-            return { statusCode: 404, headers, body: JSON.stringify({ error: 'Utilizator negasit' }) };
+        // If query with student_id returned empty, try fallback by username alone
+        if ((!data || data.length === 0) && targetUsername && student_id) {
+            const fallbackRes = await fetch(`${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(targetUsername)}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ phone_number: cleanPhone })
+            });
+            if (fallbackRes.ok) {
+                const fbData = await fallbackRes.json();
+                if (fbData && fbData.length > 0) {
+                    data = fbData;
+                }
+            }
+        }
+
+        if (!data || data.length === 0) {
+            return { statusCode: 404, headers, body: JSON.stringify({ error: 'Utilizator negăsit.' }) };
         }
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ success: true })
+            body: JSON.stringify({ success: true, phone_number: cleanPhone })
         };
 
     } catch (e) {
+        console.error('update-phone error:', e);
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Eroare interna de server' })
+            body: JSON.stringify({ error: 'Eroare internă de server.' })
         };
     }
 };
