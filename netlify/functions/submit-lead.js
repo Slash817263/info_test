@@ -221,7 +221,7 @@ exports.handler = async function(event, context) {
         // Trigger automatic email report delivery
         try {
             const emailHandler = require('./send-report-email.js').handler;
-            await emailHandler({
+            const emailResponse = await emailHandler({
                 httpMethod: 'POST',
                 headers: { 
                     origin: corsOrigin,
@@ -238,7 +238,17 @@ exports.handler = async function(event, context) {
                     stats: stats
                 })
             }, {});
-            console.log(`[submit-lead] Email report dispatched successfully for ${fullName}`);
+            
+            if (emailResponse && emailResponse.statusCode === 200) {
+                const resBody = JSON.parse(emailResponse.body || '{}');
+                if (resBody.success) {
+                    console.log(`[submit-lead] Email report dispatched successfully for ${fullName}`);
+                } else {
+                    console.warn(`[submit-lead] Email simulated or failed:`, resBody.warning || resBody.message, resBody.details || '');
+                }
+            } else {
+                console.error(`[submit-lead] Email handler failed with status:`, emailResponse?.statusCode, emailResponse?.body);
+            }
         } catch (e) {
             console.error('[submit-lead] Error invoking send-report-email:', e);
         }

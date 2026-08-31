@@ -13,6 +13,7 @@
 1.2 Operatori si expresii
 1.3 Structuri de control
 1.4 Complexitati
+1.5 Pseudocod
 
 2.Organizarea Datelor
 2.1 Vectori

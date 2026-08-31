@@ -48,7 +48,7 @@ let currentWaitingEditId = null;
 let studentsData = [];
 
 const subcategoriesMap = {
-    "Fundamente": ["Citire si afisare date", "Operatori si expresii", "Structuri de control", "Complexitati"],
+    "Fundamente": ["Citire si afisare date", "Operatori si expresii", "Structuri de control", "Complexitati", "Pseudocod"],
     "Organizarea Datelor": ["Vectori", "Matrice", "Siruri de caractere", "Structuri de date (struct)"],
     "Subprograme": ["Transmitere prin valoare", "Transmitere prin referinta", "Recursivitate"],
     "Backtracking": ["Teorie si aplicare practica"],
