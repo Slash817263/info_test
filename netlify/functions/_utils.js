@@ -1,8 +1,8 @@
-// netlify/functions/_utils.js
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 function getCorsHeaders(event) {
-    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+    const origin = (event && event.headers && (event.headers.origin || event.headers.Origin)) || '';
     
     const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
     const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
@@ -16,11 +16,35 @@ function getCorsHeaders(event) {
 }
 
 function verifyAdminToken(event) {
-    const adminToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
+    if (!event || !event.headers) return false;
+
+    let adminToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
+
+    if (!adminToken && event.headers.authorization) {
+        const auth = event.headers.authorization;
+        if (auth.startsWith('Bearer ')) adminToken = auth.substring(7).trim();
+    } else if (!adminToken && event.headers.Authorization) {
+        const auth = event.headers.Authorization;
+        if (auth.startsWith('Bearer ')) adminToken = auth.substring(7).trim();
+    }
+
+    if (!adminToken) {
+        const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
+        const match = cookieHeader.match(/(?:^|;\s*)admin_token=([^;]+)/);
+        if (match) {
+            adminToken = decodeURIComponent(match[1]).trim();
+        }
+    }
+
     if (!adminToken) return false;
-    const expectedToken = process.env.ADMIN_SECRET;
+
+    const expectedToken = getLiveEnv('ADMIN_SECRET', process.env.ADMIN_SECRET);
     if (!expectedToken) return false;
+
+    // Direct secret match
     if (adminToken === expectedToken) return true;
+
+    // JWT verification
     try {
         const decoded = jwt.verify(adminToken, expectedToken);
         return decoded && decoded.role === 'admin';
@@ -30,6 +54,7 @@ function verifyAdminToken(event) {
 }
 
 function parseJwt(event) {
+    if (!event || !event.headers) return null;
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return null;
@@ -49,18 +74,74 @@ function getLiveEnv(key, fallback = '') {
     try {
         const fs = require('fs');
         const path = require('path');
-        const envPath = path.resolve(process.cwd(), '.env');
-        if (fs.existsSync(envPath)) {
-            const content = fs.readFileSync(envPath, 'utf-8');
-            const match = content.match(new RegExp(`^${key}=(.*)$`, 'm'));
-            if (match && match[1]) {
-                return match[1].trim();
+        const envCandidates = [
+            path.resolve(__dirname, '../../.env'),
+            path.resolve(__dirname, '../.env'),
+            path.resolve(process.cwd(), '.env')
+        ];
+        for (const envPath of envCandidates) {
+            if (fs.existsSync(envPath)) {
+                const content = fs.readFileSync(envPath, 'utf-8');
+                const match = content.match(new RegExp(`^${key}=(.*)$`, 'm'));
+                if (match && match[1]) {
+                    return match[1].trim();
+                }
             }
         }
     } catch (e) {
         // ignore
     }
     return process.env[key] || fallback;
+}
+
+function hashPassword(password) {
+    if (!password) return '';
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+    return `$scrypt$${salt}$${hash}`;
+}
+
+function verifyPassword(password, storedHash) {
+    if (!storedHash || !password) return false;
+    // Backward compatibility for existing plaintext passwords
+    if (!storedHash.startsWith('$scrypt$')) {
+        return storedHash === password;
+    }
+    try {
+        const parts = storedHash.split('$');
+        if (parts.length !== 4) return false;
+        const salt = parts[2];
+        const originalHash = parts[3];
+        const verifyHash = crypto.scryptSync(password, salt, 64).toString('hex');
+        const origBuf = Buffer.from(originalHash, 'hex');
+        const verBuf = Buffer.from(verifyHash, 'hex');
+        if (origBuf.length !== verBuf.length) return false;
+        return crypto.timingSafeEqual(origBuf, verBuf);
+    } catch(e) {
+        return false;
+    }
+}
+
+function parseExpirationDate(expiresAt) {
+    if (!expiresAt) return null;
+    let y, m, d;
+    if (expiresAt.includes('/')) {
+        const parts = expiresAt.split('/');
+        if (parts.length === 3) {
+            d = parseInt(parts[0], 10);
+            m = parseInt(parts[1], 10);
+            y = parseInt(parts[2], 10);
+        }
+    } else if (expiresAt.includes('-')) {
+        const parts = expiresAt.split('T')[0].split('-');
+        if (parts.length === 3) {
+            y = parseInt(parts[0], 10);
+            m = parseInt(parts[1], 10);
+            d = parseInt(parts[2], 10);
+        }
+    }
+    if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return null;
+    return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 async function isStudentSubscriptionActive(supabaseUrl, supabaseKey, username) {
@@ -90,30 +171,13 @@ async function isStudentSubscriptionActive(supabaseUrl, supabaseKey, username) {
         const expiresAt = data[0].expires_at;
         if (!expiresAt) return true; // Nelimitat dacă nu are expires_at
         
-        let expireDate;
-        if (expiresAt.includes('/')) {
-            const parts = expiresAt.split('/');
-            if (parts.length === 3) {
-                // Assuming DD/MM/YYYY
-                expireDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`);
-            } else {
-                expireDate = new Date(expiresAt);
-            }
-        } else {
-            expireDate = new Date(expiresAt);
-        }
+        const expStr = parseExpirationDate(expiresAt);
+        if (!expStr) return true; // If invalid date format, fallback to true
 
-        const today = new Date();
-        // Ștergem orele pentru a compara doar ziua (expire la sfârșitul zilei respective)
-        today.setHours(0, 0, 0, 0);
-        
-        if (!isNaN(expireDate.getTime())) {
-            expireDate.setHours(0, 0, 0, 0);
-            return expireDate >= today;
-        }
-        
-        // If invalid date, fallback to true so we don't accidentally block
-        return true;
+        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit' });
+        const todayStr = formatter.format(new Date());
+
+        return expStr >= todayStr;
     } catch(e) {
         console.error('Eroare verificare abonament', e);
         return false;
@@ -129,11 +193,55 @@ function createErrorResponse(statusCode, message, corsHeaders, error = null) {
     };
 }
 
+async function fetchAllSupabaseRows(baseEndpoint, supabaseKey) {
+    let all = [];
+    let from = 0;
+    const chunkSize = 1000;
+    while (true) {
+        let url = baseEndpoint;
+        const separator = url.includes('?') ? '&' : '?';
+        url += `${separator}offset=${from}&limit=${chunkSize}`;
+        
+        const res = await fetch(url, {
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': 'Bearer ' + supabaseKey
+            }
+        });
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`Supabase fetch failed: ${res.status} - ${errText}`);
+        }
+        const chunk = await res.json();
+        all = all.concat(chunk);
+        if (chunk.length < chunkSize) break;
+        from += chunkSize;
+    }
+    return all;
+}
+
+function getClientIp(event) {
+    if (!event || !event.headers) return 'unknown';
+    const forwarded = event.headers['x-forwarded-for'] || event.headers['X-Forwarded-For'];
+    const forwardedIp = forwarded ? forwarded.split(',')[0].trim() : null;
+    return event.headers['cf-connecting-ip'] ||
+           event.headers['CF-Connecting-IP'] ||
+           event.headers['x-nf-client-connection-ip'] ||
+           forwardedIp ||
+           event.headers['client-ip'] ||
+           'unknown';
+}
+
 module.exports = {
     getCorsHeaders,
     verifyAdminToken,
     parseJwt,
     getLiveEnv,
     createErrorResponse,
-    isStudentSubscriptionActive
+    isStudentSubscriptionActive,
+    fetchAllSupabaseRows,
+    hashPassword,
+    verifyPassword,
+    parseExpirationDate,
+    getClientIp
 };

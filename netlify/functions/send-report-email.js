@@ -208,7 +208,44 @@ exports.handler = async function (event, context) {
 
         const waPhone = formatWhatsAppNumber(cleanPhone);
         const cleanFullName = (fullName || 'Elev').replace(/\s*\(Test\s+Introductiv\)/gi, '').trim();
-        const waMessage = encodeURIComponent(`Salut, ${cleanFullName}! Am analizat raportul tău la testul de informatică.👨‍💻\nCa să ajungi la excelență, vom rezolva împreună aceste lipsuri, pas cu pas. 💯\nPentru moment, aș dori să programăm sesiunea gratuită de diagnosticare! 🕑`);
+        const prenume = cleanFullName.split(' ')[0] || 'Elev';
+        const scorePct = Math.round((userScore / totalPoints) * 100);
+
+        function extractWeakTopics(detailList) {
+            if (!Array.isArray(detailList) || detailList.length === 0) return ['Grafuri', 'Struct'];
+            function toFriendlyName(subcat, cat) {
+                const s = (subcat || '').toLowerCase();
+                const c = (cat || '').toLowerCase();
+                if (s.includes('struct')) return 'Struct';
+                if (s.includes('siruri') || s.includes('șiruri')) return 'Șiruri de caractere';
+                if (s.includes('matrice')) return 'Matrice';
+                if (s.includes('vector')) return 'Vectori';
+                if (s.includes('recursiv')) return 'Recursivitate';
+                if (s.includes('valoare') || s.includes('referinta') || s.includes('referință')) return 'Subprograme';
+                if (s.includes('graf') || c.includes('graf') || c.includes('arbori')) return 'Grafuri';
+                if (c.includes('backtracking') || s.includes('backtracking')) return 'Backtracking';
+                if (s.includes('complexit')) return 'Complexități';
+                if (s.includes('pseudocod')) return 'Pseudocod';
+                if (s.includes('operator')) return 'Operatori';
+                if (s.includes('control')) return 'Structuri de control';
+                return subcat || cat || 'Grafuri';
+            }
+            const mistakeCounts = {};
+            detailList.forEach(d => {
+                if (!d.isCorrect) {
+                    const topic = toFriendlyName(d.subcategory, d.category);
+                    mistakeCounts[topic] = (mistakeCounts[topic] || 0) + 1;
+                }
+            });
+            const sorted = Object.entries(mistakeCounts).sort((a, b) => b[1] - a[1]).map(e => e[0]);
+            if (sorted.length >= 2) return [sorted[0], sorted[1]];
+            if (sorted.length === 1) return [sorted[0], sorted[0] === 'Grafuri' ? 'Struct' : 'Grafuri'];
+            return ['Grafuri', 'Struct'];
+        }
+
+        const [cat1, cat2] = extractWeakTopics(details);
+        const waText = `Salut, ${prenume}! Sunt Tudor de la AcaDe-Informatica.\nAm aruncat un ochi peste raportul tău. Ai obținut [${scorePct}/100] la testul de diagnosticare.\nPartea bună este că ai logică de bază. Partea riscantă este că ai căzut exact în capcanele de la ${cat1} si ${cat2} care fac diferența dintre candidații la admitere.\nHai să intrăm 30 de minute într-un scurt video-call gratuit. Îți dau share screen pe lucrarea ta, vedem împreună ce ți-a creat dificultăți și cum se rezolvau exercițiile mai simplu.\nCum stai cu programul? Ești liber mâine la ora 12:00?`;
+        const waMessage = encodeURIComponent(waText);
 
         // Full HTML Email Template (Dark Theme & Perfectly Centered)
         const emailHtml = `

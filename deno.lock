@@ -11,7 +11,9 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:jsonwebtoken@^9.0.3"
+        "npm:jsonwebtoken@^9.0.3",
+        "npm:pdf-parse@^2.4.5",
+        "npm:puppeteer-core@^25.12.0"
       ]
     }
   }

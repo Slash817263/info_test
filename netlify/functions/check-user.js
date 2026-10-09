@@ -11,13 +11,6 @@ exports.handler = async function(event, context) {
         return utils.createErrorResponse(405, 'Method Not Allowed', headers);
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-        return utils.createErrorResponse(500, 'Supabase env variables missing', headers);
-    }
-
     try {
         const body = JSON.parse(event.body || '{}');
         const { username } = body;
@@ -35,40 +28,32 @@ exports.handler = async function(event, context) {
             return utils.createErrorResponse(401, 'Token mismatch cu username', headers);
         }
 
+        const supabaseUrl = utils.getLiveEnv('SUPABASE_URL', process.env.SUPABASE_URL);
+        const supabaseKey = utils.getLiveEnv('SUPABASE_SERVICE_KEY', process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY);
+
+        if (!supabaseUrl || !supabaseKey) {
+            return utils.createErrorResponse(500, 'Supabase env variables missing', headers);
+        }
+
         const safeUsername = cleanUsername.replace(/[%_]/g, '\\$&');
         const encodedUsername = encodeURIComponent(cleanUsername);
         
-        // Verificam hash-ul parolei si statusul abonamentului (expires_at) + date gamificare
-        let stdUrl = `${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(safeUsername)}&select=password,phone_number,expires_at,current_streak,last_active_date,xp`;
+        // Verificam hash-ul parolei si statusul abonamentului (expires_at) + gdpr_consent
+        let stdUrl = `${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(safeUsername)}&select=password,phone_number,expires_at,gdpr_consent`;
         let stdRes = await fetch(stdUrl, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } });
         if (!stdRes.ok) {
-            // Fallback for schemas missing newer columns
-            stdUrl = `${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(safeUsername)}&select=password,phone_number,expires_at,xp`;
-            stdRes = await fetch(stdUrl, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-            });
+            stdUrl = `${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(safeUsername)}&select=password,phone_number,expires_at`;
+            stdRes = await fetch(stdUrl, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } });
             if (!stdRes.ok) {
-                // Final fallback WITH expires_at
-                stdUrl = `${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(safeUsername)}&select=password,phone_number,expires_at`;
-                stdRes = await fetch(stdUrl, {
-                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                });
-                if (!stdRes.ok) {
-                    // Ultimate fallback WITHOUT expires_at (if column doesn't exist)
-                    stdUrl = `${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(safeUsername)}&select=password,phone_number`;
-                    stdRes = await fetch(stdUrl, {
-                        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                    });
-                }
+                stdUrl = `${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(safeUsername)}&select=password,phone_number`;
+                stdRes = await fetch(stdUrl, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } });
             }
         }
 
         let phoneNumber = null;
         let expiresAt = null;
         let isExpired = false;
-        let currentStreak = 0;
-        let lastActiveDate = null;
-        let xp = 0;
+        let gdprConsent = { accepted: true };
 
         if (stdRes.ok) {
             const stdData = await stdRes.json();
@@ -77,31 +62,16 @@ exports.handler = async function(event, context) {
                 if (currentHashPrefix !== decoded.hashPrefix) {
                     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Parola a fost modificata. Va rugam sa va relogati.' }) };
                 }
+                gdprConsent = stdData[0].gdpr_consent || { accepted: true };
                 phoneNumber = stdData[0].phone_number;
                 expiresAt = stdData[0].expires_at || null;
-                currentStreak = stdData[0].current_streak || 0;
-                lastActiveDate = stdData[0].last_active_date || null;
-                xp = stdData[0].xp || 0;
 
                 if (expiresAt) {
-                    let expDate;
-                    if (expiresAt.includes('/')) {
-                        const parts = expiresAt.split('/');
-                        if (parts.length === 3) {
-                            expDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`);
-                        } else {
-                            expDate = new Date(expiresAt);
-                        }
-                    } else {
-                        expDate = new Date(expiresAt);
-                    }
-                    
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    
-                    if (!isNaN(expDate.getTime())) {
-                        expDate.setHours(0, 0, 0, 0);
-                        if (expDate < today) {
+                    const expStr = utils.parseExpirationDate(expiresAt);
+                    if (expStr) {
+                        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest', year: 'numeric', month: '2-digit', day: '2-digit' });
+                        const todayStr = formatter.format(new Date());
+                        if (expStr < todayStr) {
                             isExpired = true;
                         }
                     }
@@ -140,44 +110,6 @@ exports.handler = async function(event, context) {
             grade = (totalScore / finalData.length) / 10;
         }
 
-        // Calculate Effective Streak (Europe/Bucharest timezone)
-        let effectiveStreak = currentStreak;
-        if (lastActiveDate) {
-            const getBucharestDateStr = (dateObj) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest' }).format(dateObj);
-            const today = new Date();
-            const todayStr = getBucharestDateStr(today);
-            const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-            const yesterdayStr = getBucharestDateStr(yesterday);
-            
-            if (lastActiveDate !== todayStr && lastActiveDate !== yesterdayStr) {
-                effectiveStreak = 0;
-            }
-        }
-
-        // Calculate Leaderboard Percentile (approximate for now based on a random factor or real query if we want)
-        // Since we don't have all users fetched, we will do a quick count query for percentile
-        let percentile = 15; // default
-        try {
-            const countUrl = `${supabaseUrl}/rest/v1/students?select=id&xp=gt.${xp}`;
-            const countRes = await fetch(countUrl, {
-                method: 'HEAD',
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Prefer': 'count=exact' }
-            });
-            const allUrl = `${supabaseUrl}/rest/v1/students?select=id`;
-            const allRes = await fetch(allUrl, {
-                method: 'HEAD',
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Prefer': 'count=exact' }
-            });
-            
-            const betterCount = parseInt(countRes.headers.get('content-range')?.split('/')[1] || countRes.headers.get('content-range')?.split('-')[1]?.split('/')[0] || 0);
-            const totalCount = parseInt(allRes.headers.get('content-range')?.split('/')[1] || 100);
-            
-            if (totalCount > 0) {
-                const perc = (betterCount / totalCount) * 100;
-                percentile = Math.max(1, Math.round(perc));
-            }
-        } catch(e) { console.error('Percentile error', e); }
-
         // Calculate Daily Test Completion Today (Europe/Bucharest timezone)
         const todayBucharestStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest' }).format(new Date());
         const hasDailyToday = finalData.some(d => {
@@ -196,13 +128,12 @@ exports.handler = async function(event, context) {
                 expires_at: expiresAt,
                 name: studentDisplayName,
                 phone_number: phoneNumber,
+                gdpr_consent: gdprConsent,
                 hasCompletedInitial: hasCompletedInitial,
                 hasDailyToday: hasDailyToday,
+                grade: grade.toFixed(2),
                 gamification: {
-                    xp: xp,
-                    streak: effectiveStreak,
-                    grade: grade.toFixed(2),
-                    percentile: percentile
+                    grade: grade.toFixed(2)
                 },
                 history: finalData.slice(0, 10).map(d => ({
                     test_type: d.test_type,

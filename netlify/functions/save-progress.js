@@ -32,7 +32,11 @@ exports.handler = async function(event, context) {
     }
     const token = authHeader.substring(7);
     const jwt = require('jsonwebtoken');
-    const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+    const utils = require('./_utils');
+    const jwtSecret = utils.getLiveEnv('JWT_SECRET', process.env.JWT_SECRET);
+    if (!jwtSecret) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Eroare server: JWT_SECRET lipsă.' }) };
+    }
     let decoded;
     try {
         decoded = jwt.verify(token, jwtSecret);

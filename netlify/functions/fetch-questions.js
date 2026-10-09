@@ -30,10 +30,9 @@ exports.handler = async function(event, context) {
     }
 
     try {
+        const utils = require('./_utils');
         const queryParams = event.queryStringParameters || {};
-        const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-        const clientToken = (event.headers && (event.headers['x-admin-token'] || event.headers['X-Admin-Token'])) || '';
-        const isAdmin = queryParams.admin === 'true' && clientToken && validTokens.includes(clientToken);
+        const isAdmin = queryParams.admin === 'true' && utils.verifyAdminToken(event);
 
         const testType = queryParams.type || 'initial';
         const examType = queryParams.examType || 'Initial';
@@ -41,25 +40,12 @@ exports.handler = async function(event, context) {
         const idsParam = queryParams.ids || '';
 
         if (!isAdmin && username) {
-            const authHeader = event.headers.authorization || event.headers.Authorization || '';
-            if (!authHeader.startsWith('Bearer ')) {
-                return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Lipsă token autentificare' }) };
+            const decoded = utils.parseJwt(event);
+            if (!decoded) {
+                return utils.createErrorResponse(401, 'Unauthorized: Token expirat sau invalid', headers);
             }
-            const token = authHeader.substring(7);
-            const jwt = require('jsonwebtoken');
-            const utils = require('./_utils');
-            const jwtSecret = utils.getLiveEnv('JWT_SECRET', process.env.JWT_SECRET);
-            if (!jwtSecret) {
-                return { statusCode: 500, headers, body: JSON.stringify({ error: 'Eroare server: JWT_SECRET lipsă.' }) };
-            }
-            
-            try {
-                const decoded = jwt.verify(token, jwtSecret);
-                if (decoded.username.toLowerCase() !== username.toLowerCase()) {
-                    return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden: Token invalid pentru acest utilizator' }) };
-                }
-            } catch (err) {
-                return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Token expirat sau invalid' }) };
+            if (decoded.username.toLowerCase() !== username.toLowerCase()) {
+                return utils.createErrorResponse(403, 'Forbidden: Token invalid pentru acest utilizator', headers);
             }
 
             const { isStudentSubscriptionActive } = require('./_utils.js');
@@ -97,19 +83,11 @@ exports.handler = async function(event, context) {
             }
         }
 
+        const { fetchAllSupabaseRows } = require('./_utils');
+
         // Optimization 1: Counts query - only fetch id & exam_type
         if (testType === 'counts') {
-            const countsResponse = await fetch(`${supabaseUrl}/rest/v1/questions?select=id,exam_type&limit=50000`, {
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`
-                }
-            });
-            if (!countsResponse.ok) {
-                const errorText = await countsResponse.text();
-                throw new Error(`Supabase request failed: ${countsResponse.status} - ${errorText}`);
-            }
-            const dataCounts = await countsResponse.json();
+            const dataCounts = await fetchAllSupabaseRows(`${supabaseUrl}/rest/v1/questions?select=id,exam_type`, supabaseKey);
             const counts = { 'Initial': 0, 'Academie': 0, 'Poli': 0, 'BAC': 0, 'Diverse': 0 };
             dataCounts.forEach(q => {
                 const ex = q.exam_type || 'Diverse';
@@ -124,32 +102,22 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // Construct targeted Supabase query
-        let queryUrl = `${supabaseUrl}/rest/v1/questions?select=*&order=id.asc&limit=50000`;
-        if (!isAdmin) {
+        // Construct targeted Supabase query with full pagination
+        let data;
+        if (isAdmin) {
+            data = await fetchAllSupabaseRows(`${supabaseUrl}/rest/v1/questions?select=*&order=id.asc`, supabaseKey);
+        } else {
+            let queryUrl = `${supabaseUrl}/rest/v1/questions?select=*&order=id.asc`;
             if (idsParam) {
                 const requestedIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
                 if (requestedIds.length > 0) {
                     queryUrl += `&id=in.(${requestedIds.join(',')})`;
                 }
-            } else if (examType !== 'Diverse' && examType !== 'Zilnic') {
+            } else if (examType !== 'Toate' && examType !== 'Zilnic') {
                 queryUrl += `&exam_type=ilike.*${encodeURIComponent(examType)}*`;
             }
+            data = await fetchAllSupabaseRows(queryUrl, supabaseKey);
         }
-
-        const response = await fetch(queryUrl, {
-            headers: {
-                'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`
-            }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Supabase request failed: ${response.status} - ${errorText}`);
-        }
-
-        const data = await response.json();
 
         // Map database fields to the shape the frontend expects
         let mappedQuestions = data.map(q => {
@@ -251,26 +219,75 @@ exports.handler = async function(event, context) {
                 const pastResults = await resultsResponse.json();
                 pastResults.forEach((res, testIdx) => {
                     if (res.test_type && res.test_type.startsWith('progress_')) return;
-                    if (res.test_type === 'category_coverage') return;
                     
-                    const details = res.details_json || [];
+                    if (res.test_type === 'category_coverage') {
+                        const masteredList = Array.isArray(res.details_json) ? res.details_json : [];
+                        masteredList.forEach(id => {
+                            const qId = Number(id);
+                            if (!isNaN(qId)) {
+                                questionHistory[qId] = {
+                                    isCorrect: true,
+                                    lastSeenIndex: testIdx
+                                };
+                            }
+                        });
+
+                        let pWrongs = res.answers_json;
+                        if (typeof pWrongs === 'string') {
+                            try { pWrongs = JSON.parse(pWrongs); } catch (e) { pWrongs = []; }
+                        }
+                        if (Array.isArray(pWrongs)) {
+                            pWrongs.forEach(item => {
+                                if (item && (item.id !== undefined || item.question_id !== undefined)) {
+                                    const qId = Number(item.id !== undefined ? item.id : item.question_id);
+                                    if (!isNaN(qId) && (!questionHistory[qId] || !questionHistory[qId].isCorrect)) {
+                                        questionHistory[qId] = {
+                                            isCorrect: false,
+                                            lastSeenIndex: testIdx
+                                        };
+                                    }
+                                }
+                            });
+                        } else if (pWrongs && typeof pWrongs === 'object') {
+                            Object.keys(pWrongs).forEach(key => {
+                                const qId = Number(key);
+                                if (!isNaN(qId) && (!questionHistory[qId] || !questionHistory[qId].isCorrect)) {
+                                    questionHistory[qId] = {
+                                        isCorrect: false,
+                                        lastSeenIndex: testIdx
+                                    };
+                                }
+                            });
+                        }
+                        return;
+                    }
+                    
+                    let details = res.details_json;
+                    if (typeof details === 'string') {
+                        try { details = JSON.parse(details); } catch(e) { details = []; }
+                    }
+                    if (!Array.isArray(details)) details = [];
                     const isLastTest = (testIdx === pastResults.length - 1);
                     
                     details.forEach(d => {
-                        if (d && d.id !== undefined) {
-                            questionHistory[Number(d.id)] = {
-                                isCorrect: !!d.isCorrect,
-                                lastSeenIndex: testIdx
-                            };
-                            if (d.category && catStats[d.category]) {
-                                catStats[d.category].t++;
-                                totalT++;
-                                if (d.isCorrect) {
-                                    catStats[d.category].c++;
-                                    totalC++;
-                                } else if (isLastTest) {
-                                    lastTestWrongCats.push(d.category);
-                                }
+                        if (!d) return;
+                        const qId = Number(d.id !== undefined ? d.id : d.number);
+                        if (isNaN(qId)) return;
+
+                        const isCor = !!(d.isCorrect === true || d.is_correct === true || d.correct === true || (d.studentAnswer !== null && d.studentAnswer !== undefined && d.correctAnswer !== undefined && d.studentAnswer === d.correctAnswer));
+
+                        questionHistory[qId] = {
+                            isCorrect: isCor,
+                            lastSeenIndex: testIdx
+                        };
+                        if (d.category && catStats[d.category]) {
+                            catStats[d.category].t++;
+                            totalT++;
+                            if (isCor) {
+                                catStats[d.category].c++;
+                                totalC++;
+                            } else if (isLastTest) {
+                                lastTestWrongCats.push(d.category);
                             }
                         }
                     });

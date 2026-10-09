@@ -1,37 +1,59 @@
-exports.handler = async function (event, context) {
-    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
-    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
-    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+const path = require('path');
+const utils = require('./_utils');
 
-    const headers = {
-        'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-token, X-Admin-Token',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-    };
+const ALLOWED_MIME_TYPES = {
+    'image/jpeg': ['.jpg', '.jpeg'],
+    'image/png': ['.png'],
+    'image/webp': ['.webp'],
+    'image/gif': ['.gif']
+};
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+function verifyImageSignature(buffer, mime) {
+    if (!buffer || buffer.length < 12) return false;
+
+    // JPEG: FF D8 FF
+    if (mime === 'image/jpeg') {
+        return buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+    }
+    // PNG: 89 50 4E 47
+    if (mime === 'image/png') {
+        return buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+    }
+    // GIF: GIF8 (47 49 46 38)
+    if (mime === 'image/gif') {
+        return buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38;
+    }
+    // WebP: RIFF .... WEBP
+    if (mime === 'image/webp') {
+        const isRiff = buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
+        const isWebp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+        return isRiff && isWebp;
+    }
+
+    return false;
+}
+
+exports.handler = async function (event, context) {
+    const headers = utils.getCorsHeaders(event);
 
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
     }
 
     if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, headers, body: 'Method Not Allowed' };
+        return utils.createErrorResponse(405, 'Method Not Allowed', headers);
     }
 
-    const token = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
-    const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+    if (!utils.verifyAdminToken(event)) {
+        return utils.createErrorResponse(401, 'Neautorizat: Token invalid sau lipsă', headers);
+    }
+
+    const supabaseUrl = utils.getLiveEnv('SUPABASE_URL', process.env.SUPABASE_URL);
+    const supabaseKey = utils.getLiveEnv('SUPABASE_SERVICE_KEY', process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY);
 
     if (!supabaseUrl || !supabaseKey) {
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ error: 'Supabase environment variables missing.' })
-        };
-    }
-
-    if (!token || !validTokens.includes(token)) {
-        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Neautorizat' }) };
+        return utils.createErrorResponse(500, 'Supabase environment variables missing.', headers);
     }
 
     try {
@@ -42,15 +64,53 @@ exports.handler = async function (event, context) {
             return {
                 statusCode: 400,
                 headers,
-                body: JSON.stringify({ error: 'Date incomplete.' })
+                body: JSON.stringify({ error: 'Date incomplete (filename, base64data, contentType sunt obligatorii).' })
+            };
+        }
+
+        const normalizedMime = String(contentType).trim().toLowerCase();
+        const allowedExts = ALLOWED_MIME_TYPES[normalizedMime];
+        if (!allowedExts) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Tip de fișier nepermis. Sunt acceptate doar imagini JPG, PNG, WEBP și GIF.' })
+            };
+        }
+
+        const rawExt = path.extname(filename || '').toLowerCase();
+        const effectiveExt = allowedExts.includes(rawExt) ? rawExt : allowedExts[0];
+
+        const buffer = Buffer.from(base64data, 'base64');
+        if (buffer.length === 0) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Fișierul încărcat este gol.' })
+            };
+        }
+
+        if (buffer.length > MAX_IMAGE_SIZE_BYTES) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Imaginea depășește limita maximă permisă de 5MB.' })
+            };
+        }
+
+        if (!verifyImageSignature(buffer, normalizedMime)) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Semnătura fișierului este invalidă (conținutul nu este o imagine validă de tipul declarat).' })
             };
         }
 
         const timestamp = Date.now();
-        const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
-        const uniqueFileName = `${timestamp}-${safeName}`;
+        const rawBase = path.basename(filename, rawExt);
+        const safeBase = rawBase.replace(/[^a-zA-Z0-9.\-_]/g, '').substring(0, 60) || 'image';
+        const uniqueFileName = `${timestamp}-${safeBase}${effectiveExt}`;
 
-        const buffer = Buffer.from(base64data, 'base64');
         const uploadUrl = `${supabaseUrl}/storage/v1/object/images/${uniqueFileName}`;
 
         const response = await fetch(uploadUrl, {
@@ -58,7 +118,7 @@ exports.handler = async function (event, context) {
             headers: {
                 'apikey': supabaseKey,
                 'Authorization': `Bearer ${supabaseKey}`,
-                'Content-Type': contentType
+                'Content-Type': normalizedMime
             },
             body: buffer
         });

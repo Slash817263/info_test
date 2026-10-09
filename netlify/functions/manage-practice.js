@@ -24,29 +24,21 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+    const utils = require('./_utils');
+    const supabaseUrl = utils.getLiveEnv('SUPABASE_URL', process.env.SUPABASE_URL);
+    const supabaseKey = utils.getLiveEnv('SUPABASE_SERVICE_KEY', process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY);
 
     if (!supabaseUrl || !supabaseKey) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Supabase environment variables missing.' }) };
     }
 
     // Helper: Authenticate request (Admin or Student JWT)
-    const clientAdminToken = (event.headers && (event.headers['x-admin-token'] || event.headers['X-Admin-Token'])) || '';
-    const validAdminTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-    const isAdmin = clientAdminToken && validAdminTokens.includes(clientAdminToken);
+    const isAdmin = utils.verifyAdminToken(event);
 
     let authUser = null;
-    const authHeader = (event.headers && (event.headers.authorization || event.headers.Authorization)) || '';
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        const jwtSecret = process.env.JWT_SECRET || supabaseKey;
-        try {
-            const decoded = jwt.verify(token, jwtSecret);
-            authUser = decoded.username || null;
-        } catch (e) {
-            // invalid token
-        }
+    const decoded = utils.parseJwt(event);
+    if (decoded && decoded.username) {
+        authUser = decoded.username;
     }
 
     const method = event.httpMethod;
@@ -69,16 +61,13 @@ exports.handler = async function(event, context) {
             // Permitem vizualizarea progresului și pentru conturile expirate
             // (blocăm accesul la teste noi din fetch-questions, dar dashboard-ul este vizibil)
 
-            // 1. Fetch all active questions to compute accurate totals
-            const qRes = await fetch(`${supabaseUrl}/rest/v1/questions?select=id,category,subcategory,difficulty,type,text,code,options_json,image_url,hint,correct_index&limit=50000`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-            });
-            if (!qRes.ok) throw new Error(await qRes.text());
-            const allQuestions = await qRes.json();
+            const { fetchAllSupabaseRows } = require('./_utils');
+            // 1. Fetch all active questions to compute accurate totals with full pagination
+            const allQuestions = await fetchAllSupabaseRows(`${supabaseUrl}/rest/v1/questions?select=id,category,subcategory,difficulty,type,text,code,options_json,image_url,hint,correct_index`, supabaseKey);
 
             // 2. Fetch student's coverage record from results table
             const encodedUser = encodeURIComponent(studentUsername);
-            const covRes = await fetch(`${supabaseUrl}/rest/v1/results?student_username=ilike.${encodedUser}&test_type=eq.category_coverage&select=*&limit=1`, {
+            const covRes = await fetch(`${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUser},student_name.ilike.${encodedUser})&test_type=eq.category_coverage&select=*&limit=1`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
             let coverageRow = null;
@@ -92,8 +81,10 @@ exports.handler = async function(event, context) {
             let masteredSet = new Set();
             let wrongSet = new Set();
 
+            const includeCoverage = params.source !== 'tests' && params.include_coverage !== 'false';
+
             // 1. From coverageRow (category_coverage) - mastered from practice
-            if (coverageRow && coverageRow.details_json && Array.isArray(coverageRow.details_json)) {
+            if (includeCoverage && coverageRow && coverageRow.details_json && Array.isArray(coverageRow.details_json)) {
                 coverageRow.details_json.forEach(id => {
                     const qId = Number(id);
                     masteredSet.add(qId);
@@ -102,7 +93,7 @@ exports.handler = async function(event, context) {
             }
 
             // 1b. From coverageRow (category_coverage) - wrong answers from practice
-            if (coverageRow && coverageRow.answers_json) {
+            if (includeCoverage && coverageRow && coverageRow.answers_json) {
                 let pWrongs = coverageRow.answers_json;
                 if (typeof pWrongs === 'string') {
                     try { pWrongs = JSON.parse(pWrongs); } catch (e) { pWrongs = []; }
@@ -132,37 +123,32 @@ exports.handler = async function(event, context) {
                 }
             }
 
-            // 2. Scan all regular test results (chronological order asc: initial, intermediar, tema, lead_diagnostic)
-            const histRes = await fetch(`${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUser},student_name.ilike.${encodedUser})&order=created_at.asc`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-            });
-            if (histRes.ok) {
-                const pastTests = await histRes.json();
-                for (const t of pastTests) {
-                    if (t.test_type && t.test_type.startsWith('progress_')) continue;
-                    if (t.test_type === 'category_coverage') continue;
-                    let details = t.details_json;
-                    if (typeof details === 'string') {
-                        try { details = JSON.parse(details); } catch (e) { details = []; }
-                    }
-                    if (Array.isArray(details)) {
-                        for (const d of details) {
-                            if (d && (d.id !== undefined || d.number !== undefined)) {
-                                const qId = Number(d.id !== undefined ? d.id : d.number);
-                                const isCor = !!(d.isCorrect === true || d.is_correct === true || (d.studentAnswer !== null && d.studentAnswer !== undefined && d.studentAnswer === d.correctAnswer));
-                                
-                                const prev = questionStatusMap.get(qId);
-                                if (isCor) {
-                                    masteredSet.add(qId);
-                                    wrongSet.delete(qId);
-                                    questionStatusMap.set(qId, { isCorrect: true, studentAnswer: d.studentAnswer });
-                                } else {
-                                    // If already mastered previously, student remains mastered.
-                                    // If not yet mastered, mark as wrong with the student's answer.
-                                    if (!prev || !prev.isCorrect) {
-                                        wrongSet.add(qId);
-                                        questionStatusMap.set(qId, { isCorrect: false, studentAnswer: d.studentAnswer });
-                                    }
+            // 2. Scan all regular test results (chronological order asc: initial, intermediar, tema)
+            const histResUrl = `${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUser},student_name.ilike.${encodedUser})&order=created_at.asc`;
+            const pastTests = await fetchAllSupabaseRows(histResUrl, supabaseKey);
+            for (const t of (pastTests || [])) {
+                if (t.test_type && (t.test_type.startsWith('progress_') || t.test_type === 'category_coverage' || t.test_type === 'lead_diagnostic')) continue;
+                let details = t.details_json;
+                if (typeof details === 'string') {
+                    try { details = JSON.parse(details); } catch (e) { details = []; }
+                }
+                if (Array.isArray(details)) {
+                    for (const d of details) {
+                        if (d && (d.id !== undefined || d.number !== undefined)) {
+                            const qId = Number(d.id !== undefined ? d.id : d.number);
+                            const isCor = !!(d.isCorrect === true || d.is_correct === true || d.correct === true || (d.studentAnswer !== null && d.studentAnswer !== undefined && d.correctAnswer !== undefined && d.studentAnswer === d.correctAnswer));
+                            
+                            const prev = questionStatusMap.get(qId);
+                            if (isCor) {
+                                masteredSet.add(qId);
+                                wrongSet.delete(qId);
+                                questionStatusMap.set(qId, { isCorrect: true, studentAnswer: d.studentAnswer });
+                            } else {
+                                // If already mastered previously, student remains mastered.
+                                // If not yet mastered, mark as wrong with the student's answer.
+                                if (!prev || !prev.isCorrect) {
+                                    wrongSet.add(qId);
+                                    questionStatusMap.set(qId, { isCorrect: false, studentAnswer: d.studentAnswer });
                                 }
                             }
                         }
@@ -170,20 +156,51 @@ exports.handler = async function(event, context) {
                 }
             }
 
+            // 3. Scan pending assigned tests for this student only if explicitly requested (e.g. from admin triage picker)
+            const includeAssigned = params.include_assigned === 'true';
+            if (includeAssigned) {
+                try {
+                    const assignedRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?student_username=ilike.${encodedUser}&status=eq.pending&select=questions_ids`, {
+                        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                    });
+                    if (assignedRes.ok) {
+                        const pendingTests = await assignedRes.json();
+                        for (const pt of pendingTests) {
+                            let qIds = pt.questions_ids;
+                            if (typeof qIds === 'string') {
+                                try { qIds = JSON.parse(qIds); } catch (e) { qIds = []; }
+                            }
+                            if (Array.isArray(qIds)) {
+                                for (const id of qIds) {
+                                    const qNum = Number(id);
+                                    if (!isNaN(qNum) && !questionStatusMap.has(qNum)) {
+                                        questionStatusMap.set(qNum, { isCorrect: null, isAssigned: true, studentAnswer: null });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error fetching pending assigned tests in manage-practice:', err);
+                }
+            }
+
             if (action === 'get_student_practice_details') {
                 const requestedCategory = params.category || 'all';
-                // Only return questions that the student has actually encountered/answered
+                // Only return questions that the student has actually encountered/answered/assigned
                 let targetQuestions = allQuestions.filter(q => questionStatusMap.has(Number(q.id)));
                 if (requestedCategory && requestedCategory !== 'all') {
                     targetQuestions = targetQuestions.filter(q => q.category === requestedCategory);
                 }
 
-                // Sort: wrong questions first, then correct ones
+                // Sort: wrong questions first, then assigned, then correct ones
                 targetQuestions.sort((a, b) => {
-                    const stA = questionStatusMap.get(Number(a.id));
-                    const stB = questionStatusMap.get(Number(b.id));
-                    if (stA.isCorrect === stB.isCorrect) return a.id - b.id;
-                    return stA.isCorrect ? 1 : -1;
+                    const stA = questionStatusMap.get(Number(a.id)) || {};
+                    const stB = questionStatusMap.get(Number(b.id)) || {};
+                    const rankA = stA.isCorrect ? 3 : (stA.isAssigned ? 2 : 1);
+                    const rankB = stB.isCorrect ? 3 : (stB.isAssigned ? 2 : 1);
+                    if (rankA === rankB) return a.id - b.id;
+                    return rankA - rankB;
                 });
 
                 const details = targetQuestions.map((q, idx) => {
@@ -192,7 +209,8 @@ exports.handler = async function(event, context) {
                     if (typeof opts === 'string') {
                         try { opts = JSON.parse(opts); } catch (e) { opts = []; }
                     }
-                    const isCor = status ? status.isCorrect : false;
+                    const isAssigned = status ? !!status.isAssigned : false;
+                    const isCor = status ? !!status.isCorrect : false;
                     const stAns = (status && status.studentAnswer !== null && status.studentAnswer !== undefined) 
                         ? status.studentAnswer 
                         : (isCor ? q.correct_index : null);
@@ -206,6 +224,8 @@ exports.handler = async function(event, context) {
                         studentAnswer: stAns,
                         correctAnswer: q.correct_index,
                         isCorrect: isCor,
+                        isAssigned: isAssigned,
+                        status: isAssigned ? 'ASIGNAT' : (isCor ? 'CORECT' : 'GRESIT'),
                         difficulty: q.difficulty,
                         category: q.category,
                         subcategory: q.subcategory,
@@ -215,7 +235,8 @@ exports.handler = async function(event, context) {
                 });
 
                 const totalMastered = details.filter(d => d.isCorrect).length;
-                const totalWrong = details.length - totalMastered;
+                const totalAssigned = details.filter(d => d.isAssigned).length;
+                const totalWrong = details.filter(d => !d.isCorrect && !d.isAssigned).length;
 
                 return {
                     statusCode: 200,
@@ -225,6 +246,7 @@ exports.handler = async function(event, context) {
                         category: requestedCategory,
                         total_encountered: details.length,
                         total_mastered: totalMastered,
+                        total_assigned: totalAssigned,
                         total_wrong: totalWrong,
                         details: details
                     })
@@ -404,12 +426,37 @@ exports.handler = async function(event, context) {
             const action = body.action;
 
             if (action === 'check_answer') {
+                if (!isAdmin && !authUser) {
+                    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autentificare necesară.' }) };
+                }
+
                 const { question_id, selected_index, student_username } = body;
                 if (question_id === undefined || selected_index === undefined) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'question_id and selected_index are required.' }) };
                 }
 
-                const qRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${question_id}&select=id,correct_index,hint`, {
+                const qNum = parseInt(question_id, 10);
+                const sIdx = parseInt(selected_index, 10);
+                if (isNaN(qNum) || isNaN(sIdx) || qNum <= 0 || sIdx < 0) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parametrii question_id și selected_index trebuie să fie numere întregi valide.' }) };
+                }
+
+                // Enforce student ownership: non-admins can only verify/record answers for their own account
+                const targetStudent = isAdmin ? (student_username || authUser) : authUser;
+                if (!isAdmin && student_username && student_username.trim().toLowerCase() !== authUser.toLowerCase()) {
+                    return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden: Nu poți trimite răspunsuri pentru un alt elev.' }) };
+                }
+
+                // Verify student subscription
+                if (!isAdmin && targetStudent) {
+                    const { isStudentSubscriptionActive } = require('./_utils.js');
+                    const isActive = await isStudentSubscriptionActive(supabaseUrl, supabaseKey, targetStudent);
+                    if (!isActive) {
+                        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Abonamentul tău a expirat. Nu poți accesa întrebări de antrenament.' }) };
+                    }
+                }
+
+                const qRes = await fetch(`${supabaseUrl}/rest/v1/questions?id=eq.${qNum}&select=id,correct_index,hint`, {
                     headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
                 });
                 if (!qRes.ok) throw new Error(await qRes.text());
@@ -419,13 +466,13 @@ exports.handler = async function(event, context) {
                 }
 
                 const q = qData[0];
-                const isCorrect = Number(selected_index) === Number(q.correct_index);
+                const isCorrect = sIdx === Number(q.correct_index);
 
-                // Auto-record wrong answer in category_coverage if student is identified
-                const targetStudent = student_username || authUser;
-                if (!isCorrect && targetStudent) {
+                // Auto-record answer (mastered or wrong) in category_coverage in real-time
+                if (targetStudent) {
                     try {
-                        const encodedUser = encodeURIComponent(targetStudent);
+                        const safeUser = targetStudent.trim().toLowerCase().replace(/[%_]/g, '\\$&');
+                        const encodedUser = encodeURIComponent(safeUser);
                         const covRes = await fetch(`${supabaseUrl}/rest/v1/results?student_username=ilike.${encodedUser}&test_type=eq.category_coverage&select=*&limit=1`, {
                             headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
                         });
@@ -443,21 +490,26 @@ exports.handler = async function(event, context) {
                             if (!Array.isArray(wrongList)) wrongList = [];
                         }
 
-                        const exIdx = wrongList.findIndex(item => Number(item.id || item.question_id) === Number(question_id));
-                        const wrongEntry = {
-                            id: Number(question_id),
-                            studentAnswer: Number(selected_index),
-                            updated_at: new Date().toISOString()
-                        };
-                        if (exIdx >= 0) {
-                            wrongList[exIdx] = wrongEntry;
-                        } else {
-                            wrongList.push(wrongEntry);
-                        }
-
                         let masteredList = (existingRow && Array.isArray(existingRow.details_json)) ? existingRow.details_json : [];
-                        // Demote question from mastered if student made a mistake in practice
-                        masteredList = masteredList.filter(id => Number(id) !== Number(question_id));
+
+                        if (isCorrect) {
+                            if (!masteredList.map(Number).includes(qNum)) {
+                                masteredList.push(qNum);
+                            }
+                            wrongList = wrongList.filter(item => Number(item.id || item.question_id) !== qNum);
+                        } else {
+                            const exIdx = wrongList.findIndex(item => Number(item.id || item.question_id) === qNum);
+                            const wrongEntry = {
+                                id: qNum,
+                                studentAnswer: sIdx,
+                                updated_at: new Date().toISOString()
+                            };
+                            if (exIdx >= 0) {
+                                wrongList[exIdx] = wrongEntry;
+                            } else {
+                                wrongList.push(wrongEntry);
+                            }
+                        }
 
                         if (existingRow) {
                             await fetch(`${supabaseUrl}/rest/v1/results?id=eq.${existingRow.id}`, {
@@ -496,7 +548,7 @@ exports.handler = async function(event, context) {
                             });
                         }
                     } catch (err) {
-                        console.error('Error auto-recording practice wrong answer:', err);
+                        console.error('Error auto-recording practice answer:', err);
                     }
                 }
 
@@ -606,76 +658,12 @@ exports.handler = async function(event, context) {
                     if (!insertRes.ok) throw new Error(await insertRes.text());
                 }
 
-                // Award XP and update streak for Lucru Individual (+10 XP per mastered/solved exercise)
-                const xpToAdd = (typeof earned_xp === 'number' && earned_xp >= 0) ? earned_xp : (newly_mastered_ids.length * 10);
-                let newXp = 0;
-                let newStreak = 1;
-
-                try {
-                    let currentStreak = 0;
-                    let lastActive = null;
-                    let currentXp = 0;
-
-                    const stdRes = await fetch(`${supabaseUrl}/rest/v1/students?username=ilike.${encodedUser}&select=current_streak,last_active_date,xp`, {
-                        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                    });
-
-                    if (stdRes.ok) {
-                        const stdData = await stdRes.json();
-                        if (stdData.length > 0) {
-                            currentStreak = stdData[0].current_streak || 0;
-                            lastActive = stdData[0].last_active_date || null;
-                            currentXp = stdData[0].xp || 0;
-                        }
-                    }
-
-                    const getBucharestDateStr = (dateObj) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest' }).format(dateObj);
-                    const today = new Date();
-                    const todayStr = getBucharestDateStr(today);
-                    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-                    const yesterdayStr = getBucharestDateStr(yesterday);
-
-                    newStreak = currentStreak;
-                    if (lastActive === yesterdayStr) {
-                        newStreak += 1;
-                    } else if (lastActive === todayStr) {
-                        // Already active today, maintain streak
-                    } else {
-                        newStreak = 1;
-                    }
-
-                    newXp = currentXp + xpToAdd;
-
-                    const patchStdRes = await fetch(`${supabaseUrl}/rest/v1/students?username=ilike.${encodedUser}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'apikey': supabaseKey,
-                            'Authorization': `Bearer ${supabaseKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            current_streak: newStreak,
-                            last_active_date: todayStr,
-                            xp: newXp
-                        })
-                    });
-
-                    if (!patchStdRes.ok) {
-                        console.error('[manage-practice] Failed to update gamification in students table:', await patchStdRes.text());
-                    }
-                } catch (gamErr) {
-                    console.error('[manage-practice] Gamification error:', gamErr);
-                }
-
                 return {
                     statusCode: 200,
                     headers,
                     body: JSON.stringify({
                         success: true,
-                        total_mastered: updatedList.length,
-                        xpEarned: xpToAdd,
-                        newTotalXp: newXp,
-                        newStreak: newStreak
+                        total_mastered: updatedList.length
                     })
                 };
             }

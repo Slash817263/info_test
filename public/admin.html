@@ -23,7 +23,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
-    <link rel="stylesheet" href="assets/css/admin.css">
+    <link rel="stylesheet" href="assets/css/admin.css?v=20261009_01">
+    <!-- KaTeX for beautiful math rendering (local vendor) -->
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css?v=1">
+    <script src="assets/vendor/katex/katex.min.js?v=1"></script>
+    <script src="assets/vendor/katex/contrib/auto-render.min.js?v=1"></script>
 </head>
 <body>
     <div class="bg-orb bg-orb-1"></div>
@@ -42,23 +46,47 @@
             <button class="tab-btn active" data-target="tab-rezultate">📊 Situație</button>
             <button class="tab-btn" data-target="tab-elevi">👥 Conturi</button>
             <button class="tab-btn" data-target="tab-leads" onclick="loadLeads()">📬 Leads <span id="badge-leads-count" class="tab-count-badge" style="background: rgba(56,189,248,0.2); color: #38bdf8;">0</span></button>
-            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Initial')">🚀 Test Inițial <span id="tab-count-Initial" class="tab-count-badge"></span></button>
-            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Academie')">📝 Academie <span id="tab-count-Academie" class="tab-count-badge"></span></button>
-            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Poli')">🏛️ Poli <span id="tab-count-Poli" class="tab-count-badge"></span></button>
-            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('BAC')">🎓 BAC <span id="tab-count-BAC" class="tab-count-badge"></span></button>
-            <button class="tab-btn" data-target="tab-intrebari" onclick="setExamTab('Diverse')">🧠 Diverse <span id="tab-count-Diverse" class="tab-count-badge"></span></button>
+            <button class="tab-btn" data-target="tab-presets" onclick="loadPresetTests()">📋 Teste Predefinite <span id="badge-presets-count" class="tab-count-badge" style="background: rgba(124,106,255,0.2); color: var(--accent-purple);">0</span></button>
+            <button class="tab-btn" id="btn-tab-intrebari" data-target="tab-intrebari">📚 Întrebări <span id="badge-total-questions-count" class="tab-count-badge" style="background: rgba(124,106,255,0.25); color: #c4b5fd;">0</span></button>
+
             <button class="tab-btn" data-target="tab-waiting">⏳ În Așteptare <span id="badge-waiting-count" class="tab-count-badge" style="background: rgba(251,191,36,0.2); color: var(--accent-amber);">0</span></button>
         </div>
 
         <!-- TAB SITUATIE (REZULTATE) -->
         <div id="tab-rezultate" class="tab-content active">
             <div id="situatie-list-view">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-                    <h2 style="font-size: 20px; font-weight: 700;">Situație Elevi</h2>
-                    <div style="width: 280px;">
-                        <input type="text" id="search-situatie-student" class="form-control" placeholder="🔍 Caută elev..." onkeyup="renderSituatieGrid()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h2 style="font-size: 22px; font-weight: 800; color: #fff; margin: 0;">Situație Elevi</h2>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0;">Monitorizare performanță, teme restante și alertare elevi</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="loadSituatie(true)" title="Reîmprospătează datele" style="padding: 9px 14px; font-size: 13px; display: flex; align-items: center; gap: 6px; white-space: nowrap;">🔄 Reîmprospătează</button>
+                        <div style="width: 260px;">
+                            <input type="text" id="search-situatie-student" class="form-control" placeholder="🔍 Caută elev...">
+                        </div>
                     </div>
                 </div>
+
+                <!-- TRIAGE EXECUTIVE ALERT BANNER -->
+                <div id="situatie-triage-container" style="display: none; margin-bottom: 16px;"></div>
+
+                <!-- SITUATIE FILTER BAR -->
+                <div class="situatie-filter-bar">
+                    <button type="button" class="situatie-filter-pill active" id="filter-situatie-all" data-filter="all" onclick="setSituatieFilter('all')">
+                        <span>🌐 Toți Elevii</span>
+                        <span id="situatie-count-all" class="pill-badge">0</span>
+                    </button>
+                    <button type="button" class="situatie-filter-pill" id="filter-situatie-attention" data-filter="attention" onclick="setSituatieFilter('attention')">
+                        <span>🚨 Necesită Atenție</span>
+                        <span id="situatie-count-attention" class="pill-badge" style="background: rgba(245, 158, 11, 0.25); color: #fbbf24;">0</span>
+                    </button>
+                    <button type="button" class="situatie-filter-pill" id="filter-situatie-normal" data-filter="normal" onclick="setSituatieFilter('normal')">
+                        <span>🟢 Activitate Normală</span>
+                        <span id="situatie-count-normal" class="pill-badge" style="background: rgba(52, 211, 153, 0.25); color: #34d399;">0</span>
+                    </button>
+                </div>
+
                 <div class="loading-state" id="loading-situatie-students">
                     <div class="spinner"></div>
                     <p>Se încarcă elevii...</p>
@@ -120,9 +148,14 @@
 
                     <!-- Assigned Tests -->
                     <main class="table-card" style="padding: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                            <h3 style="font-size: 16px; font-weight: 600;">Teste Asignate</h3>
-                            <button class="btn btn-primary" onclick="openAssignTestModal()">+ Asignează Test</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+                            <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Teste Asignate</h3>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="btn btn-secondary" onclick="openSmartRecoveryModal()" id="btn-smart-recovery-detail" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.2)); border: 1px solid rgba(245, 158, 11, 0.5); color: #f59e0b; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15); padding: 8px 14px;">
+                                    <span>⚡</span> Temă Recuperare
+                                </button>
+                                <button class="btn btn-primary" onclick="openAssignTestModal()">+ Asignează Test</button>
+                            </div>
                         </div>
                         <div id="situatie-assigned-list"></div>
                     </main>
@@ -155,9 +188,44 @@
 
         <!-- TAB INTREBARI -->
         <div id="tab-intrebari" class="tab-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 id="tab-intrebari-title" style="font-size: 20px; font-weight: 700;">Bază de Întrebări</h2>
-                <button class="btn btn-primary" onclick="openQuestionModal()">+ Adaugă Întrebare</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h2 id="tab-intrebari-title" style="font-size: 22px; font-weight: 800; color: #fff; margin: 0;">
+                        <span class="gradient-text">Bază de Întrebări - Toate Categoriile</span>
+                    </h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Filtrează și gestionează întrebările pe categorii de examen</p>
+                </div>
+                <button class="btn btn-primary" onclick="openQuestionModal()" style="display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 18px rgba(124, 106, 255, 0.35);">
+                    <span>✨</span> + Adaugă Întrebare
+                </button>
+            </div>
+
+            <!-- EXAM CATEGORY PILLS BAR -->
+            <div class="exam-pills-bar">
+                <button type="button" class="exam-pill active" data-exam="Toate" onclick="setExamTab('Toate')">
+                    <span>🌐 Toate</span>
+                    <span id="pill-count-Toate" class="pill-badge">0</span>
+                </button>
+                <button type="button" class="exam-pill" data-exam="Academie" onclick="setExamTab('Academie')">
+                    <span>📝 Academie</span>
+                    <span id="pill-count-Academie" class="pill-badge">0</span>
+                </button>
+                <button type="button" class="exam-pill" data-exam="BAC" onclick="setExamTab('BAC')">
+                    <span>🎓 BAC</span>
+                    <span id="pill-count-BAC" class="pill-badge">0</span>
+                </button>
+                <button type="button" class="exam-pill" data-exam="Poli" onclick="setExamTab('Poli')">
+                    <span>🏛️ Poli</span>
+                    <span id="pill-count-Poli" class="pill-badge">0</span>
+                </button>
+                <button type="button" class="exam-pill" data-exam="Diverse" onclick="setExamTab('Diverse')">
+                    <span>🧠 Diverse</span>
+                    <span id="pill-count-Diverse" class="pill-badge">0</span>
+                </button>
+                <button type="button" class="exam-pill" data-exam="Initial" onclick="setExamTab('Initial')">
+                    <span>🚀 Test Inițial</span>
+                    <span id="pill-count-Initial" class="pill-badge">0</span>
+                </button>
             </div>
 
             <!-- Filters -->
@@ -337,6 +405,7 @@
                                 <th>Telefon</th>
                                 <th>Parolă</th>
                                 <th>Valabilitate</th>
+                                <th>Acord GDPR</th>
                                 <th>Data Creării</th>
                                 <th>Acțiuni</th>
                             </tr>
@@ -345,6 +414,52 @@
                     </table>
                 </div>
             </main>
+            </div>
+        </div>
+
+        <!-- TAB TESTE PREDEFINITE -->
+        <div id="tab-presets" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+                <div>
+                    <h2 style="font-size: 20px; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <span>📋</span> <span class="gradient-text">Bibliotecă Teste Predefinite</span>
+                    </h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                        Creează modele tipizate de teste cu întrebări selectate și asignează-le ca temă la toți elevii sau la elevi selectați.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div style="width: 220px;">
+                        <input type="text" id="search-presets" class="form-control" placeholder="🔍 Caută test predefinit..." onkeyup="renderPresetTestsGrid()">
+                    </div>
+                    <select id="filter-presets-cat" class="form-control" onchange="renderPresetTestsGrid()" style="width: 150px;">
+                        <option value="">Toate Categoriile</option>
+                        <option value="BAC">🎓 BAC</option>
+                        <option value="Poli">🏛️ Poli</option>
+                        <option value="Academie">📝 Academie</option>
+                        <option value="Diverse">🧠 Diverse</option>
+                        <option value="Toate">🌐 Toate</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadPresetTests()" title="Reîmprospătează datele" style="padding: 9px 12px;">🔄</button>
+                    <button class="btn btn-primary" onclick="openCreatePresetModal()" style="display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 18px rgba(124, 106, 255, 0.35);">
+                        <span>✨</span> + Creează Test Predefinit
+                    </button>
+                </div>
+            </div>
+
+            <div class="loading-state" id="loading-presets" style="display: none;">
+                <div class="spinner"></div>
+                <p>Se încarcă testele predefinite...</p>
+            </div>
+
+            <div class="empty-state" id="empty-presets" style="display: none;">
+                <div style="font-size: 42px; margin-bottom: 12px;">📋</div>
+                <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0 0 16px 0;">Nu ai creat încă niciun test predefinit</h3>
+                <button class="btn btn-primary" onclick="openCreatePresetModal()">+ Creează Primul Test Predefinit</button>
+            </div>
+
+            <div id="presets-grid" class="presets-grid">
+                <!-- Carduri teste predefinite generate dinamic -->
             </div>
         </div>
     </div>
@@ -673,33 +788,69 @@
                     <span class="badge" style="background: rgba(74, 222, 128, 0.15); color: var(--accent-green); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px;">Cont Activ</span>
                 </div>
 
-                <!-- Category & Questions Count Grid -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Categorie Test</label>
-                        <select id="assign-category" class="form-control" style="width: 100%; background: rgba(15, 15, 35, 0.8); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #fff; font-weight: 600;" required>
-                            <option value="Academie">📝 Academie</option>
-                            <option value="Poli">🏛️ Poli</option>
-                            <option value="BAC">🎓 BAC</option>
-                            <option value="Diverse">🧠 Diverse (Din Toate)</option>
-                        </select>
+                <!-- Mode Toggle: Dynamic Test vs. Preset Test -->
+                <div class="assign-mode-toggle" id="assign-mode-toggle" style="display: flex; gap: 8px; margin-bottom: 16px; background: rgba(15, 15, 35, 0.6); padding: 5px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                    <button type="button" class="assign-mode-btn active" id="btn-assign-mode-dynamic" onclick="setAssignMode('dynamic')">
+                        <span>🎲</span> Test Dinamic (Generare / Manual)
+                    </button>
+                    <button type="button" class="assign-mode-btn" id="btn-assign-mode-preset" onclick="setAssignMode('preset')">
+                        <span>📋</span> Test Predefinit (Șablon Salvat)
+                    </button>
+                </div>
+
+                <!-- Dynamic Fields Container -->
+                <div id="assign-dynamic-container">
+                    <!-- Category & Questions Count Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Categorie Test</label>
+                            <select id="assign-category" class="form-control" style="width: 100%; background: rgba(15, 15, 35, 0.8); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #fff; font-weight: 600;" required>
+                                <option value="Academie">📝 Academie</option>
+                                <option value="Poli">🏛️ Poli</option>
+                                <option value="BAC">🎓 BAC</option>
+                                <option value="Diverse">🧠 Diverse</option>
+                                <option value="Toate">🌐 Toate</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Număr de Întrebări</label>
+                            <input type="number" id="assign-count" class="form-control" value="10" min="1" max="100" style="width: 100%; background: rgba(15, 15, 35, 0.8); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #fff; font-weight: 700;" required>
+                        </div>
                     </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Număr de Întrebări</label>
-                        <input type="number" id="assign-count" class="form-control" value="10" min="1" max="100" style="width: 100%; background: rgba(15, 15, 35, 0.8); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #fff; font-weight: 700;" required>
+
+                    <!-- Manual Selection Card -->
+                    <div style="background: rgba(124, 106, 255, 0.04); border: 1px dashed rgba(124, 106, 255, 0.25); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #fff; margin-bottom: 2px;">🎯 Selecție Manuală Întrebări</div>
+                            <div id="manual-selection-status" style="font-size: 12px; color: var(--text-secondary);">Nicio întrebare selectată (generare aleatorie).</div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="openManualSelectModal()" style="padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 8px; border-color: rgba(124, 106, 255, 0.4); background: rgba(124, 106, 255, 0.1); color: #fff; display: flex; align-items: center; gap: 6px;">
+                            <span>🔍 Alege Întrebări</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Deadline Section -->
-                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                <!-- Preset Selection Fields Container (hidden by default) -->
+                <div id="assign-preset-container" style="display: none; margin-bottom: 16px;">
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Selectează Testul Predefinit *</label>
+                        <select id="assign-preset-select" class="form-control" onchange="onAssignPresetChange()" style="width: 100%; background: rgba(15, 15, 35, 0.85); border: 1px solid rgba(124, 106, 255, 0.35); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #fff; font-weight: 600;">
+                            <option value="">-- Alege un test predefinit --</option>
+                        </select>
+                    </div>
+                    <div id="assign-preset-summary-card" style="display: none; background: rgba(124, 106, 255, 0.08); border: 1px solid rgba(124, 106, 255, 0.25); border-radius: 10px; padding: 12px 16px; margin-top: 10px;"></div>
+                </div>
+
+                <!-- Deadline Section (Termen Limita Predare) -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <label style="font-weight: 700; font-size: 13px; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 6px;">
-                            <span>⏰</span> Termen Limită Predare
+                            <span>⏱️</span> Termen Limită Predare
                         </label>
                         <span style="font-size: 11px; color: var(--text-muted);">Format 24h</span>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 10px;">
                         <div>
                             <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Data (zz / ll / aaaa)</label>
                             <div style="display: grid; grid-template-columns: 60px 1fr 75px; gap: 6px;">
@@ -714,26 +865,15 @@
                         </div>
                     </div>
 
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
-                        <button type="button" class="btn btn-secondary" onclick="setAssignQuickDate(1, 20)" style="padding: 5px 11px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">⚡ Mâine (20:00)</button>
-                        <button type="button" class="btn btn-secondary" onclick="setAssignQuickDate(3, 20)" style="padding: 5px 11px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">📅 Peste 3 zile (20:00)</button>
-                        <button type="button" class="btn btn-secondary" onclick="setAssignQuickDate(7, 20)" style="padding: 5px 11px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">🗓️ Peste 1 săptămână (20:00)</button>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button type="button" class="btn btn-secondary" onclick="setAssignQuickDate(1, 20)" style="padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">⚡ Mâine (20:00)</button>
+                        <button type="button" class="btn btn-secondary" onclick="setAssignQuickDate(3, 20)" style="padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">📅 Peste 3 zile (20:00)</button>
+                        <button type="button" class="btn btn-secondary" onclick="setAssignQuickDate(7, 20)" style="padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">🗓️ Peste 1 săptămână (20:00)</button>
                     </div>
 
-                    <div id="assign-deadline-preview" style="font-size: 12px; color: #c4b5fd; font-weight: 600; background: linear-gradient(90deg, rgba(124, 106, 255, 0.15), rgba(99, 102, 241, 0.05)); padding: 9px 12px; border-radius: 8px; border-left: 3px solid var(--accent-purple); display: flex; align-items: center; gap: 6px;">
+                    <div id="assign-deadline-preview" style="font-size: 12px; color: #c4b5fd; font-weight: 600; background: linear-gradient(90deg, rgba(124, 106, 255, 0.15), rgba(99, 102, 241, 0.05)); padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--accent-purple); display: flex; align-items: center; gap: 6px;">
                         📅 Termen: -
                     </div>
-                </div>
-
-                <!-- Manual Selection Card -->
-                <div style="background: rgba(124, 106, 255, 0.04); border: 1px dashed rgba(124, 106, 255, 0.25); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-                    <div>
-                        <div style="font-weight: 700; font-size: 13px; color: #fff; margin-bottom: 2px;">🎯 Selecție Manuală Întrebări</div>
-                        <div id="manual-selection-status" style="font-size: 12px; color: var(--text-secondary);">Nicio întrebare selectată (generare aleatorie).</div>
-                    </div>
-                    <button type="button" class="btn btn-secondary" onclick="openManualSelectModal()" style="padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 8px; border-color: rgba(124, 106, 255, 0.4); background: rgba(124, 106, 255, 0.1); color: #fff; display: flex; align-items: center; gap: 6px;">
-                        <span>🔍 Alege Întrebări</span>
-                    </button>
                 </div>
 
                 <!-- Modal Actions -->
@@ -741,6 +881,287 @@
                     <button type="button" class="btn btn-secondary" onclick="closeAssignModal()" style="padding: 10px 18px; font-size: 13px; font-weight: 600;">Anulează</button>
                     <button type="submit" class="btn btn-primary" id="btn-assign-save" style="padding: 10px 22px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(124, 106, 255, 0.4);">
                         <span>🚀 Generează Test</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CREATE/EDIT PRESET TEST -->
+    <div id="modal-preset-test" class="modal-overlay" style="display: none; z-index: 1015;">
+        <div class="modal-content" style="max-width: 780px; width: 100%; margin: auto; padding: 26px; border: 1px solid rgba(124, 106, 255, 0.3); background: linear-gradient(175deg, rgba(22, 22, 50, 0.98), rgba(12, 12, 28, 0.99)); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85); border-radius: 16px; text-align: left;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, rgba(124, 106, 255, 0.25), rgba(56, 189, 248, 0.15)); border: 1px solid rgba(124, 106, 255, 0.4); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                        📋
+                    </div>
+                    <div>
+                        <h2 id="modal-preset-heading" style="font-size: 20px; font-weight: 800; color: #fff; margin: 0; line-height: 1.2;">
+                            <span class="gradient-text">Creează Test Predefinit</span>
+                        </h2>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">Configurează un set fix de întrebări pentru a fi dat ca temă</div>
+                    </div>
+                </div>
+                <button class="btn-close" onclick="closePresetModal()" style="font-size: 24px; color: var(--text-muted); background: transparent; border: none; cursor: pointer;">&times;</button>
+            </div>
+            
+            <form id="form-preset-test" onsubmit="handleSavePresetTest(event)">
+                <input type="hidden" id="preset-id">
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Titlu Test Predefinit *</label>
+                    <input type="text" id="preset-title" class="form-control" placeholder="ex: Simulare BAC 1 - Structuri & Grafuri" style="width: 100%; font-size: 14px; font-weight: 600;" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Categorie Examen *</label>
+                        <select id="preset-category" class="form-control" style="width: 100%; font-weight: 600;" required>
+                            <option value="BAC">🎓 BAC</option>
+                            <option value="Poli">🏛️ Poli</option>
+                            <option value="Academie">📝 Academie</option>
+                            <option value="Diverse">🧠 Diverse</option>
+                            <option value="Toate">🌐 Toate</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Timp Limită (minute)</label>
+                        <input type="number" id="preset-time-limit" class="form-control" value="0" min="0" max="300" placeholder="0 = Fără limită de timp" style="width: 100%;">
+                        <span style="font-size: 11px; color: var(--text-muted); margin-top: 3px; display: block;">0 = nelimitat (recomandat la teme)</span>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Descriere / Instrucțiuni (Opțional)</label>
+                    <textarea id="preset-description" class="form-control" rows="2" placeholder="Instrucțiuni sau indicații specifice pentru elevi..." style="width: 100%; font-size: 13px;"></textarea>
+                </div>
+
+                <!-- Questions Selection Card -->
+                <div style="background: rgba(124, 106, 255, 0.05); border: 1px dashed rgba(124, 106, 255, 0.3); border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 14px; color: #fff;">Întrebări Incluse în Test</div>
+                            <div id="preset-questions-count-label" style="font-size: 12px; color: var(--accent-purple); font-weight: 700; margin-top: 2px;">0 întrebări selectate</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.35); padding: 5px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                                <label for="preset-target-count" style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary); margin: 0; white-space: nowrap;">Total Țintă:</label>
+                                <input type="number" id="preset-target-count" class="form-control" value="10" min="1" max="100" style="width: 55px; height: 28px; padding: 2px 6px; font-size: 12px; font-weight: 700; text-align: center;" oninput="updatePresetAutoFillButton()">
+                            </div>
+                            <button type="button" id="btn-preset-auto-fill" class="btn btn-secondary" onclick="autoFillPresetRandomQuestions()" style="padding: 7px 13px; font-size: 12px; font-weight: 600; border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.12); color: #38bdf8; display: flex; align-items: center; gap: 6px;" title="Completează automat cu întrebări aleatorii până la numărul țintă">
+                                <span>🎲</span> Completează Random
+                            </button>
+                            <button type="button" id="btn-preset-select-questions" class="btn btn-secondary" onclick="openManualSelectForPreset()" style="padding: 7px 13px; font-size: 12px; font-weight: 600; border-color: rgba(124, 106, 255, 0.4); background: rgba(124, 106, 255, 0.12); color: #fff; display: flex; align-items: center; gap: 6px;">
+                                <span>🔍</span> Alege Manual
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="preset-selected-preview-list" style="max-height: 480px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px;">
+                        <div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 24px;">Apasă pe butonul de mai sus pentru a alege întrebările din bancă sau completează random.</div>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px;">
+                    <button type="button" class="btn btn-secondary" onclick="closePresetModal()">Anulează</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-preset" style="padding: 10px 22px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                        <span>💾</span> Salvează Testul Predefinit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL BULK ASSIGN TEST -->
+    <div id="modal-bulk-assign" class="modal-overlay" style="display: none; z-index: 1025;">
+        <div class="modal-content" style="max-width: 650px; width: 100%; margin: auto; padding: 26px; border: 1px solid rgba(124, 106, 255, 0.3); background: linear-gradient(175deg, rgba(22, 22, 50, 0.98), rgba(12, 12, 28, 0.99)); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85); border-radius: 16px; text-align: left;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, rgba(124, 106, 255, 0.25), rgba(56, 189, 248, 0.15)); border: 1px solid rgba(124, 106, 255, 0.4); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                        🚀
+                    </div>
+                    <div>
+                        <h2 style="font-size: 20px; font-weight: 800; color: #fff; margin: 0; line-height: 1.2;">
+                            <span class="gradient-text">Asignează Temă Elevilor</span>
+                        </h2>
+                        <div id="bulk-assign-preset-title" style="font-size: 13px; color: #c4b5fd; font-weight: 700; margin-top: 3px;">-</div>
+                    </div>
+                </div>
+                <button class="btn-close" onclick="closeBulkAssignModal()" style="font-size: 24px; color: var(--text-muted); background: transparent; border: none; cursor: pointer;">&times;</button>
+            </div>
+
+            <form id="form-bulk-assign" onsubmit="handleBulkAssignSubmit(event)">
+                <input type="hidden" id="bulk-assign-preset-id">
+                <input type="hidden" id="bulk-assign-exam-type">
+                
+                <!-- Deadline Section -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-weight: 700; font-size: 13px; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 6px;">
+                            <span>⏰</span> Termen Limită Predare
+                        </label>
+                        <span style="font-size: 11px; color: var(--text-muted);">Format 24h</span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 10px;">
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Data (zz / ll / aaaa)</label>
+                            <div style="display: grid; grid-template-columns: 60px 1fr 75px; gap: 6px;">
+                                <select id="bulk-assign-day" class="form-control dt-select" onchange="updateBulkAssignDeadlinePreview()" style="font-weight: 600;"></select>
+                                <select id="bulk-assign-month" class="form-control dt-select dt-left" onchange="updateBulkAssignDeadlinePreview()" style="font-weight: 600;"></select>
+                                <select id="bulk-assign-year" class="form-control dt-select" onchange="updateBulkAssignDeadlinePreview()" style="font-weight: 600;"></select>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Ora Limită (24h)</label>
+                            <select id="bulk-assign-hour" class="form-control dt-select" onchange="updateBulkAssignDeadlinePreview()" style="font-weight: 700; color: var(--accent-purple);"></select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button type="button" class="btn btn-secondary" onclick="setBulkAssignQuickDate(1, 20)" style="padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">⚡ Mâine (20:00)</button>
+                        <button type="button" class="btn btn-secondary" onclick="setBulkAssignQuickDate(3, 20)" style="padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">📅 Peste 3 zile (20:00)</button>
+                        <button type="button" class="btn btn-secondary" onclick="setBulkAssignQuickDate(7, 20)" style="padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(255,255,255,0.04);">🗓️ Peste 1 săptămână (20:00)</button>
+                    </div>
+
+                    <div id="bulk-assign-deadline-preview" style="font-size: 12px; color: #c4b5fd; font-weight: 600; background: linear-gradient(90deg, rgba(124, 106, 255, 0.15), rgba(99, 102, 241, 0.05)); padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--accent-purple); display: flex; align-items: center; gap: 6px;">
+                        📅 Termen: -
+                    </div>
+                </div>
+
+                <!-- Student Selection Section -->
+                <div style="background: rgba(20, 20, 48, 0.7); border: 1px solid rgba(124, 106, 255, 0.2); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 13px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                                <span>👥</span> Selectează Elevii pentru Temă
+                            </div>
+                            <div id="bulk-assign-count-info" style="font-size: 12px; color: var(--accent-purple); font-weight: 700; margin-top: 2px;">
+                                0 din 0 elevi selectați
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button type="button" class="btn btn-secondary" onclick="toggleSelectAllBulkStudents(true)" style="padding: 5px 10px; font-size: 11px; font-weight: 600;">Bifează Toți</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleSelectAllBulkStudents(false)" style="padding: 5px 10px; font-size: 11px; font-weight: 600;">Debifează Toți</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 10px;">
+                        <input type="text" id="bulk-assign-student-search" class="form-control" placeholder="🔍 Filtrează elev după nume..." onkeyup="filterBulkAssignStudentsList()" style="width: 100%; font-size: 13px; padding: 8px 12px;">
+                    </div>
+
+                    <div id="bulk-assign-students-list" class="student-select-list">
+                        <!-- Generat dinamic cu checkbox-uri -->
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeBulkAssignModal()">Anulează</button>
+                    <button type="submit" class="btn btn-primary" id="btn-bulk-assign-submit" style="padding: 10px 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(124, 106, 255, 0.4);">
+                        <span>🚀</span> Asignează Tema la 0 Elevi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL SMART RECOVERY TEST -->
+    <div id="modal-smart-recovery" class="modal-overlay" style="display: none; z-index: 1040;">
+        <div class="modal-content" style="max-width: 580px; width: 100%; margin: auto; padding: 26px; border: 1px solid rgba(245, 158, 11, 0.4); background: linear-gradient(175deg, rgba(26, 20, 48, 0.98), rgba(16, 12, 32, 0.99)); box-shadow: 0 25px 60px -15px rgba(245, 158, 11, 0.25); border-radius: 16px; text-align: left;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(239, 68, 68, 0.2)); border: 1px solid rgba(245, 158, 11, 0.5); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                        ⚡
+                    </div>
+                    <div>
+                        <h2 style="font-size: 20px; font-weight: 800; color: #fff; margin: 0; line-height: 1.2;">
+                            Temă Inteligentă de Recuperare
+                        </h2>
+                        <div id="recovery-student-badge" style="font-size: 13px; color: #f59e0b; font-weight: 700; margin-top: 3px;">Elev: -</div>
+                    </div>
+                </div>
+                <button class="btn-close" onclick="closeSmartRecoveryModal()">&times;</button>
+            </div>
+
+            <!-- Student Diagnostic Banner -->
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span style="font-size: 16px;">🎯</span>
+                    <span style="font-weight: 700; font-size: 13px; color: #f59e0b;">Strategie Automată de Selecție:</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; font-size: 12px;">
+                    <div style="background: rgba(239, 68, 68, 0.12); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.25);">
+                        <strong style="color: #f87171;">50% Greșeli</strong>
+                        <div style="color: var(--text-secondary); font-size: 11px; margin-top: 2px;">din întrebările greșite nemasterizate</div>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.12); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.25);">
+                        <strong style="color: #fbbf24;">30% Capitole Slabe</strong>
+                        <div style="color: var(--text-secondary); font-size: 11px; margin-top: 2px;">subcategorii cu acuratețe &lt; 50%</div>
+                    </div>
+                    <div style="background: rgba(56, 189, 248, 0.12); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">
+                        <strong style="color: #38bdf8;">20% Progres Nou</strong>
+                        <div style="color: var(--text-secondary); font-size: 11px; margin-top: 2px;">întrebări noi medii și grele</div>
+                    </div>
+                </div>
+                <div id="recovery-diag-summary" style="margin-top: 10px; font-size: 12px; color: #e2e8f0; line-height: 1.4;">
+                    Se analizează istoricul elevului...
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form id="form-smart-recovery" onsubmit="handleSmartRecoverySubmit(event)">
+                <input type="hidden" id="recovery-username">
+
+                <!-- Target Length Selection -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; display: block;">Număr de Întrebări</label>
+                    <div style="display: flex; gap: 10px;">
+                        <label style="flex: 1; cursor: pointer;">
+                            <input type="radio" name="recovery-count-radio" value="10" onchange="setRecoveryCount(10)" style="display: none;">
+                            <div class="recovery-count-pill" id="pill-count-10" style="text-align: center; padding: 10px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); font-weight: 700; font-size: 13px;">10 Întrebări</div>
+                        </label>
+                        <label style="flex: 1.2; cursor: pointer;">
+                            <input type="radio" name="recovery-count-radio" value="15" checked onchange="setRecoveryCount(15)" style="display: none;">
+                            <div class="recovery-count-pill active" id="pill-count-15" style="text-align: center; padding: 10px 8px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.6); background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-weight: 700; font-size: 13px;">15 (Recomandat)</div>
+                        </label>
+                        <label style="flex: 1; cursor: pointer;">
+                            <input type="radio" name="recovery-count-radio" value="20" onchange="setRecoveryCount(20)" style="display: none;">
+                            <div class="recovery-count-pill" id="pill-count-20" style="text-align: center; padding: 10px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); font-weight: 700; font-size: 13px;">20 Întrebări</div>
+                        </label>
+                    </div>
+                    <input type="hidden" id="recovery-count" value="15">
+                </div>
+
+                <!-- Exam Category Selection -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Profil / Categorie Întrebări</label>
+                    <select id="recovery-exam-type" class="form-control" style="width: 100%; font-weight: 600;">
+                        <option value="Diverse" selected>🧠 Diverse</option>
+                        <option value="Toate">🌐 Toate (Toate categoriile)</option>
+                        <option value="BAC">🎓 BAC</option>
+                        <option value="Poli">🏛️ Poli</option>
+                        <option value="Academie">📝 Academie</option>
+                    </select>
+                </div>
+
+                <!-- Deadline Presets -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;">
+                    <label style="font-weight: 700; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">⏰ Termen Limită Rapid</label>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button type="button" class="btn btn-secondary recovery-dl-btn" id="dl-btn-24" onclick="setRecoveryQuickDeadline(1, 20)" style="padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px;">⚡ Peste 24h (20:00)</button>
+                        <button type="button" class="btn btn-secondary recovery-dl-btn active" id="dl-btn-48" onclick="setRecoveryQuickDeadline(2, 20)" style="padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; border-color: rgba(245, 158, 11, 0.5); background: rgba(245, 158, 11, 0.15); color: #f59e0b;">📅 Peste 48h (Recomandat)</button>
+                        <button type="button" class="btn btn-secondary recovery-dl-btn" id="dl-btn-sun" onclick="setRecoverySundayDeadline()" style="padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px;">🗓️ Duminică (20:00)</button>
+                    </div>
+                    <div id="recovery-deadline-preview" style="font-size: 12px; color: #f59e0b; font-weight: 700; background: rgba(245, 158, 11, 0.08); padding: 8px 12px; border-radius: 8px; border-left: 3px solid #f59e0b; display: flex; align-items: center; gap: 6px;">
+                        📅 Termen: Se calculează...
+                    </div>
+                    <input type="hidden" id="recovery-deadline-iso">
+                </div>
+
+                <div class="modal-actions" style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeSmartRecoveryModal()">Anulează</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-recovery" style="padding: 10px 22px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4); color: #000;">
+                        <span>⚡ Generează &amp; Previzualizează Temă</span>
                     </button>
                 </div>
             </form>
@@ -813,7 +1234,7 @@
     </div>
 
     <!-- MODAL MANUAL SELECT QUESTIONS -->
-    <div id="modal-manual-select" class="modal-overlay" style="display: none; z-index: 1000;">
+    <div id="modal-manual-select" class="modal-overlay" style="display: none; z-index: 1060;">
         <div class="modal-content modal-admin-large" style="display: flex; flex-direction: column; max-height: 85vh;">
             <div class="modal-header" style="flex-shrink: 0;">
                 <div>
@@ -825,10 +1246,11 @@
             
             <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-shrink: 0; align-items: center; flex-wrap: wrap;">
                  <select id="manual-filter-cat" class="form-control" onchange="renderManualSelectionList()" style="width: 170px;">
-                     <option value="Diverse">Toate Examenele</option>
-                     <option value="Academie">Academie</option>
-                     <option value="Poli">Poli</option>
-                     <option value="BAC">BAC</option>
+                     <option value="Toate">🌐 Toate Examenele</option>
+                     <option value="Diverse">🧠 Diverse</option>
+                     <option value="BAC">🎓 BAC</option>
+                     <option value="Poli">🏛️ Poli</option>
+                     <option value="Academie">📝 Academie</option>
                  </select>
                  <select id="manual-filter-subject" class="form-control" onchange="updateManualSubcats(); renderManualSelectionList();" style="width: 170px;">
                      <option value="Toate">Toate Categoriile</option>
@@ -840,6 +1262,19 @@
                  </select>
                  <select id="manual-filter-subcat" class="form-control" onchange="renderManualSelectionList()" style="width: 170px; display: none;">
                      <option value="Toate">Toate Subcategoriile</option>
+                 </select>
+                 <select id="manual-filter-diff" class="form-control" onchange="renderManualSelectionList()" style="width: 155px;">
+                     <option value="Toate">Toate Dificultățile</option>
+                     <option value="easy">🟢 Ușoară</option>
+                     <option value="medium">🟡 Medie</option>
+                     <option value="hard">🔴 Grea</option>
+                 </select>
+                 <select id="manual-filter-status" class="form-control" onchange="renderManualSelectionList()" style="width: 175px;">
+                     <option value="Toate">Toate Statusurile</option>
+                     <option value="NOU">🆕 Neîntâlnite (Noi)</option>
+                     <option value="ASIGNAT">⏳ Asignate (În Așteptare)</option>
+                     <option value="GRESIT">❌ Greșite Anterior</option>
+                     <option value="CORECT">✅ Corecte Anterior</option>
                  </select>
                  <input type="text" id="manual-search" class="form-control" placeholder="Caută text, cod..." onkeyup="renderManualSelectionList()" style="width: 200px;">
                  <span id="manual-selected-count" style="font-weight: bold; color: var(--accent-purple); margin-left: auto;">0 selectate</span>
@@ -857,7 +1292,7 @@
     </div>
 
     <!-- MODAL MANUAL REPLACE QUESTION -->
-    <div id="modal-manual-replace" class="modal-overlay" style="display: none; z-index: 1010;">
+    <div id="modal-manual-replace" class="modal-overlay" style="display: none; z-index: 1060;">
         <div class="modal-content modal-admin-large" style="display: flex; flex-direction: column; max-height: 85vh;">
             <div class="modal-header" style="flex-shrink: 0;">
                 <div>
@@ -869,10 +1304,11 @@
             
             <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-shrink: 0; align-items: center; flex-wrap: wrap;">
                  <select id="manual-replace-filter-cat" class="form-control" onchange="renderManualReplaceList()" style="width: 170px;">
-                     <option value="Diverse">Toate Examenele</option>
-                     <option value="Academie">Academie</option>
-                     <option value="Poli">Poli</option>
-                     <option value="BAC">BAC</option>
+                     <option value="Toate">🌐 Toate Examenele</option>
+                     <option value="Diverse">🧠 Diverse</option>
+                     <option value="BAC">🎓 BAC</option>
+                     <option value="Poli">🏛️ Poli</option>
+                     <option value="Academie">📝 Academie</option>
                  </select>
                  <select id="manual-replace-filter-subject" class="form-control" onchange="updateManualReplaceSubcats(); renderManualReplaceList();" style="width: 170px;">
                      <option value="Toate">Toate Categoriile</option>
@@ -884,6 +1320,12 @@
                  </select>
                  <select id="manual-replace-filter-subcat" class="form-control" onchange="renderManualReplaceList()" style="width: 170px; display: none;">
                      <option value="Toate">Toate Subcategoriile</option>
+                 </select>
+                 <select id="manual-replace-filter-diff" class="form-control" onchange="renderManualReplaceList()" style="width: 155px;">
+                     <option value="Toate">Toate Dificultățile</option>
+                     <option value="easy">🟢 Ușoară</option>
+                     <option value="medium">🟡 Medie</option>
+                     <option value="hard">🔴 Grea</option>
                  </select>
                  <input type="text" id="manual-replace-search" class="form-control" placeholder="Caută text, cod..." onkeyup="renderManualReplaceList()" style="width: 200px;">
             </div>
@@ -949,7 +1391,7 @@
         <img id="admin-lightbox-img" src="" alt="Zoom Imagine" onclick="event.stopPropagation()" style="max-width: 90vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 35px rgba(124, 106, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); object-fit: contain; cursor: default;">
     </div>
 
-    <script src="assets/js/admin.js"></script>
+    <script src="assets/js/admin.js?v=20261009_01"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

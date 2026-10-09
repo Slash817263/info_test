@@ -16,6 +16,23 @@ build/
 db_dump_temp.json
 questions.json
 *.sql
+*.json.bak
+scratch/
+*.pdf
+dump_*.txt
+pdf_dump.txt
+questions_dump.txt
+search_book.txt
+POLI_V1_*.txt
+*questions*.json
+audit_issues_detected.json
+cleaned_questions.json
+math_questions_analysis.json
+parsed_answers.json
+parsed_questions.json
+recoverable_text_questions.json
+supabase_questions_*.json
+true_image_questions.json
 
 # Personal and config files
 ACTUALmd

@@ -1,3 +1,4 @@
+const utils = require('./_utils');
 let rateLimitCache = {};
 const RATE_LIMIT_MS = 60000;
 const MAX_REQUESTS_PER_MIN = 15;
@@ -18,7 +19,7 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
+    const ip = utils.getClientIp(event);
     const now = Date.now();
     if (!rateLimitCache[ip]) {
         rateLimitCache[ip] = { count: 1, first: now };
@@ -27,6 +28,12 @@ exports.handler = async function(event, context) {
             rateLimitCache[ip] = { count: 1, first: now };
         } else {
             rateLimitCache[ip].count++;
+        }
+    }
+
+    if (Object.keys(rateLimitCache).length > 200) {
+        for (const k in rateLimitCache) {
+            if (now - rateLimitCache[k].first > RATE_LIMIT_MS) delete rateLimitCache[k];
         }
     }
 
@@ -74,14 +81,33 @@ exports.handler = async function(event, context) {
             return { statusCode: 401, headers, body: JSON.stringify({ error: 'Utilizator negăsit' }) };
         }
 
+        const utils = require('./_utils');
         const student = data[0];
-        let isPasswordValid = (student.password === cleanPassword);
+        const isPasswordValid = utils.verifyPassword(cleanPassword, student.password);
 
         if (!isPasswordValid) {
             return { statusCode: 401, headers, body: JSON.stringify({ error: 'Parolă incorectă' }) };
         }
 
-        const utils = require('./_utils');
+        // Seamless auto-migration of legacy plaintext passwords to secure scrypt hash
+        if (!student.password || !student.password.startsWith('$scrypt$')) {
+            try {
+                const newHashed = utils.hashPassword(cleanPassword);
+                await fetch(`${supabaseUrl}/rest/v1/students?id=eq.${student.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: newHashed })
+                });
+                student.password = newHashed;
+            } catch (e) {
+                console.warn('Auto-upgrade password hash error:', e);
+            }
+        }
+
         const jwt = require('jsonwebtoken');
         const jwtSecret = utils.getLiveEnv('JWT_SECRET', process.env.JWT_SECRET);
         if (!jwtSecret) {

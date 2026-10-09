@@ -1,65 +1,86 @@
-exports.handler = async function(event, context) {
-    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
-    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
-    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+const utils = require('./_utils');
 
-    const headers = {
-        'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token, Authorization',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+exports.handler = async function(event, context) {
+    const headers = utils.getCorsHeaders(event);
 
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
-    const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-    const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
-    const isAdmin = clientToken && validTokens.includes(clientToken);
+    if (event.httpMethod !== 'GET') {
+        return utils.createErrorResponse(405, 'Method Not Allowed', headers);
+    }
 
+    const isAdmin = utils.verifyAdminToken(event);
     const params = event.queryStringParameters || {};
-    const requestedUsername = params.username;
-    
+    const requestedUsername = params.username ? params.username.trim() : '';
+    let authenticatedUsername = null;
+
     if (!isAdmin) {
-        if (!requestedUsername) {
-            return {
-                statusCode: 401,
-                headers,
-                body: JSON.stringify({ error: 'Unauthorized: Trebuie să fii admin.' })
-            };
+        const decoded = utils.parseJwt(event);
+        if (!decoded || !decoded.username) {
+            return utils.createErrorResponse(401, 'Autentificare necesară.', headers);
         }
-        const authHeader = event.headers.authorization || event.headers.Authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autentificare necesară.' }) };
-        }
-        const token = authHeader.substring(7);
-        const jwt = require('jsonwebtoken');
-        const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
-        try {
-            const decoded = jwt.verify(token, jwtSecret);
-            if ((decoded.username || '').toLowerCase() !== (requestedUsername || '').toLowerCase()) {
-                return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
-            }
-        } catch(e) {
-            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid' }) };
+        authenticatedUsername = decoded.username.trim();
+
+        if (requestedUsername && requestedUsername.toLowerCase() !== authenticatedUsername.toLowerCase()) {
+            return utils.createErrorResponse(403, 'Forbidden: Nu ai permisiunea de a accesa rezultatele altui elev.', headers);
         }
     }
 
+    const supabaseUrl = utils.getLiveEnv('SUPABASE_URL', process.env.SUPABASE_URL);
+    const supabaseKey = utils.getLiveEnv('SUPABASE_SERVICE_KEY', process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY);
+
     if (!supabaseUrl || !supabaseKey) {
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ error: 'Supabase environment variables are missing.' })
-        };
+        return utils.createErrorResponse(500, 'Supabase environment variables are missing.', headers);
     }
 
     try {
-        let url = `${supabaseUrl}/rest/v1/results?test_type=not.in.(category_coverage,lead_diagnostic)&select=*&order=created_at.desc&limit=2000`;
-        if (requestedUsername) {
-            url += `&or=(student_username.eq.${encodeURIComponent(requestedUsername)},student_name.eq.${encodeURIComponent(requestedUsername)})`;
+        // Enforce student ownership: an authenticated non-admin can only ever view their own data
+        const targetUsername = isAdmin ? requestedUsername : authenticatedUsername;
+
+        if (params.id) {
+            let singleUrl = `${supabaseUrl}/rest/v1/results?id=eq.${encodeURIComponent(params.id)}&select=*&limit=1`;
+            if (!isAdmin && targetUsername) {
+                const safeUser = targetUsername.toLowerCase().replace(/[%_]/g, '\\$&');
+                singleUrl += `&or=(student_username.ilike.${encodeURIComponent(safeUser)},student_name.ilike.${encodeURIComponent(safeUser)})`;
+            }
+
+            const response = await fetch(singleUrl, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`
+                }
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Supabase query failed: ${response.status} - ${errorText}`);
+            }
+            const data = await response.json();
+            if (!data || data.length === 0) {
+                return utils.createErrorResponse(404, 'Rezultatul nu a fost găsit.', headers);
+            }
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify(data[0])
+            };
+        }
+
+        // List query: only admin can query without targetUsername (all results)
+        if (!isAdmin && !targetUsername) {
+            return utils.createErrorResponse(401, 'Unauthorized: Trebuie să fii admin.', headers);
+        }
+
+        const isSummary = params.summary === 'true' || (!targetUsername && params.full !== 'true');
+        const selectCols = isSummary
+            ? 'id,student_name,student_username,score,total_points,time_taken_ms,blur_count,test_type,created_at,student_email'
+            : '*';
+
+        let url = `${supabaseUrl}/rest/v1/results?test_type=not.in.(category_coverage,lead_diagnostic)&test_type=not.like.progress_*&select=${encodeURIComponent(selectCols)}&order=created_at.desc&limit=2000`;
+        if (targetUsername) {
+            const safeUser = targetUsername.toLowerCase().replace(/[%_]/g, '\\$&');
+            url += `&or=(student_username.ilike.${encodeURIComponent(safeUser)},student_name.ilike.${encodeURIComponent(safeUser)})`;
         }
 
         const response = await fetch(url, {

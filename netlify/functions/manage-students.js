@@ -1,52 +1,94 @@
-exports.handler = async function(event, context) {
-    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
-    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
-    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+const utils = require('./_utils');
 
-    const headers = {
-        'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+exports.handler = async function(event, context) {
+    const headers = utils.getCorsHeaders(event);
 
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const validTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-    const clientToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
-    
-    if (!clientToken || !validTokens.includes(clientToken)) {
-        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
+    if (!utils.verifyAdminToken(event)) {
+        return utils.createErrorResponse(401, 'Unauthorized', headers);
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+    const supabaseUrl = utils.getLiveEnv('SUPABASE_URL', process.env.SUPABASE_URL);
+    const supabaseKey = utils.getLiveEnv('SUPABASE_SERVICE_KEY', process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY);
 
     if (!supabaseUrl || !supabaseKey) {
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Missing Supabase vars' }) };
+        return utils.createErrorResponse(500, 'Missing Supabase vars', headers);
     }
 
     const STUDENTS_ENDPOINT = `${supabaseUrl}/rest/v1/students`;
 
+    async function cascadeDeleteStudent(studentId) {
+        let username = '';
+        let phone = '';
+        try {
+            const studentRes = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${studentId}&select=username,phone_number`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            });
+            if (studentRes.ok) {
+                const list = await studentRes.json();
+                if (list && list.length > 0) {
+                    username = list[0].username;
+                    phone = list[0].phone_number;
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching student before cascade delete:', e);
+        }
+
+        if (username) {
+            const encodedUser = encodeURIComponent(username);
+            // 1. Delete all results for this student (GDPR Right to be Forgotten)
+            await fetch(`${supabaseUrl}/rest/v1/results?student_username=eq.${encodedUser}`, {
+                method: 'DELETE',
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            }).catch(e => console.error('Error deleting results for student:', e));
+
+            if (phone) {
+                await fetch(`${supabaseUrl}/rest/v1/results?student_username=eq.${encodeURIComponent(phone)}`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                }).catch(() => {});
+            }
+
+            // 2. Delete all assigned tests for this student
+            await fetch(`${supabaseUrl}/rest/v1/assigned_tests?student_username=eq.${encodedUser}`, {
+                method: 'DELETE',
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            }).catch(e => console.error('Error deleting assigned tests for student:', e));
+        }
+
+        // 3. Delete student account from students table
+        const res = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${studentId}`, {
+            method: 'DELETE',
+            headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+        });
+        if (!res.ok) throw new Error('Eroare la ștergerea elevului din baza de date');
+        return true;
+    }
+
     try {
         if (event.httpMethod === 'GET') {
-            const res = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,password,created_at,phone_number,expires_at&order=created_at.desc&limit=2000`, {
+            const res = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,password,created_at,phone_number,expires_at,gdpr_consent&order=created_at.desc&limit=2000`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
             if (!res.ok) {
-                // Fallback in case expires_at column was not yet added in Supabase
-                const fallbackRes = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,password,created_at,phone_number&order=created_at.desc&limit=2000`, {
+                // Fallback in case a column was not yet added in Supabase
+                const fallbackRes = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,password,created_at,phone_number,expires_at&order=created_at.desc&limit=2000`, {
                     headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
                 });
-                if (!fallbackRes.ok) throw new Error('Eroare la preluare elevi');
+                if (!fallbackRes.ok) {
+                    const thirdRes = await fetch(`${STUDENTS_ENDPOINT}?select=id,username,password,created_at,phone_number&order=created_at.desc&limit=2000`, {
+                        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                    });
+                    if (!thirdRes.ok) throw new Error('Eroare la preluare elevi');
+                    const data = await thirdRes.json();
+                    return { statusCode: 200, headers, body: JSON.stringify(data) };
+                }
                 const data = await fallbackRes.json();
                 return { statusCode: 200, headers, body: JSON.stringify(data) };
-            }
-            if (!res.ok) {
-                const text = await res.text().catch(()=>'');
-                throw new Error(`HTTP ${res.status} pe res: ${text}`);
             }
             const data = await res.json();
             return { statusCode: 200, headers, body: JSON.stringify(data) };
@@ -56,12 +98,8 @@ exports.handler = async function(event, context) {
             const body = JSON.parse(event.body || '{}');
 
             if (body.action === 'delete' && body.id) {
-                const res = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${body.id}`, {
-                    method: 'DELETE',
-                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-                });
-                if (!res.ok) throw new Error('Eroare la ștergerea elevului');
-                return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+                await cascadeDeleteStudent(body.id);
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Elevul și toate datele sale au fost șterse complet.' }) };
             }
 
             if (!body.username || !body.password) {
@@ -76,11 +114,18 @@ exports.handler = async function(event, context) {
             }
 
             const defaultExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            const hashedPassword = utils.hashPassword(body.password.trim());
             const studentInsert = { 
                 username: body.username.trim().toLowerCase(), 
-                password: body.password.trim(),
+                password: hashedPassword,
                 phone_number: cleanPhone,
-                expires_at: body.expires_at !== undefined ? body.expires_at : defaultExpiresAt
+                expires_at: body.expires_at !== undefined ? body.expires_at : defaultExpiresAt,
+                gdpr_consent: body.gdpr_consent || {
+                    accepted: true,
+                    consented_at: new Date().toISOString(),
+                    policy_version: '1.0',
+                    source: 'admin_enrollment'
+                }
             };
 
             let res = await fetch(STUDENTS_ENDPOINT, {
@@ -96,9 +141,10 @@ exports.handler = async function(event, context) {
 
             if (!res.ok) {
                 const err = await res.text();
-                // If column expires_at does not exist in schema, retry without it
-                if (err.includes('expires_at') || err.includes('column') || err.includes('not found')) {
-                    delete studentInsert.expires_at;
+                // If column gdpr_consent or expires_at does not exist in schema, retry without it
+                if (err.includes('gdpr_consent') || err.includes('expires_at') || err.includes('column') || err.includes('not found')) {
+                    if (err.includes('gdpr_consent')) delete studentInsert.gdpr_consent;
+                    if (err.includes('expires_at')) delete studentInsert.expires_at;
                     res = await fetch(STUDENTS_ENDPOINT, {
                         method: 'POST',
                         headers: {
@@ -170,12 +216,8 @@ exports.handler = async function(event, context) {
             const id = params.id;
             if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'ID obligatoriu' }) };
 
-            const res = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${id}`, {
-                method: 'DELETE',
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-            });
-            if (!res.ok) throw new Error('Eroare la ștergerea elevului');
-            return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+            await cascadeDeleteStudent(id);
+            return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'Elevul și toate datele asociate au fost șterse complet.' }) };
         }
 
         if (event.httpMethod === 'PUT') {
@@ -185,6 +227,7 @@ exports.handler = async function(event, context) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'ID și noua parolă sunt obligatorii' }) };
                 }
 
+                const hashedNewPassword = utils.hashPassword(body.new_password.trim());
                 const res = await fetch(`${STUDENTS_ENDPOINT}?id=eq.${body.id}`, {
                     method: 'PATCH',
                     headers: {
@@ -193,7 +236,7 @@ exports.handler = async function(event, context) {
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation'
                     },
-                    body: JSON.stringify({ password: body.new_password })
+                    body: JSON.stringify({ password: hashedNewPassword })
                 });
                 if (!res.ok) throw new Error('Eroare la resetarea parolei');
                 return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };

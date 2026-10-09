@@ -1,27 +1,18 @@
-exports.handler = async function(event, context) {
-    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
-    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
-    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+const utils = require('./_utils');
 
-    const headers = {
-        'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token, Authorization',
-        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+exports.handler = async function(event, context) {
+    const headers = utils.getCorsHeaders(event);
 
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
-    const adminSecret = process.env.ADMIN_SECRET;
-
-    const clientAdminToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
-    if (!clientAdminToken || clientAdminToken !== adminSecret) {
-        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Doar administratorul are acces.' }) };
+    if (!utils.verifyAdminToken(event)) {
+        return utils.createErrorResponse(401, 'Unauthorized: Doar administratorul are acces.', headers);
     }
+
+    const supabaseUrl = utils.getLiveEnv('SUPABASE_URL', process.env.SUPABASE_URL);
+    const supabaseKey = utils.getLiveEnv('SUPABASE_SERVICE_KEY', process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY);
 
     if (!supabaseUrl || !supabaseKey) {
         return { statusCode: 500, headers, body: JSON.stringify({ error: 'Supabase credentials missing.' }) };
@@ -67,17 +58,21 @@ exports.handler = async function(event, context) {
                 const existingStudents = await studentCheck.json();
 
                 if (!existingStudents || existingStudents.length === 0) {
-                    // Fetch lead to get phone number if available
+                    // Fetch lead to get phone number and creation date if available
                     let leadPhone = null;
-                    const leadRes = await fetch(`${supabaseUrl}/rest/v1/results?id=eq.${lead_id}&select=student_username`, {
+                    let leadCreatedAt = null;
+                    const leadRes = await fetch(`${supabaseUrl}/rest/v1/results?id=eq.${lead_id}&select=student_username,created_at`, {
                         headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
                     });
                     if (leadRes.ok) {
                         const lData = await leadRes.json();
-                        if (lData && lData.length > 0) leadPhone = lData[0].student_username;
+                        if (lData && lData.length > 0) {
+                            leadPhone = lData[0].student_username;
+                            leadCreatedAt = lData[0].created_at;
+                        }
                     }
 
-                    // Create student with requested subscription duration
+                    // Create student with requested subscription duration and GDPR consent audit
                     let calculatedExpiresAt = null;
                     const durationVal = body.duration || '30';
                     if (durationVal !== 'unlimited') {
@@ -87,9 +82,16 @@ exports.handler = async function(event, context) {
 
                     const studentPayload = {
                         username: cleanUsername,
-                        password: password.trim(),
+                        password: utils.hashPassword(password.trim()),
                         phone_number: leadPhone || null,
-                        expires_at: calculatedExpiresAt
+                        expires_at: calculatedExpiresAt,
+                        gdpr_consent: {
+                            accepted: true,
+                            consented_at: leadCreatedAt || new Date().toISOString(),
+                            policy_version: '1.0',
+                            source: 'lead_conversion',
+                            lead_id: Number(lead_id)
+                        }
                     };
 
                     let createStudentRes = await fetch(`${supabaseUrl}/rest/v1/students`, {
@@ -105,8 +107,9 @@ exports.handler = async function(event, context) {
 
                     if (!createStudentRes.ok) {
                         const errTxt = await createStudentRes.text();
-                        if (errTxt.includes('expires_at') || errTxt.includes('column')) {
-                            delete studentPayload.expires_at;
+                        if (errTxt.includes('gdpr_consent') || errTxt.includes('expires_at') || errTxt.includes('column')) {
+                            if (errTxt.includes('gdpr_consent')) delete studentPayload.gdpr_consent;
+                            if (errTxt.includes('expires_at')) delete studentPayload.expires_at;
                             createStudentRes = await fetch(`${supabaseUrl}/rest/v1/students`, {
                                 method: 'POST',
                                 headers: {

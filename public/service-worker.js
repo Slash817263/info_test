@@ -1,9 +1,23 @@
-const CACHE_NAME = 'acade-quiz-v5';
+const CACHE_NAME = 'acade-quiz-v14';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
+  '/manifest.json',
   '/assets/css/style.css',
   '/assets/js/app.js',
+  '/assets/js/api.js',
+  '/assets/js/auth.js',
+  '/assets/js/dom.js',
+  '/assets/js/math.js',
+  '/assets/js/practice.js',
+  '/assets/js/quiz.js',
+  '/assets/js/state.js',
+  '/assets/js/ui.js',
+  '/assets/js/utils.js',
+  '/assets/vendor/katex/katex.min.css?v=1',
+  '/assets/vendor/katex/katex.min.js?v=1',
+  '/assets/vendor/katex/contrib/auto-render.min.js?v=1',
+  '/politica-de-confidentialitate.html',
   '/SIGLA2.jpg'
 ];
 

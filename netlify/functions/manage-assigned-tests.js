@@ -1,30 +1,21 @@
-exports.handler = async function(event, context) {
-    const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
-    const allowedOrigins = ['http://localhost:8888', 'http://127.0.0.1:8888', 'https://acadeinformatica.netlify.app'];
-    const corsOrigin = allowedOrigins.includes(origin) ? origin : 'https://acadeinformatica.netlify.app';
+const utils = require('./_utils');
 
-    const headers = {
-        'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-token, X-Admin-Token, Authorization',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+exports.handler = async function(event, context) {
+    const headers = utils.getCorsHeaders(event);
 
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+    const supabaseUrl = utils.getLiveEnv('SUPABASE_URL', process.env.SUPABASE_URL);
+    const supabaseKey = utils.getLiveEnv('SUPABASE_SERVICE_KEY', process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY);
 
     if (!supabaseUrl || !supabaseKey) {
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Supabase env missing.' }) };
+        return utils.createErrorResponse(500, 'Supabase env missing.', headers);
     }
 
     const method = event.httpMethod;
-    const adminToken = event.headers['x-admin-token'] || event.headers['X-Admin-Token'];
-    const validAdminTokens = [process.env.ADMIN_SECRET].filter(Boolean);
-    const isAdmin = adminToken && validAdminTokens.includes(adminToken);
+    const isAdmin = utils.verifyAdminToken(event);
 
     const shuffle = (array) => {
         let currentIndex = array.length, randomIndex;
@@ -46,20 +37,12 @@ exports.handler = async function(event, context) {
             }
 
             if (username && !isAdmin) {
-                const authHeader = event.headers.authorization || event.headers.Authorization;
-                if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                const decoded = utils.parseJwt(event);
+                if (!decoded) {
                     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autentificare necesară.' }) };
                 }
-                const token = authHeader.substring(7);
-                const jwt = require('jsonwebtoken');
-                const jwtSecret = process.env.JWT_SECRET || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
-                try {
-                    const decoded = jwt.verify(token, jwtSecret);
-                    if ((decoded.username || '').toLowerCase() !== (username || '').toLowerCase()) {
-                        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
-                    }
-                } catch(e) {
-                    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid sau expirat' }) };
+                if ((decoded.username || '').toLowerCase() !== (username || '').toLowerCase()) {
+                    return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
                 }
             }
             
@@ -141,8 +124,388 @@ exports.handler = async function(event, context) {
                 return { statusCode: 200, headers, body: JSON.stringify({ success: true, test: updated[0] }) };
             }
 
-            if (body.save_draft) {
+            if (action === 'generate_recovery_test' || body.action === 'generate_recovery_test') {
+                const targetStudent = (student_username || body.student_username || '').trim();
+                if (!targetStudent) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Numele elevului este obligatoriu.' }) };
+                }
+
+                const totalTarget = Math.max(5, Math.min(50, parseInt(target_length || body.target_length || 15, 10) || 15));
+                const examType = (exam_type || body.exam_type || 'Diverse').trim();
+                
+                // Calculate default deadline: 48h from now if not provided
+                let finalDeadline = deadline || body.deadline;
+                if (!finalDeadline) {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 2);
+                    d.setHours(20, 0, 0, 0);
+                    finalDeadline = d.toISOString();
+                }
+
+                // 1. Fetch all active questions
+                let allQuestions = await utils.fetchAllSupabaseRows(`${supabaseUrl}/rest/v1/questions?select=*`, supabaseKey);
+                if (!allQuestions || allQuestions.length === 0) {
+                    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Nu s-au putut încărca întrebările din baza de date.' }) };
+                }
+
+                // Filter questions if a specific exam type (non-Toate) is requested
+                let poolByExam = allQuestions;
+                if (examType !== 'Toate') {
+                    const filtered = allQuestions.filter(q => (q.exam_type || 'Diverse').includes(examType));
+                    if (filtered.length >= totalTarget) {
+                        poolByExam = filtered;
+                    }
+                }
+
+                // 2. Fetch student past results (completed tests & category_coverage)
+                const encodedUser = encodeURIComponent(targetStudent);
+                const resultsRes = await fetch(`${supabaseUrl}/rest/v1/results?or=(student_username.ilike.${encodedUser},student_name.ilike.${encodedUser})&order=created_at.asc`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                const pastResults = resultsRes.ok ? await resultsRes.json() : [];
+
+                // 3. Fetch pending assigned tests so we don't pick questions already assigned in active tests
+                const currentlyAssignedSet = new Set();
+                try {
+                    const pendingRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?student_username=ilike.${encodedUser}&status=eq.pending&select=questions_ids`, {
+                        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                    });
+                    if (pendingRes.ok) {
+                        const pendingTests = await pendingRes.json();
+                        pendingTests.forEach(pt => {
+                            let qIds = pt.questions_ids;
+                            if (typeof qIds === 'string') {
+                                try { qIds = JSON.parse(qIds); } catch (e) { qIds = []; }
+                            }
+                            if (Array.isArray(qIds)) {
+                                qIds.forEach(id => currentlyAssignedSet.add(Number(id)));
+                            }
+                        });
+                    }
+                } catch(e) {}
+
+                // 4. Build student mastery map and wrong set
+                const masteredSet = new Set();
+                const wrongSet = new Set();
+                const subcatStats = {}; // subcategory -> { seen: 0, correct: 0 }
+
+                for (const res of pastResults) {
+                    if (res.test_type && res.test_type.startsWith('progress_')) continue;
+
+                    if (res.test_type === 'category_coverage') {
+                        const masteredList = Array.isArray(res.details_json) ? res.details_json : [];
+                        masteredList.forEach(id => {
+                            const qId = Number(id);
+                            if (!isNaN(qId)) {
+                                masteredSet.add(qId);
+                                wrongSet.delete(qId);
+                            }
+                        });
+
+                        let pWrongs = res.answers_json;
+                        if (typeof pWrongs === 'string') {
+                            try { pWrongs = JSON.parse(pWrongs); } catch (e) { pWrongs = []; }
+                        }
+                        if (Array.isArray(pWrongs)) {
+                            pWrongs.forEach(item => {
+                                if (item && (item.id !== undefined || item.question_id !== undefined)) {
+                                    const qId = Number(item.id !== undefined ? item.id : item.question_id);
+                                    if (!isNaN(qId) && !masteredSet.has(qId)) {
+                                        wrongSet.add(qId);
+                                    }
+                                }
+                            });
+                        } else if (pWrongs && typeof pWrongs === 'object') {
+                            Object.keys(pWrongs).forEach(key => {
+                                const qId = Number(key);
+                                if (!isNaN(qId) && !masteredSet.has(qId)) {
+                                    wrongSet.add(qId);
+                                }
+                            });
+                        }
+                        continue;
+                    }
+
+                    let details = res.details_json;
+                    if (typeof details === 'string') {
+                        try { details = JSON.parse(details); } catch(e) { details = []; }
+                    }
+                    if (Array.isArray(details)) {
+                        for (const d of details) {
+                            if (!d) continue;
+                            const qId = Number(d.id !== undefined ? d.id : d.number);
+                            if (isNaN(qId)) continue;
+                            const isCor = !!(d.isCorrect === true || d.is_correct === true || d.correct === true || (d.studentAnswer !== null && d.studentAnswer !== undefined && d.correctAnswer !== undefined && d.studentAnswer === d.correctAnswer));
+
+                            // Subcategory stats tracking
+                            const sub = (d.subcategory || '').trim();
+                            if (sub) {
+                                if (!subcatStats[sub]) subcatStats[sub] = { seen: 0, correct: 0 };
+                                subcatStats[sub].seen++;
+                                if (isCor) subcatStats[sub].correct++;
+                            }
+
+                            if (isCor) {
+                                masteredSet.add(qId);
+                                wrongSet.delete(qId);
+                            } else {
+                                if (!masteredSet.has(qId)) {
+                                    wrongSet.add(qId);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Also update subcatStats with category_coverage data
+                masteredSet.forEach(id => {
+                    const q = allQuestions.find(x => Number(x.id) === id);
+                    if (q && q.subcategory) {
+                        const sub = q.subcategory.trim();
+                        if (!subcatStats[sub]) subcatStats[sub] = { seen: 0, correct: 0 };
+                        subcatStats[sub].seen++;
+                        subcatStats[sub].correct++;
+                    }
+                });
+                wrongSet.forEach(id => {
+                    const q = allQuestions.find(x => Number(x.id) === id);
+                    if (q && q.subcategory) {
+                        const sub = q.subcategory.trim();
+                        if (!subcatStats[sub]) subcatStats[sub] = { seen: 0, correct: 0 };
+                        subcatStats[sub].seen++;
+                    }
+                });
+
+                // Identify weak subcategories (< 50% accuracy or least mastered)
+                const weakSubcatList = [];
+                Object.entries(subcatStats).forEach(([sub, stats]) => {
+                    const acc = stats.seen > 0 ? (stats.correct / stats.seen) : 1;
+                    if (acc < 0.5) {
+                        weakSubcatList.push({ sub, acc, seen: stats.seen });
+                    }
+                });
+                weakSubcatList.sort((a, b) => a.acc - b.acc);
+                const weakSubcategoryNames = weakSubcatList.map(w => w.sub);
+
+                // 5. Partition questions into candidate pools
+                // Pool 1: Wrong questions (50% target)
+                const poolWrong = poolByExam.filter(q => wrongSet.has(Number(q.id)) && !currentlyAssignedSet.has(Number(q.id)));
+
+                // Pool 2: Weak subcategory questions (30% target) - excluding already in wrongSet, masteredSet, or currentlyAssigned
+                const poolWeak = poolByExam.filter(q => 
+                    weakSubcategoryNames.includes((q.subcategory || '').trim()) &&
+                    !wrongSet.has(Number(q.id)) &&
+                    !masteredSet.has(Number(q.id)) &&
+                    !currentlyAssignedSet.has(Number(q.id))
+                );
+
+                // Pool 3: New medium & hard questions (20% target) - progression
+                const poolNewHard = poolByExam.filter(q => 
+                    (q.difficulty === 'hard' || q.difficulty === 'medium') &&
+                    !wrongSet.has(Number(q.id)) &&
+                    !masteredSet.has(Number(q.id)) &&
+                    !currentlyAssignedSet.has(Number(q.id))
+                );
+
+                // Pool 4: General unseen fallback
+                const poolUnseenFallback = poolByExam.filter(q => 
+                    !wrongSet.has(Number(q.id)) &&
+                    !masteredSet.has(Number(q.id)) &&
+                    !currentlyAssignedSet.has(Number(q.id))
+                );
+
+                shuffle(poolWrong);
+                shuffle(poolWeak);
+                shuffle(poolNewHard);
+                shuffle(poolUnseenFallback);
+
+                // 6. Quota calculations with automatic deficit rollover
+                const quotaWrong = Math.round(totalTarget * 0.5); // 50%
+                const quotaWeak = Math.round(totalTarget * 0.3);  // 30%
+                const quotaNew = totalTarget - quotaWrong - quotaWeak; // 20%
+
+                const selectedQuestions = [];
+                const pickedIds = new Set();
+                const questionOrigins = {}; // qId -> 'wrong' | 'weak' | 'new'
+
+                // Pick from Pool 1 (Wrong)
+                const takeWrong = Math.min(quotaWrong, poolWrong.length);
+                for (let i = 0; i < takeWrong; i++) {
+                    const q = poolWrong[i];
+                    selectedQuestions.push(q);
+                    pickedIds.add(Number(q.id));
+                    questionOrigins[q.id] = 'wrong';
+                }
+
+                // Pick from Pool 2 (Weak subcategories)
+                const neededWeak = quotaWeak + (quotaWrong - takeWrong); // deficit rollover from wrong
+                let takeWeakCount = 0;
+                for (const q of poolWeak) {
+                    if (takeWeakCount >= neededWeak || selectedQuestions.length >= totalTarget) break;
+                    if (!pickedIds.has(Number(q.id))) {
+                        selectedQuestions.push(q);
+                        pickedIds.add(Number(q.id));
+                        questionOrigins[q.id] = 'weak';
+                        takeWeakCount++;
+                    }
+                }
+
+                // Pick from Pool 3 (New medium / hard progression)
+                for (const q of poolNewHard) {
+                    if (selectedQuestions.length >= totalTarget) break;
+                    if (!pickedIds.has(Number(q.id))) {
+                        selectedQuestions.push(q);
+                        pickedIds.add(Number(q.id));
+                        questionOrigins[q.id] = 'new';
+                    }
+                }
+
+                // Final safety fallback from poolUnseenFallback or poolByExam if needed
+                if (selectedQuestions.length < totalTarget) {
+                    for (const q of poolUnseenFallback) {
+                        if (selectedQuestions.length >= totalTarget) break;
+                        if (!pickedIds.has(Number(q.id))) {
+                            selectedQuestions.push(q);
+                            pickedIds.add(Number(q.id));
+                            questionOrigins[q.id] = 'new';
+                        }
+                    }
+                }
+                if (selectedQuestions.length < totalTarget) {
+                    for (const q of poolByExam) {
+                        if (selectedQuestions.length >= totalTarget) break;
+                        if (!pickedIds.has(Number(q.id))) {
+                            selectedQuestions.push(q);
+                            pickedIds.add(Number(q.id));
+                            questionOrigins[q.id] = 'new';
+                        }
+                    }
+                }
+
+                shuffle(selectedQuestions);
+
+                const countWrong = selectedQuestions.filter(q => questionOrigins[q.id] === 'wrong').length;
+                const countWeak = selectedQuestions.filter(q => questionOrigins[q.id] === 'weak').length;
+                const countNew = selectedQuestions.filter(q => questionOrigins[q.id] === 'new').length;
+
+                const responseDraft = {
+                    draft: true,
+                    is_smart_recovery: true,
+                    title: `⚡ Temă Recuperare: ${targetStudent}`,
+                    student_username: targetStudent,
+                    exam_type: examType,
+                    target_length: selectedQuestions.length,
+                    deadline: finalDeadline,
+                    questions_ids: selectedQuestions.map(q => q.id),
+                    status: 'pending',
+                    recovery_meta: {
+                        from_wrong_count: countWrong,
+                        from_weak_count: countWeak,
+                        from_new_count: countNew,
+                        weak_subcategories: weakSubcategoryNames,
+                        total_wrong_pool: poolWrong.length,
+                        question_origins: questionOrigins
+                    }
+                };
+
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(responseDraft)
+                };
+            }
+
+            if (action === 'bulk_assign' || body.action === 'bulk_assign') {
+                const student_usernames = Array.isArray(body.student_usernames) ? body.student_usernames : (Array.isArray(body.students) ? body.students : []);
+                const questions_ids = Array.isArray(body.questions_ids) ? body.questions_ids.map(n => Number(n)) : [];
+                const preset_id = body.preset_id ? Number(body.preset_id) : null;
+                const title = (body.title || '').trim();
+                const exam_type = body.exam_type || 'Diverse';
+                const deadline = body.deadline;
+
+                if (student_usernames.length === 0) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Trebuie să selectezi cel puțin un elev.' }) };
+                }
+
+                if (questions_ids.length === 0) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Testul nu conține întrebări.' }) };
+                }
+
+                if (!deadline) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Termenul limită este obligatoriu.' }) };
+                }
+
+                const assignedRecords = student_usernames.map(username => {
+                    const rec = {
+                        student_username: String(username).trim(),
+                        exam_type: exam_type,
+                        target_length: questions_ids.length,
+                        deadline: deadline,
+                        questions_ids: questions_ids,
+                        status: 'pending'
+                    };
+                    if (preset_id) rec.preset_id = preset_id;
+                    if (title) rec.title = title;
+                    return rec;
+                });
+
                 const insertRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(assignedRecords)
+                });
+
+                if (!insertRes.ok) {
+                    const errText = await insertRes.text();
+                    // Fallback graceful dacă coloanele title sau preset_id nu există încă în DB
+                    if (errText.includes('preset_id') || errText.includes('title') || errText.includes('column')) {
+                        const fallbackRecords = student_usernames.map(username => ({
+                            student_username: String(username).trim(),
+                            exam_type: exam_type,
+                            target_length: questions_ids.length,
+                            deadline: deadline,
+                            questions_ids: questions_ids,
+                            status: 'pending'
+                        }));
+                        const fallbackRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests`, {
+                            method: 'POST',
+                            headers: {
+                                'apikey': supabaseKey,
+                                'Authorization': `Bearer ${supabaseKey}`,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=representation'
+                            },
+                            body: JSON.stringify(fallbackRecords)
+                        });
+                        if (!fallbackRes.ok) throw new Error(await fallbackRes.text());
+                        const insertedFallback = await fallbackRes.json();
+                        return { statusCode: 201, headers, body: JSON.stringify({ success: true, count: insertedFallback.length, assigned_count: insertedFallback.length, assigned: insertedFallback }) };
+                    }
+                    throw new Error(errText);
+                }
+
+                const inserted = await insertRes.json();
+                return { statusCode: 201, headers, body: JSON.stringify({ success: true, count: inserted.length, assigned_count: inserted.length, assigned: inserted }) };
+            }
+
+            if (body.save_draft) {
+                const draftRecord = {
+                    student_username: body.student_username,
+                    exam_type: body.exam_type,
+                    target_length: body.target_length,
+                    deadline: body.deadline,
+                    questions_ids: body.questions_ids,
+                    status: 'pending'
+                };
+                if (body.title) draftRecord.title = body.title;
+                if (body.preset_id) draftRecord.preset_id = body.preset_id;
+
+                let insertRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests`, {
                     method: 'POST',
                     headers: { 
                         'apikey': supabaseKey, 
@@ -150,16 +513,28 @@ exports.handler = async function(event, context) {
                         'Content-Type': 'application/json', 
                         'Prefer': 'return=representation' 
                     },
-                    body: JSON.stringify({
-                        student_username: body.student_username,
-                        exam_type: body.exam_type,
-                        target_length: body.target_length,
-                        deadline: body.deadline,
-                        questions_ids: body.questions_ids,
-                        status: 'pending'
-                    })
+                    body: JSON.stringify(draftRecord)
                 });
-                if (!insertRes.ok) throw new Error(await insertRes.text());
+                if (!insertRes.ok) {
+                    const errText = await insertRes.text();
+                    if (errText.includes('title') || errText.includes('preset_id') || errText.includes('column')) {
+                        delete draftRecord.title;
+                        delete draftRecord.preset_id;
+                        insertRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests`, {
+                            method: 'POST',
+                            headers: { 
+                                'apikey': supabaseKey, 
+                                'Authorization': `Bearer ${supabaseKey}`, 
+                                'Content-Type': 'application/json', 
+                                'Prefer': 'return=representation' 
+                            },
+                            body: JSON.stringify(draftRecord)
+                        });
+                        if (!insertRes.ok) throw new Error(await insertRes.text());
+                    } else {
+                        throw new Error(errText);
+                    }
+                }
                 const inserted = await insertRes.json();
                 return { statusCode: 201, headers, body: JSON.stringify(inserted[0]) };
             }
@@ -168,15 +543,12 @@ exports.handler = async function(event, context) {
                 return { statusCode: 400, headers, body: JSON.stringify({ error: 'Toate câmpurile sunt obligatorii.' }) };
             }
 
-            // 1. Fetch all questions for requested category
-            const qResponse = await fetch(`${supabaseUrl}/rest/v1/questions?select=id,exam_type,category,subcategory`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-            });
-            if (!qResponse.ok) throw new Error(await qResponse.text());
-            let allQuestions = await qResponse.json();
+            const { fetchAllSupabaseRows } = require('./_utils');
+            // 1. Fetch all questions for requested category with pagination
+            let allQuestions = await fetchAllSupabaseRows(`${supabaseUrl}/rest/v1/questions?select=id,exam_type,category,subcategory`, supabaseKey);
 
             let categoryQuestions = allQuestions;
-            if (exam_type !== 'Diverse') {
+            if (exam_type !== 'Toate') {
                 categoryQuestions = allQuestions.filter(q => (q.exam_type || 'Diverse').includes(exam_type));
             }
 
@@ -222,13 +594,82 @@ exports.handler = async function(event, context) {
                 const pastResults = await resultsResponse.json();
                 for (const res of pastResults) {
                     if (res.test_type && res.test_type.startsWith('progress_')) continue; // exclude partials
-                    const details = res.details_json || [];
-                    for (const d of details) {
-                        if (d && d.id !== undefined) {
-                            lastQuestionStatus[d.id] = !!d.isCorrect;
+                    
+                    if (res.test_type === 'category_coverage') {
+                        const masteredList = Array.isArray(res.details_json) ? res.details_json : [];
+                        masteredList.forEach(id => {
+                            const qId = Number(id);
+                            if (!isNaN(qId)) lastQuestionStatus[qId] = true;
+                        });
+
+                        let pWrongs = res.answers_json;
+                        if (typeof pWrongs === 'string') {
+                            try { pWrongs = JSON.parse(pWrongs); } catch (e) { pWrongs = []; }
+                        }
+                        if (Array.isArray(pWrongs)) {
+                            pWrongs.forEach(item => {
+                                if (item && (item.id !== undefined || item.question_id !== undefined)) {
+                                    const qId = Number(item.id !== undefined ? item.id : item.question_id);
+                                    if (!isNaN(qId) && lastQuestionStatus[qId] !== true) {
+                                        lastQuestionStatus[qId] = false;
+                                    }
+                                }
+                            });
+                        } else if (pWrongs && typeof pWrongs === 'object') {
+                            Object.keys(pWrongs).forEach(key => {
+                                const qId = Number(key);
+                                if (!isNaN(qId) && lastQuestionStatus[qId] !== true) {
+                                    lastQuestionStatus[qId] = false;
+                                }
+                            });
+                        }
+                        continue;
+                    }
+
+                    let details = res.details_json;
+                    if (typeof details === 'string') {
+                        try { details = JSON.parse(details); } catch(e) { details = []; }
+                    }
+                    if (Array.isArray(details)) {
+                        for (const d of details) {
+                            if (!d) continue;
+                            const qId = Number(d.id !== undefined ? d.id : d.number);
+                            if (isNaN(qId)) continue;
+                            const isCor = !!(d.isCorrect === true || d.is_correct === true || d.correct === true || (d.studentAnswer !== null && d.studentAnswer !== undefined && d.correctAnswer !== undefined && d.studentAnswer === d.correctAnswer));
+                            if (isCor) {
+                                lastQuestionStatus[qId] = true;
+                            } else if (lastQuestionStatus[qId] !== true) {
+                                lastQuestionStatus[qId] = false;
+                            }
                         }
                     }
                 }
+            }
+
+            // Also fetch pending assigned tests so questions already assigned to the student are marked 'assigned' and not treated as 'unseen'
+            try {
+                const pendingAssignedRes = await fetch(`${supabaseUrl}/rest/v1/assigned_tests?student_username=ilike.${encodedUser}&status=eq.pending&select=questions_ids`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                if (pendingAssignedRes.ok) {
+                    const pendingTests = await pendingAssignedRes.json();
+                    for (const pt of pendingTests) {
+                        let qIds = pt.questions_ids;
+                        if (typeof qIds === 'string') {
+                            try { qIds = JSON.parse(qIds); } catch(e) { qIds = []; }
+                        }
+                        if (Array.isArray(qIds)) {
+                            for (const id of qIds) {
+                                const qNum = Number(id);
+                                if (!isNaN(qNum) && lastQuestionStatus[qNum] === undefined) {
+                                    lastQuestionStatus[qNum] = 'assigned';
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error('Error fetching pending assigned tests in manage-assigned-tests:', e);
             }
 
             // 3. Selection with Diverse priority hierarchy and subcategory balancing
@@ -276,64 +717,22 @@ exports.handler = async function(event, context) {
 
             // selected array is already initialized with preselected ones
 
-            if (exam_type === 'Diverse') {
-                // LOGICA SPECIALA DIVERSE:
-                // 1. Diverse nefăcute
-                // 2. Diverse greșite
-                // 3. Alte categorii (Bac, Poli, Academie) nefăcute - STRICT RANDOM & echilibrate
-                // 4. Alte categorii greșite
-                // 5. Diverse corecte
-                // 6. Alte categorii corecte
-                const divPool = allQuestions.filter(q => (q.exam_type || '').includes('Diverse'));
-                const otherPool = allQuestions.filter(q => !(q.exam_type || '').includes('Diverse'));
+            const priority1_unseen = categoryQuestions.filter(q => lastQuestionStatus[q.id] === undefined);
+            const priority2_wrong = categoryQuestions.filter(q => lastQuestionStatus[q.id] === false);
+            const priority3_correct = categoryQuestions.filter(q => lastQuestionStatus[q.id] === true);
 
-                const div_unseen = divPool.filter(q => lastQuestionStatus[q.id] === undefined);
-                const div_wrong = divPool.filter(q => lastQuestionStatus[q.id] === false);
-                const div_correct = divPool.filter(q => lastQuestionStatus[q.id] === true);
+            shuffle(priority1_unseen);
+            shuffle(priority2_wrong);
+            shuffle(priority3_correct);
 
-                const other_unseen = otherPool.filter(q => lastQuestionStatus[q.id] === undefined);
-                const other_wrong = otherPool.filter(q => lastQuestionStatus[q.id] === false);
-                const other_correct = otherPool.filter(q => lastQuestionStatus[q.id] === true);
-
-                shuffle(div_unseen); shuffle(div_wrong); shuffle(div_correct);
-                shuffle(other_unseen); shuffle(other_wrong); shuffle(other_correct);
-
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(div_unseen, target_length - selected.length));
-                }
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(div_wrong, target_length - selected.length));
-                }
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(other_unseen, target_length - selected.length));
-                }
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(other_wrong, target_length - selected.length));
-                }
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(div_correct, target_length - selected.length));
-                }
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(other_correct, target_length - selected.length));
-                }
-            } else {
-                const priority1_unseen = categoryQuestions.filter(q => lastQuestionStatus[q.id] === undefined);
-                const priority2_wrong = categoryQuestions.filter(q => lastQuestionStatus[q.id] === false);
-                const priority3_correct = categoryQuestions.filter(q => lastQuestionStatus[q.id] === true);
-
-                shuffle(priority1_unseen);
-                shuffle(priority2_wrong);
-                shuffle(priority3_correct);
-
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(priority1_unseen, target_length - selected.length));
-                }
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(priority2_wrong, target_length - selected.length));
-                }
-                if (selected.length < target_length) {
-                    selected.push(...pickDiverseAware(priority3_correct, target_length - selected.length));
-                }
+            if (selected.length < target_length) {
+                selected.push(...pickDiverseAware(priority1_unseen, target_length - selected.length));
+            }
+            if (selected.length < target_length) {
+                selected.push(...pickDiverseAware(priority2_wrong, target_length - selected.length));
+            }
+            if (selected.length < target_length) {
+                selected.push(...pickDiverseAware(priority3_correct, target_length - selected.length));
             }
 
             shuffle(selected);
@@ -413,7 +812,7 @@ exports.handler = async function(event, context) {
                 }
                 let allQuestions = await qResponse.json();
                 let categoryQuestions = allQuestions;
-                if (targetExamType !== 'Diverse') {
+                if (targetExamType !== 'Toate') {
                     categoryQuestions = allQuestions.filter(q => (q.exam_type || 'Diverse').includes(targetExamType));
                 }
 

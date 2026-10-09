@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ro">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Politica de Confidențialitate | AcaDe-QUIZ</title>
+    <meta name="description" content="Politica de confidențialitate și protecția datelor cu caracter personal (GDPR) pe platforma AcaDe-QUIZ.">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="apple-touch-icon" href="/SIGLA2.jpg">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        :root {
+            --bg-body: #0a0a1e;
+            --card-bg: rgba(18, 18, 38, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-glow: rgba(124, 106, 255, 0.15);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: #f1f5f9;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.7;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .privacy-container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 40px 20px 80px 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .privacy-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .privacy-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #fff;
+        }
+
+        .privacy-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            object-fit: cover;
+        }
+
+        .privacy-brand-text {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-back:hover {
+            background: rgba(124, 106, 255, 0.2);
+            border-color: #7c6aff;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .privacy-hero {
+            text-align: center;
+            margin-bottom: 45px;
+        }
+
+        .privacy-badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            margin-bottom: 16px;
+        }
+
+        .privacy-title {
+            font-size: 34px;
+            font-weight: 900;
+            margin: 0 0 14px 0;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .privacy-updated {
+            color: var(--text-secondary, #94a3b8);
+            font-size: 14px;
+        }
+
+        .privacy-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 32px 28px;
+            margin-bottom: 28px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 0 0 18px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title span.icon {
+            font-size: 22px;
+        }
+
+        .privacy-card p {
+            color: #cbd5e1;
+            font-size: 15px;
+            margin: 0 0 16px 0;
+        }
+
+        .privacy-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        .privacy-card ul {
+            margin: 0 0 16px 0;
+            padding-left: 24px;
+            color: #cbd5e1;
+        }
+
+        .privacy-card li {
+            margin-bottom: 8px;
+            font-size: 14.5px;
+        }
+
+        .highlight-box {
+            background: rgba(124, 106, 255, 0.08);
+            border-left: 3px solid #7c6aff;
+            padding: 14px 18px;
+            border-radius: 0 8px 8px 0;
+            margin: 16px 0;
+            font-size: 14px;
+            color: #e2e8f0;
+        }
+
+        .highlight-box.green {
+            background: rgba(16, 185, 129, 0.08);
+            border-left-color: #10b981;
+        }
+
+        .highlight-box.amber {
+            background: rgba(251, 191, 36, 0.08);
+            border-left-color: #fbbf24;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            padding: 12px 16px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: #cbd5e1;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .contact-box {
+            background: linear-gradient(135deg, rgba(124, 106, 255, 0.15), rgba(56, 189, 248, 0.15));
+            border: 1px solid rgba(124, 106, 255, 0.35);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .contact-email {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            color: #38bdf8;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 8px;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            transition: all 0.2s;
+        }
+
+        .contact-email:hover {
+            color: #fff;
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 640px) {
+            .privacy-container {
+                padding: 24px 16px 60px 16px;
+            }
+
+            .privacy-card {
+                padding: 22px 18px;
+            }
+
+            .privacy-title {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Animated Orbs -->
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+
+    <div class="privacy-container">
+        <!-- Navigation Header -->
+        <header class="privacy-nav">
+            <a href="/" class="privacy-brand">
+                <img src="/SIGLA2.jpg" alt="AcaDe-QUIZ Logo" class="privacy-logo">
+                <span class="privacy-brand-text"><span class="gradient-text">AcaDe-QUIZ</span></span>
+            </a>
+            <a href="/" class="btn-back">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+                <span>Înapoi la platformă</span>
+            </a>
+        </header>
+
+        <!-- Hero Section -->
+        <div class="privacy-hero">
+            <div class="privacy-badge">Protecția Datelor & GDPR</div>
+            <h1 class="privacy-title">Politica de Confidențialitate</h1>
+            <div class="privacy-updated">Ultima actualizare: 9 octombrie 2026</div>
+        </div>
+
+        <!-- 1. Cine suntem -->
+        <div class="privacy-card">
+            <h2 class="section-title"><span class="icon">🏛️</span> 1. Operatorul Datelor</h2>
+            <p>
+                Prezenta Politică de Confidențialitate stabilește modul în care platforma educațională <strong>AcaDe-QUIZ</strong> colectează, utilizează, stochează și protejează datele cu caracter personal ale utilizatorilor săi, în deplină conformitate cu <strong>Regulamentul General privind Protecția Datelor (GDPR - Regulamentul UE 2016/679)</strong> și <strong>Legea nr. 190/2018</strong>.
+            </p>
+            <p>
+                Platforma este administrată de <strong>Curcă Tudor-Mihai</strong>, mentor de informatică și coordonator educațional al proiectului <strong>AcaDe-QUIZ</strong> (denumit în continuare „Operatorul”).
+            </p>
+            <div class="highlight-box green">
+                🔒 <strong>Principiul nostru de bază:</strong> Colectăm exclusiv datele strict necesare desfășurării procesului educațional și evaluării performanței. Nu vindem, nu închiriem și nu transmitem datele tale către agenții de publicitate terțe.
+            </div>
+        </div>
+
+        <!-- 2. Ce date colectăm -->
+        <div class="privacy-card">
+            <h2 class="section-title"><span class="icon">📋</span> 2. Ce Date Colectăm și Scopul Prelucrării</h2>
+            
+            <p>Datele prelucrate diferă în funcție de calitatea utilizatorului pe platformă:</p>
+
+            <h3 style="font-size: 16px; color: #a78bfa; margin: 20px 0 10px 0;">A. Vizitatori care susțin Testul Inițial Gratuit (Lead-uri)</h3>
+            <p>Pentru utilizatorii care accesează testul introductiv de evaluare fără cont, colectăm:</p>
+            <ul>
+                <li><strong>Nume și prenume:</strong> pentru personalizarea raportului de evaluare.</li>
+                <li><strong>Număr de telefon (WhatsApp):</strong> utilizat exclusiv pentru trimiterea rezultatului detaliat, a diagnozei pe capitole și pentru a stabili sesiunea demonstrativă gratuită de analiză a lucrării.</li>
+                <li><strong>Răspunsurile la test, scorul, timpul de rezolvare și comportamentul la test</strong> (ex: numărul de părăsiri ale ferestrei — monitorizat anti-cheat): pentru calcularea corectă a nivelului inițial și stabilirea profilului de pregătire.</li>
+            </ul>
+
+            <h3 style="font-size: 16px; color: #a78bfa; margin: 24px 0 10px 0;">B. Elevi Înregistrați (Conturi Active)</h3>
+            <p>Pentru elevii înscriși în programele de pregătire intensivă, prelucrăm:</p>
+            <ul>
+                <li><strong>Nume de utilizator și parolă securizată:</strong> pentru autentificarea securizată și gestionarea profilului educațional.</li>
+                <li><strong>Număr de telefon:</strong> pentru comunicarea temelor noi, atenționărilor de deadline și menținerea legăturii cu profesorul.</li>
+                <li><strong>Progresul educațional complet:</strong> istoricul tuturor testelor susținute, rezolvările per întrebare, temele alocate și starea lor, nivelul de stăpânire per categorie (Fundamente, Organizarea Datelor, Subprograme, Backtracking, Grafuri și Arbori), numărul de cerințe rezolvate corect și nota estimată curentă.</li>
+                <li><strong>Perioada de valabilitate a abonamentului:</strong> pentru gestionarea accesului conform pachetului educațional contractat.</li>
+            </ul>
+
+            <h3 style="font-size: 16px; color: #a78bfa; margin: 24px 0 10px 0;">C. Date Tehnice & Securitate</h3>
+            <ul>
+                <li><strong>Adresă IP:</strong> prelucrată automat în mod temporar pe server exclusiv pentru mecanismele de protecție anti-brute-force (rate-limiting împotriva atacurilor automate).</li>
+            </ul>
+
+            <h3 style="font-size: 16px; color: #a78bfa; margin: 24px 0 10px 0;">D. Profilarea Educațională și Absența Efectelor Juridice (Art. 22 GDPR)</h3>
+            <p>
+                Platforma utilizează mecanisme automate de diagnoză pentru analiza răspunsurilor, determinarea gradului de stăpânire a capitolelor de informatică, calcularea scorurilor și a notei estimate curente raportate la baremele de examen.
+            </p>
+            <div class="highlight-box green">
+                🧠 <strong>Garanție esențială conform Art. 22 GDPR:</strong> Această analiză și profilare educațională are un caracter <u>strict didactic, orientativ și formativ</u>. Ea <strong>nu produce efecte juridice</strong> și <strong>nu te afectează într-un mod similar semnificativ</strong> (de exemplu, nu se refuză accesul la platformă sau la educație pe baza unui algoritm automat). Orice decizie privitoare la parcursul educațional al elevului, recomandările de lucru sau continuarea parteneriatului de mentorat se realizează prin intervenție umană directă din partea profesorului coordonator.
+            </div>
+        </div>
+
+        <!-- 3. Temeiul legal -->
+        <div class="privacy-card">
+            <h2 class="section-title"><span class="icon">⚖️</span> 3. Temeiul Legal al Prelucrării</h2>
+            <p>Prelucrarea datelor se bazează pe următoarele temeiuri juridice prevăzute de Art. 6 din GDPR:</p>
+            <ul>
+                <li><strong>Consimțământul tău explicit (Art. 6(1)(a) GDPR):</strong> acordat prin bifarea căsuței de acord înaintea începerii testului introductiv gratuit, pentru comunicarea rezultatelor și sesiunii introductive pe WhatsApp.</li>
+                <li><strong>Executarea contractului educațional (Art. 6(1)(b) GDPR):</strong> pentru furnizarea serviciilor de pregătire, evaluare, alocare de teme și monitorizare a elevilor înscriși.</li>
+                <li><strong>Obligația legală a Operatorului (Art. 6(1)(c) GDPR):</strong> pentru emiterea și păstrarea documentelor financiar-fiscale (facturi, chitanțe, registre contabile obligatorii) conform legislației financiar-contabile din România.</li>
+                <li><strong>Interesul legitim al Operatorului (Art. 6(1)(f) GDPR):</strong> pentru garantarea securității tehnice a platformei, prevenirea fraudării testelor și asigurarea funcționării fără întreruperi a serverelor.</li>
+            </ul>
+        </div>
+
+        <!-- 4. Subprocesatori & Destinatari -->
+        <div class="privacy-card">
+            <h2 class="section-title"><span class="icon">🌐</span> 4. Destinatari și Furnizori de Servicii (Subprocesatori)</h2>
+            <p>Pentru a livra o experiență rapidă și securizată, folosim parteneri tehnologici de nivel enterprise:</p>
+            
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Partener</th>
+                            <th>Rol & Serviciu</th>
+                            <th>Garanții de Securitate & Transfer Internațional</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Supabase Inc.</strong> (SUA)</td>
+                            <td>Găzduire bază de date PostgreSQL criptată și stocare fișiere/imagini</td>
+                            <td>EU-U.S. Data Privacy Framework (DPF), Clauze Contractuale Standard (SCC), Row Level Security (RLS)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Netlify Inc.</strong> (SUA)</td>
+                            <td>Găzduire CDN, Edge Functions și procesare Serverless</td>
+                            <td>EU-U.S. Data Privacy Framework (DPF), Clauze Contractuale Standard (SCC), Certificare SOC 2, TLS 1.3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Resend</strong> (SUA)</td>
+                            <td>Trimiterea automată a notificărilor și rapoartelor către profesor</td>
+                            <td>EU-U.S. Data Privacy Framework (DPF), Clauze Contractuale Standard (SCC), criptare end-to-end la tranzit</td>
+                        </tr>
+                        <tr>
+                            <td><strong>WhatsApp (Meta Platforms Inc.)</strong> (SUA)</td>
+                            <td>Canal direct de comunicare pentru raportul evaluării și detalii pregătire</td>
+                            <td>EU-U.S. Data Privacy Framework (DPF), Clauze Contractuale Standard (SCC), criptare end-to-end conform politicilor Meta Platforms</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="highlight-box">
+                🌍 <strong>Transferul internațional al datelor (în afara UE/SEE):</strong> Furnizorii noștri de infrastructură tehnologică au servere sau entități mamă în Statele Unite. Transferul internațional de date către aceștia se realizează în temeiul <strong>Cadrului de Confidențialitate a Datelor UE-SUA (EU-U.S. Data Privacy Framework - DPF)</strong>, adoptat prin Decizia de Adecvare a Comisiei Europene din 10 iulie 2023, fiind completat de <strong>Clauzele Contractuale Standard (SCC)</strong> aprobate de Comisie, asigurând un nivel de protecție esențial echivalent cu cel din cadrul Uniunii Europene.
+            </div>
+            <p>Datele nu sunt înstrăinate sau transferate către alți terți în scopuri comerciale.</p>
+        </div>
+
+        <!-- 5. Cookie-uri & Stocare Locală -->
+        <div class="privacy-card">
+            <h2 class="section-title"><span class="icon">🍪</span> 5. Cookie-uri și Tehnologii de Stocare Locală</h2>
+            <div class="highlight-box green">
+                🌱 <strong>Zero Tracking Publicitar:</strong> AcaDe-QUIZ <u>NU</u> folosește cookie-uri de urmărire (nu folosim Facebook Pixel, Google Ads, scripturi de retargeting sau profilare comercială).
+            </div>
+            <p>Utilizăm strict mecanisme tehnice necesare funcționării aplicației pe dispozitivul tău:</p>
+            <ul>
+                <li><strong>Local Storage & Session Storage:</strong> Salvează token-ul de sesiune al elevului (`active_student_token`), răspunsurile temporare în timpul testului pentru a nu pierde progresul în cazul unei pene de curent sau reîncărcări accidentale și întrebările curente.</li>
+                <li><strong>Service Worker Cache (`acade-quiz-v13`):</strong> Permite încărcarea instantanee a platformei ca Progressive Web App (PWA) și funcționarea fiabilă offline.</li>
+                <li><strong>Cookie-ul de Administrator (`admin_token`):</strong> Un cookie strict tehnic, securizat (`HttpOnly`, `SameSite=Lax`), folosit exclusiv pentru accesul profesorului în panoul administrativ.</li>
+            </ul>
+        </div>
+
+        <!-- 6. Perioada de Retenție -->
+        <div class="privacy-card">
+            <h2 class="section-title"><span class="icon">⏳</span> 6. Cât Timp Păstrăm Datele Tale</h2>
+            <p>Datele cu caracter personal sunt stocate în mod proporțional, diferențiat în funcție de scopul educațional sau de obligațiile de drept public:</p>
+            <ul>
+                <li><strong>Datele vizitatorilor (Lead-uri Test Gratuit):</strong> Păstrate pentru o perioadă de <strong>12 luni</strong> de la momentul susținerii testului, pentru a permite compararea evoluției în cazul înscrierii ulterioare, sau până la exercitarea dreptului de ștergere.</li>
+                <li><strong>Datele educaționale ale elevilor înscriși:</strong> Istoricul testelor, rezolvările per întrebare, temele și statisticile de învățare sunt păstrate pe toată durata contractului de pregătire și încă <strong>1 an</strong> după finalizarea examenului (Bacalaureat / Admitere), exclusiv pentru consultarea istoricului de studiu sau eliberarea de statistici educaționale, cu excepția cazului în care soliciți ștergerea anticipată.</li>
+                <li><strong>Documentele financiar-contabile și fiscale (Arhivare legală obligatorie):</strong> Datele de facturare, facturile emise și documentele justificative privind plățile se păstrează conform legislației financiar-contabile din România pentru o perioadă obligatorie de <strong>5 ani</strong> (documente justificative fiscale conform Codului de Procedură Fiscală) sau până la <strong>10 ani</strong> (registrele de contabilitate și situațiile financiare conform Legii contabilității nr. 82/1991), termen calculat de la 1 iulie a anului următor celui de gestiune. Aceste date nu pot face obiectul unei ștergeri premature la cerere, păstrarea lor decurgând dintr-o obligație legală expresă.</li>
+                <li><strong>Log-urile tehnice de securitate:</strong> Reținute temporar (maxim 30 de zile) pentru diagnosticarea problemelor de conectivitate și protecție anti-abuz.</li>
+            </ul>
+        </div>
+
+        <!-- 7. Drepturile Tale -->
+        <div class="privacy-card">
+            <h2 class="section-title"><span class="icon">🛡️</span> 7. Drepturile Tale Conform GDPR</h2>
+            <p>În calitate de persoană vizată, beneficiezi de drepturi depline garantate prin lege:</p>
+            <ul>
+                <li><strong>Dreptul de acces (Art. 15):</strong> Poți solicita oricând o confirmare a datelor prelucrate și o copie a rezultatelor tale.</li>
+                <li><strong>Dreptul la rectificare (Art. 16):</strong> Poți cere corectarea numelui sau a numărului de telefon dacă au fost introduse greșit.</li>
+                <li><strong>Dreptul la ștergerea datelor („Dreptul de a fi uitat” - Art. 17):</strong> Poți solicita ștergerea definitivă a datelor tale educaționale din baza de date a platformei (cu excepția datelor financiare supuse termenului legal de arhivare menționat la pct. 6).</li>
+                <li><strong>Dreptul la restricționarea prelucrării (Art. 18):</strong> Poți cere limitarea temporară a utilizării datelor în anumite condiții.</li>
+                <li><strong>Dreptul la portabilitatea datelor (Art. 20):</strong> Poți solicita istoricul testelor într-un format structurat, utilizat în mod curent.</li>
+                <li><strong>Dreptul de opoziție și refuz al deciziilor automatizate (Art. 21 și Art. 22):</strong> Dreptul de a nu face obiectul unei decizii bazate exclusiv pe prelucrarea automată sau profilare care produce efecte juridice, precum și dreptul de a solicita intervenție umană directă din partea mentorului.</li>
+                <li><strong>Dreptul de retragere a consimțământului:</strong> Dacă ai fost de acord să fii contactat pe WhatsApp, poți oricând să transmiți un mesaj prin care să renunți la viitoarele contactări.</li>
+                <li><strong>Dreptul de a depune o plângere:</strong> Ai dreptul de a te adresa <em>Autorității Naționale de Supraveghere a Prelucrării Datelor cu Caracter Personal (ANSPDCP)</em> la <a href="https://www.dataprotection.ro" target="_blank" rel="noopener" style="color: #38bdf8;">www.dataprotection.ro</a> în cazul în care consideri că drepturile nu ți-au fost respectate.</li>
+            </ul>
+        </div>
+
+        <!-- 8. Protecția Minorilor -->
+        <div class="privacy-card">
+            <h2 class="section-title"><span class="icon">👶</span> 8. Protecția Minorilor</h2>
+            <p>
+                Platforma AcaDe-QUIZ este concepută pentru elevii de liceu și candidații la învățământul universitar. În cazul elevilor cu vârsta sub 16 ani, completarea formularului și participarea la pregătire se realizează cu informarea și acordul părintelui sau al tutorelui legal.
+            </p>
+            <div class="highlight-box amber">
+                👨‍👩‍👧 Părinții pot solicita în orice moment consultarea lucrărilor, a rapoartelor de progres sau ștergerea contului copilului printr-o simplă cerere transmisă la adresa de email a Operatorului.
+            </div>
+        </div>
+
+        <!-- 9. Contact -->
+        <div class="privacy-card" style="text-align: center;">
+            <h2 class="section-title" style="justify-content: center;"><span class="icon">📬</span> 9. Cum Ne Poți Contacta</h2>
+            <p>
+                Pentru orice întrebare referitoare la protecția datelor personale, modificarea sau ștergerea informațiilor tale, ne poți scrie direct la adresa de email dedicată:
+            </p>
+            <div class="contact-box">
+                <div style="font-size: 14px; color: #cbd5e1; margin-bottom: 6px;">Adresă oficială solicitări GDPR:</div>
+                <a href="mailto:acadeinformatica10@gmail.com" class="contact-email">acadeinformatica10@gmail.com</a>
+                <div style="font-size: 13px; color: #94a3b8; margin-top: 10px;">
+                    Răspundem cu promptitudine la orice solicitare în termen de maximum 30 de zile, fără niciun cost.
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            © 2026 AcaDe-QUIZ • Curcă Tudor-Mihai • Toate drepturile rezervate.
+        </div>
+    </div>
+</body>
+
+</html>

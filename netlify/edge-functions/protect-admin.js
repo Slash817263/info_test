@@ -35,11 +35,11 @@ async function verifyJwt(token, secret) {
 export default async (req, context) => {
     const url = new URL(req.url);
 
-    const isAdminPage = url.pathname.startsWith('/admin.html') || url.pathname.startsWith('/assets/js/admin.js') || url.pathname.startsWith('/assets/css/admin.css');
+    const isAdminPage = url.pathname.startsWith('/admin.html') || url.pathname.startsWith('/assets/js/admin.js');
     
     // We want to intercept admin API routes too to inject the header from cookie
     const adminApiRoutes = [
-        '/_utils', 'upload-image', 'update-phone', 'manage-', 'fetch-', 'delete-result', 'send-report-email'
+        '/_utils', 'upload-image', 'update-', 'manage-', 'fetch-', 'delete-result', 'send-report-email'
     ];
     const isApiRoute = url.pathname.startsWith('/.netlify/functions/') && adminApiRoutes.some(route => url.pathname.includes(route));
 

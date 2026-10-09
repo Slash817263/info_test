@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const utils = require('./_utils');
 
 let rateLimitCache = {};
 const RATE_LIMIT_MS = 60000;
@@ -50,7 +51,7 @@ exports.handler = async function(event, context) {
         return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
     }
 
-    const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
+    const ip = utils.getClientIp(event);
     const now = Date.now();
     if (!rateLimitCache[ip]) {
         rateLimitCache[ip] = { count: 1, first: now };
@@ -59,6 +60,12 @@ exports.handler = async function(event, context) {
             rateLimitCache[ip] = { count: 1, first: now };
         } else {
             rateLimitCache[ip].count++;
+        }
+    }
+
+    if (Object.keys(rateLimitCache).length > 200) {
+        for (const k in rateLimitCache) {
+            if (now - rateLimitCache[k].first > RATE_LIMIT_MS) delete rateLimitCache[k];
         }
     }
 
@@ -138,6 +145,34 @@ exports.handler = async function(event, context) {
             };
         }
 
+        if (!Array.isArray(answers_json) || !Array.isArray(question_ids) || answers_json.length !== question_ids.length) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Invalid answers payload format or length mismatch.' })
+            };
+        }
+
+        if (new Set(question_ids).size !== question_ids.length) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Duplicate question IDs are not allowed.' })
+            };
+        }
+
+        const allIdsValid = question_ids.every(id => {
+            const num = Number(id);
+            return Number.isInteger(num) && num > 0;
+        });
+        if (!allIdsValid) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Toate ID-urile întrebărilor trebuie să fie numere întregi pozitive.' })
+            };
+        }
+
         const { isStudentSubscriptionActive } = require('./_utils.js');
         const isActive = await isStudentSubscriptionActive(supabaseUrl, supabaseKey, student_username);
         if (!isActive) {
@@ -165,24 +200,8 @@ exports.handler = async function(event, context) {
             }
         }
 
-        if (!Array.isArray(answers_json) || !Array.isArray(question_ids) || answers_json.length !== question_ids.length) {
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify({ error: 'Invalid answers payload format or length mismatch.' })
-            };
-        }
-
-        if (new Set(question_ids).size !== question_ids.length) {
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify({ error: 'Duplicate question IDs are not allowed.' })
-            };
-        }
-
         // Fetch the questions from Supabase to evaluate answers server-side
-        const idsString = question_ids.join(',');
+        const idsString = question_ids.map(id => parseInt(id, 10)).join(',');
         const qResponse = await fetch(`${supabaseUrl}/rest/v1/questions?id=in.(${idsString})`, {
             headers: {
                 'apikey': supabaseKey,
@@ -334,13 +353,9 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
 
-        // Get student gamification data & phone
+        // Get student phone
         let studentPhone = '';
-        let currentStreak = 0;
-        let lastActive = null;
-        let currentXp = 0;
-
-        const stdRes = await fetch(`${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(student_username)}&select=phone_number,current_streak,last_active_date,xp`, {
+        const stdRes = await fetch(`${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(student_username)}&select=phone_number`, {
             headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
         });
         
@@ -348,47 +363,7 @@ exports.handler = async function(event, context) {
             const stdData = await stdRes.json();
             if (stdData.length > 0) {
                 studentPhone = stdData[0].phone_number || '';
-                currentStreak = stdData[0].current_streak || 0;
-                lastActive = stdData[0].last_active_date || null;
-                currentXp = stdData[0].xp || 0;
             }
-        }
-
-        // Calculate Gamification Updates with Romanian timezone (Europe/Bucharest)
-        const getBucharestDateStr = (dateObj) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest' }).format(dateObj);
-        const today = new Date();
-        const todayStr = getBucharestDateStr(today);
-        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-        const yesterdayStr = getBucharestDateStr(yesterday);
-
-        let newStreak = currentStreak;
-        if (lastActive === yesterdayStr) {
-            newStreak += 1;
-        } else if (lastActive === todayStr) {
-            // Already active today, streak remains same
-        } else {
-            // Missed a day or first time
-            newStreak = 1;
-        }
-        const newXp = currentXp + earnedXp;
-
-        // Update Gamification in Supabase
-        const patchRes = await fetch(`${supabaseUrl}/rest/v1/students?username=ilike.${encodeURIComponent(student_username)}`, {
-            method: 'PATCH',
-            headers: {
-                'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                current_streak: newStreak,
-                last_active_date: todayStr,
-                xp: newXp
-            })
-        });
-
-        if (!patchRes.ok) {
-            console.error('[save-result] Failed to update gamification data:', await patchRes.text());
         }
 
         // Trigger automatic email report delivery ONLY for introductory/initial test
@@ -456,12 +431,7 @@ exports.handler = async function(event, context) {
                 evaluatedDetails: clientDetails,
                 score: serverScore,
                 totalPoints: serverMaxPoints,
-                stats: difficultyStats,
-                gamification: {
-                    xpEarned: earnedXp,
-                    newTotalXp: newXp,
-                    newStreak: newStreak
-                }
+                stats: difficultyStats
             })
         };
     } catch (error) {

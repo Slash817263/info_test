@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const utils = require('./_utils');
 
 let rateLimitCache = {};
 const RATE_LIMIT_MS = 60000;
@@ -46,7 +47,7 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, headers, body: '' };
     }
 
-    const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
+    const ip = utils.getClientIp(event);
     const now = Date.now();
     if (!rateLimitCache[ip]) {
         rateLimitCache[ip] = { count: 1, first: now };
@@ -82,7 +83,8 @@ exports.handler = async function(event, context) {
             time_taken_ms,
             blur_count,
             answers_json,
-            question_ids
+            question_ids,
+            gdpr_consent
         } = body;
 
         // Validation
@@ -99,11 +101,11 @@ exports.handler = async function(event, context) {
             };
         }
 
-        if (!cleanPhone || cleanPhone.length < 8) {
+        if (gdpr_consent !== true) {
             return {
-                statusCode: 400,
+                statusCode: 403,
                 headers,
-                body: JSON.stringify({ error: 'Vă rugăm să introduceți un număr de telefon WhatsApp valid.' })
+                body: JSON.stringify({ error: 'Acces interzis: Consimțământul pentru Politica de Confidențialitate este obligatoriu pentru susținerea și evaluarea testului.' })
             };
         }
 
@@ -114,6 +116,14 @@ exports.handler = async function(event, context) {
             cleanPhone = '0' + cleanPhone.substring(2);
         } else if (cleanPhone.startsWith('7') && cleanPhone.length === 9) {
             cleanPhone = '0' + cleanPhone;
+        }
+
+        if (!cleanPhone || !/^07\d{8}$/.test(cleanPhone)) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Numărul de telefon trebuie să aibă exact 10 cifre și să înceapă cu 07 (ex: 07XXXXXXXX).' })
+            };
         }
 
         if (!Array.isArray(answers_json) || !Array.isArray(question_ids) || answers_json.length !== question_ids.length) {

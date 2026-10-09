@@ -28,6 +28,10 @@ exports.handler = async function(event, context) {
         }
     }
 
+    if (!isAdmin && !authenticatedUsername) {
+        return utils.createErrorResponse(401, 'Autentificare necesară pentru a actualiza numărul de telefon.', headers);
+    }
+
     try {
         const body = JSON.parse(event.body || '{}');
         const { student_id, username, phone_number, phone } = body;

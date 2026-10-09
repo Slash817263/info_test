@@ -1,33 +1,6 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-
-const fs = require('fs');
-const path = require('path');
-
-function getLiveEnv(key, fallback = '') {
-    try {
-        const envCandidates = [
-            path.resolve(__dirname, '../../.env'),
-            path.resolve(__dirname, '../.env'),
-            path.resolve(process.cwd(), '.env')
-        ];
-        for (const p of envCandidates) {
-            if (fs.existsSync(p)) {
-                const content = fs.readFileSync(p, 'utf8');
-                for (const line of content.split('\n')) {
-                    const trimmed = line.trim();
-                    if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
-                        const idx = trimmed.indexOf('=');
-                        const k = trimmed.slice(0, idx).trim();
-                        const v = trimmed.slice(idx + 1).trim();
-                        if (k === key) return v;
-                    }
-                }
-            }
-        }
-    } catch (e) {}
-    return process.env[key] || fallback;
-}
+const utils = require('./_utils');
 
 const rateLimitCache = {};
 
@@ -54,9 +27,9 @@ exports.handler = async function(event, context) {
     try {
         const body = JSON.parse(event.body || '{}');
         const { password } = body;
-        const adminSecret = getLiveEnv('ADMIN_SECRET', process.env.ADMIN_SECRET || '');
+        const adminSecret = utils.getLiveEnv('ADMIN_SECRET', process.env.ADMIN_SECRET || '');
 
-        const clientIp = event.headers['x-nf-client-connection-ip'] || event.headers['client-ip'] || 'unknown';
+        const clientIp = utils.getClientIp(event);
         const now = Date.now();
         if (!rateLimitCache[clientIp]) rateLimitCache[clientIp] = { attempts: 0, lockUntil: 0 };
         const record = rateLimitCache[clientIp];
@@ -103,6 +76,7 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({ success: true, message: 'Autentificare cu succes' })
         };
     } catch (e) {
+        console.error('Error in admin-login:', e);
         return {
             statusCode: 500,
             headers,

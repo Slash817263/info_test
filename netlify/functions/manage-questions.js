@@ -166,7 +166,7 @@ exports.handler = async function(event, context) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Numărul de opțiuni trebuie să fie între 2 și 6.' }) };
                 }
             }
-            if (safeBody.exam_type) {
+            if (safeBody.exam_type !== undefined) {
                 safeBody.exam_type = normalizeExamType(safeBody.exam_type);
             }
             if (safeBody.correct_index !== undefined) {
