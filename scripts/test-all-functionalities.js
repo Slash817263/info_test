@@ -412,7 +412,7 @@ async function runAllTests() {
         const frNoAuth = await fetchResults.handler({ httpMethod: 'GET', headers: {}, queryStringParameters: { id: '123' } });
         assertEqual(frNoAuth.statusCode, 401, 'fetch-results: Acces fără token returnează 401 Unauthorized');
 
-        const jwtSecret = process.env.JWT_SECRET || 'qazwsxedcrfvtgbyhnujm';
+        const jwtSecret = utils.getLiveEnv('JWT_SECRET', 'dummy-jwt-secret-for-testing');
         const aliceToken = jwt.sign({ username: 'alice', id: 1 }, jwtSecret, { expiresIn: '1h' });
 
         // Mismatched requested username: Alice tries to ask for Bob's results explicitly
@@ -451,7 +451,7 @@ async function runAllTests() {
         const upNoAuth = await uploadImage.handler({ httpMethod: 'POST', headers: {}, body: '{}' });
         assertEqual(upNoAuth.statusCode, 401, 'upload-image: Upload fără admin token returnează 401 Unauthorized');
 
-        const adminSecret = process.env.ADMIN_SECRET || 'Slash.918273';
+        const adminSecret = utils.getLiveEnv('ADMIN_SECRET', 'dummy-admin-secret-for-testing');
         const adminHeaders = { 'x-admin-token': adminSecret };
 
         // Test rejection of non-whitelisted MIME type (e.g. SVG / HTML)
@@ -572,7 +572,7 @@ async function runAllTests() {
         });
         assertEqual(alWrong.statusCode, 401, 'admin-login: Parolă greșită returnează 401 Parolă incorectă');
 
-        const liveAdminSecret = utils.getLiveEnv('ADMIN_SECRET', process.env.ADMIN_SECRET || 'Slash.918273');
+        const liveAdminSecret = utils.getLiveEnv('ADMIN_SECRET', 'dummy-admin-secret-for-testing');
         const alCorrect = await adminLogin.handler({
             httpMethod: 'POST',
             headers: { 'x-nf-client-connection-ip': '10.0.1.2' },
@@ -849,7 +849,7 @@ async function runAllTests() {
         assertEqual(unauthStatus.statusCode, 401, 'update-result-status: Acces fără admin token returnează 401 Unauthorized');
 
         const jwtMod = require('jsonwebtoken');
-        const validAdminToken = jwtMod.sign({ role: 'admin' }, process.env.ADMIN_SECRET || 'Slash.918273');
+        const validAdminToken = jwtMod.sign({ role: 'admin' }, utils.getLiveEnv('ADMIN_SECRET', 'dummy-admin-secret-for-testing'));
         const noIdStatus = await updateStatusMod.handler({
             httpMethod: 'POST',
             headers: { 'x-admin-token': validAdminToken },

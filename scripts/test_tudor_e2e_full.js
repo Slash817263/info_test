@@ -19,7 +19,7 @@ function getEnv() {
 }
 
 const env = getEnv();
-const ADMIN_SECRET = env.ADMIN_SECRET || 'secret';
+const ADMIN_SECRET = env.ADMIN_SECRET || 'dummy-admin-secret-for-testing';
 const SUPABASE_URL = env.SUPABASE_URL;
 const SUPABASE_KEY = env.SUPABASE_SERVICE_KEY;
 

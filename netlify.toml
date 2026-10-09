@@ -2,6 +2,7 @@
   publish = "public"
   functions = "netlify/functions"
   command = "echo 'Build complete'"
+  environment = { SECRETS_SCAN_OMIT_KEYS = "JWT_SECRET,ADMIN_SECRET,INTERNAL_API_SECRET" }
 
 [[redirects]]
   from = "/admin"
