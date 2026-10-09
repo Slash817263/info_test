@@ -1,6 +1,7 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
+  command = "echo 'Build complete'"
 
 [[redirects]]
   from = "/admin"
