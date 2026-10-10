@@ -365,25 +365,26 @@ exports.handler = async function(event, context) {
                 // Ordering logic (prioritize difficulty over mastery state):
                 // 1. Ușoare noi
                 // 2. Ușoare greșite anterior
-                // 3. Ușoare deja rezolvate
-                // 4. Medii noi
-                // 5. Medii greșite anterior
-                // 6. Medii deja rezolvate
-                // 7. Grele noi
-                // 8. Grele greșite anterior
-                // 9. Grele deja rezolvate
+                // 3. Medii noi
+                // 4. Medii greșite anterior
+                // 5. Grele noi
+                // 6. Grele greșite anterior
+                // 7. Ușoare deja rezolvate (fallback)
+                // 8. Medii deja rezolvate (fallback)
+                // 9. Grele deja rezolvate (fallback)
                 const sessionPool = [
                     // EASY
                     ...shuffle(unattemptedEasy),
                     ...shuffle(wrongEasy),
-                    ...shuffle(masteredEasy),
                     // MEDIUM
                     ...shuffle(unattemptedMedium),
                     ...shuffle(wrongMedium),
-                    ...shuffle(masteredMedium),
                     // HARD
                     ...shuffle(unattemptedHard),
                     ...shuffle(wrongHard),
+                    // MASTERED (FALLBACKS)
+                    ...shuffle(masteredEasy),
+                    ...shuffle(masteredMedium),
                     ...shuffle(masteredHard)
                 ];
 
