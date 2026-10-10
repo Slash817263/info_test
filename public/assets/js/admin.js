@@ -3205,6 +3205,14 @@ function renderManualSelectionList(isLoadMore = false) {
             unselectedList.push(q);
         }
     });
+    
+    // Sort by difficulty (easy -> medium -> hard)
+    const diffWeight = { 'easy': 1, 'medium': 2, 'hard': 3 };
+    const getWeight = q => diffWeight[q.difficulty || 'medium'] || 2;
+    
+    selectedList.sort((a, b) => getWeight(a) - getWeight(b));
+    unselectedList.sort((a, b) => getWeight(a) - getWeight(b));
+
     const sortedFiltered = [...selectedList, ...unselectedList];
 
     const toRender = sortedFiltered.slice(0, manualQuestionsRenderLimit);
