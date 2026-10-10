@@ -362,25 +362,28 @@ exports.handler = async function(event, context) {
                 const wrongHard = previouslyWrong.filter(q => q.difficulty === 'hard');
                 const masteredHard = alreadyMastered.filter(q => q.difficulty === 'hard');
 
-                // Ordering logic:
+                // Ordering logic (prioritize difficulty over mastery state):
                 // 1. Ușoare noi
-                // 2. Medii noi
-                // 3. Grele noi
-                // 4. Ușoare greșite anterior
+                // 2. Ușoare greșite anterior
+                // 3. Ușoare deja rezolvate
+                // 4. Medii noi
                 // 5. Medii greșite anterior
-                // 6. Grele greșite anterior
-                // 7. Ușoare deja rezolvate
-                // 8. Medii deja rezolvate
+                // 6. Medii deja rezolvate
+                // 7. Grele noi
+                // 8. Grele greșite anterior
                 // 9. Grele deja rezolvate
                 const sessionPool = [
+                    // EASY
                     ...shuffle(unattemptedEasy),
-                    ...shuffle(unattemptedMedium),
-                    ...shuffle(unattemptedHard),
                     ...shuffle(wrongEasy),
-                    ...shuffle(wrongMedium),
-                    ...shuffle(wrongHard),
                     ...shuffle(masteredEasy),
+                    // MEDIUM
+                    ...shuffle(unattemptedMedium),
+                    ...shuffle(wrongMedium),
                     ...shuffle(masteredMedium),
+                    // HARD
+                    ...shuffle(unattemptedHard),
+                    ...shuffle(wrongHard),
                     ...shuffle(masteredHard)
                 ];
 
